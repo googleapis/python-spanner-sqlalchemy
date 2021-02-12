@@ -16,6 +16,7 @@ import re
 
 from sqlalchemy import types
 from sqlalchemy.engine.default import DefaultDialect
+from sqlalchemy.sql.compiler import GenericTypeCompiler
 from google.cloud import spanner_dbapi
 
 # Spanner-to-SQLAlchemy types map
@@ -32,6 +33,40 @@ _type_map = {
     "TIME": types.TIME,
     "TIMESTAMP": types.TIMESTAMP,
 }
+
+
+class SpannerTypeCompiler(GenericTypeCompiler):
+    """Spanner types compiler.
+
+    Maps SQLAlchemy types to Spanner data types.
+    """
+
+    def visit_INTEGER(self, type_, **kw):
+        return "INT64"
+
+    def visit_FLOAT(self, type_, **kw):
+        return "FLOAT64"
+
+    def visit_TEXT(self, type_, **kw):
+        return "STRING({})".format(type_.length)
+
+    def visit_ARRAY(self, type_, **kw):
+        return "ARRAY<{}>".format(self.process(type_.item_type, **kw))
+
+    def visit_BINARY(self, type_, **kw):
+        return "BYTES"
+
+    def visit_DECIMAL(self, type_, **kw):
+        return "NUMERIC"
+
+    def visit_VARCHAR(self, type_, **kw):
+        return "STRING({})".format(type_.length)
+
+    def visit_CHAR(self, type_, **kw):
+        return "STRING({})".format(type_.length)
+
+    def visit_BOOLEAN(self, type_, **kw):
+        return "BOOL"
 
 
 class SpannerDialect(DefaultDialect):
@@ -56,6 +91,7 @@ class SpannerDialect(DefaultDialect):
     supports_native_enum = True
     supports_native_boolean = True
 
+    type_compiler = SpannerTypeCompiler
     @classmethod
     def dbapi(cls):
         """A pointer to the Cloud Spanner DB API package.
@@ -102,12 +138,23 @@ class SpannerDialect(DefaultDialect):
         Returns:
             list: The table every column dict-like description.
         """
+        if isinstance(connection, Engine):
+            connection = connection.connect()
+
         sql = """
-SELECT COLUMN_NAME, SPANNER_TYPE, IS_NULLABLE
-FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME="{table_name}"
+SELECT column_name, spanner_type, is_nullable
+FROM information_schema.columns
+WHERE
+    table_catalog = ''
+    AND table_schema = ''
+    AND table_name = '{}'
+ORDER BY
+    table_catalog,
+    table_schema,
+    table_name,
+    ordinal_position
 """.format(
-            table_name=table_name
+            table_name
         )
 
         with connection.connection.database.snapshot() as snap:
@@ -141,6 +188,9 @@ WHERE TABLE_NAME="{table_name}"
         Returns:
             list: List with indexes description.
         """
+        if isinstance(connection, Engine):
+            connection = connection.connect()
+
         sql = """
 SELECT i.INDEX_NAME, ic.COLUMN_NAME, i.IS_UNIQUE, ic.COLUMN_ORDERING
 FROM INFORMATION_SCHEMA.INDEXES as i
@@ -180,6 +230,9 @@ WHERE i.TABLE_NAME="{table_name}"
         Returns:
             dict: Dict with the primary key constraint description.
         """
+        if isinstance(connection, Engine):
+            connection = connection.connect()
+
         sql = """
 SELECT ccu.COLUMN_NAME
 FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc
@@ -213,6 +266,9 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "PRIMARY KEY"
         Returns:
             list: Dicts, each of which describes a foreign key constraint.
         """
+        if isinstance(connection, Engine):
+            connection = connection.connect()
+
         sql = """
 SELECT ccu.COLUMN_NAME, ccu.TABLE_SCHEMA, ccu.TABLE_NAME, ccu.CONSTRAINT_NAME
 FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc
@@ -238,3 +294,106 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "FOREIGN KEY"
                 }
             )
         return keys
+
+    def get_table_names(self, connection, schema=None, **kw):
+        """Get all the tables from the given schema.
+
+        The method is used by SQLAlchemy introspection systems.
+
+        Args:
+            connection (sqlalchemy.engine.base.Connection):
+                SQLAlchemy connection object.
+            schema (str): Optional. Schema name.
+
+        Returns:
+            list: Names of the tables within the given schema.
+        """
+        if isinstance(connection, Engine):
+            connection = connection.connect()
+
+        sql = """
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = '{}'
+""".format(
+            schema
+        )
+
+        with connection.connection.database.snapshot() as snap:
+            tab_iter = snap.execute_sql(sql)
+
+        tables = []
+        for table in tab_iter:
+            tables.apend(table[0])
+
+        return tables
+
+    def get_unique_constraints(self, connection, table_name, schema=None, **kw):
+        """Get the table unique constraints.
+
+        The method is used by SQLAlchemy introspection systems.
+
+        Args:
+            connection (sqlalchemy.engine.base.Connection):
+                SQLAlchemy connection object.
+            table_name (str): Name of the table to introspect.
+            schema (str): Optional. Schema name
+
+        Returns:
+            dict: Dict with the unique constraints' descriptions.
+        """
+        if isinstance(connection, Engine):
+            connection = connection.connect()
+
+        sql = """
+SELECT ccu.CONSTRAINT_NAME, ccu.COLUMN_NAME
+FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc
+JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS ccu
+    ON ccu.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
+WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "UNIQUE"
+""".format(
+            table_name=table_name
+        )
+
+        with connection.connection.database.snapshot() as snap:
+            un_cnstrs = snap.execute_sql(sql)
+
+        cols = []
+        for cnstr in un_cnstrs:
+            cols.append({"name": cnstr[0], "column_names": [cnstr[1]]})
+
+        return cols
+
+    def has_table(self, connection, table_name, schema=None):
+        """Check if the given table exists.
+
+        The method is used by SQLAlchemy introspection systems.
+
+        Args:
+            connection (sqlalchemy.engine.base.Connection):
+                SQLAlchemy connection object.
+            table_name (str): Name of the table to introspect.
+            schema (str): Optional. Schema name.
+
+        Returns:
+            bool: True, if the given table exists, False otherwise.
+        """
+        if isinstance(connection, Engine):
+            connection = connection.connect()
+
+        with connection.connection.database.snapshot() as snap:
+            tables = snap.execute_sql(
+                """
+SELECT true
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_NAME="{table_name}"
+LIMIT 1
+""".format(
+                    table_name=table_name
+                )
+            )
+
+        for _ in tables:
+            return True
+
+        return False
