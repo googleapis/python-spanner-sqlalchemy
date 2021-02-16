@@ -92,6 +92,7 @@ class SpannerDialect(DefaultDialect):
     supports_native_boolean = True
 
     type_compiler = SpannerTypeCompiler
+
     @classmethod
     def dbapi(cls):
         """A pointer to the Cloud Spanner DB API package.
@@ -168,7 +169,7 @@ ORDER BY
                 {
                     "name": col[0],
                     "type": _type_map[type_],
-                    "nullable": col[2],
+                    "nullable": col[2] == "YES",
                     "default": None,
                 }
             )
@@ -202,16 +203,16 @@ WHERE i.TABLE_NAME="{table_name}"
         )
 
         with connection.connection.database.snapshot() as snap:
-            inds = snap.execute_sql(sql)
+            rows = snap.execute_sql(sql)
 
         ind_descs = []
-        for ind in inds:
+        for row in rows:
             ind_descs.append(
                 {
-                    "name": ind[0],
-                    "column_names": [ind[1]],
-                    "unique": ind[2],
-                    "column_sorting": {ind[0]: ind[3]},
+                    "name": row[0],
+                    "column_names": [row[1]],
+                    "unique": row[2],
+                    "column_sorting": {row[0]: row[3]},
                 }
             )
         return ind_descs
@@ -244,11 +245,11 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "PRIMARY KEY"
         )
 
         with connection.connection.database.snapshot() as snap:
-            pks = snap.execute_sql(sql)
+            rows = snap.execute_sql(sql)
 
         cols = []
-        for key in pks:
-            cols.append(key[0])
+        for row in rows:
+            cols.append(row[0])
 
         return {"constrained_columns": cols}
 
@@ -280,17 +281,17 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "FOREIGN KEY"
         )
 
         with connection.connection.database.snapshot() as snap:
-            fks = snap.execute_sql(sql)
+            rows = snap.execute_sql(sql)
 
         keys = []
-        for key in fks:
+        for row in rows:
             keys.append(
                 {
-                    "constrained_columns": [key[0]],
-                    "referred_schema": key[1],
-                    "referred_table": key[2],
-                    "referred_columns": [key[0]],
-                    "name": key[3],
+                    "constrained_columns": [row[0]],
+                    "referred_schema": row[1],
+                    "referred_table": row[2],
+                    "referred_columns": [row[0]],
+                    "name": row[3],
                 }
             )
         return keys
@@ -320,13 +321,13 @@ WHERE table_schema = '{}'
         )
 
         with connection.connection.database.snapshot() as snap:
-            tab_iter = snap.execute_sql(sql)
+            rows = snap.execute_sql(sql)
 
-        tables = []
-        for table in tab_iter:
-            tables.apend(table[0])
+        table_names = []
+        for row in rows:
+            table_names.append(row[0])
 
-        return tables
+        return table_names
 
     def get_unique_constraints(self, connection, table_name, schema=None, **kw):
         """Get the table unique constraints.
@@ -356,11 +357,11 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "UNIQUE"
         )
 
         with connection.connection.database.snapshot() as snap:
-            un_cnstrs = snap.execute_sql(sql)
+            rows = snap.execute_sql(sql)
 
         cols = []
-        for cnstr in un_cnstrs:
-            cols.append({"name": cnstr[0], "column_names": [cnstr[1]]})
+        for row in rows:
+            cols.append({"name": row[0], "column_names": [row[1]]})
 
         return cols
 
@@ -382,7 +383,7 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "UNIQUE"
             connection = connection.connect()
 
         with connection.connection.database.snapshot() as snap:
-            tables = snap.execute_sql(
+            rows = snap.execute_sql(
                 """
 SELECT true
 FROM INFORMATION_SCHEMA.TABLES
@@ -393,7 +394,7 @@ LIMIT 1
                 )
             )
 
-        for _ in tables:
+        for _ in rows:
             return True
 
         return False
