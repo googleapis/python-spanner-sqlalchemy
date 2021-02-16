@@ -15,24 +15,52 @@
 import re
 
 from sqlalchemy import types
+from sqlalchemy.engine.base import Engine
 from sqlalchemy.engine.default import DefaultDialect
-from sqlalchemy.sql.compiler import GenericTypeCompiler
+from sqlalchemy.sql.compiler import DDLCompiler, GenericTypeCompiler
 from google.cloud import spanner_dbapi
 
 # Spanner-to-SQLAlchemy types map
 _type_map = {
     "BOOL": types.Boolean,
-    "BYTES": types.BINARY,
+    "BYTES(MAX)": types.BINARY,
     "DATE": types.DATE,
     "DATETIME": types.DATETIME,
-    "FLOAT": types.Float,
+    "FLOAT64": types.Float,
     "INT64": types.BIGINT,
-    "INTEGER": types.Integer,
     "NUMERIC": types.DECIMAL,
     "STRING": types.String,
     "TIME": types.TIME,
     "TIMESTAMP": types.TIMESTAMP,
 }
+
+
+class SpannerDDLCompiler(DDLCompiler):
+    """Spanner DDL statements compiler."""
+
+    def visit_primary_key_constraint(self, constraint):
+        """Build primary key definition.
+
+        Primary key in Spanner is defined outside of a table columns definition, see:
+        https://cloud.google.com/spanner/docs/getting-started/python#create_a_database
+
+        The method returns None to omit primary key in a table columns definition.
+        """
+        return None
+
+    def post_create_table(self, table):
+        """Build statements to be executed after CREATE TABLE.
+
+        Args:
+            table (sqlalchemy.schema.Table): Table to create.
+
+        Returns:
+            str: primary key difinition to add to the table CREATE request.
+        """
+        cols = [col.name for col in table.primary_key.columns]
+
+        post_create_lines = " PRIMARY KEY ({})".format(", ".join(cols))
+        return post_create_lines
 
 
 class SpannerTypeCompiler(GenericTypeCompiler):
@@ -90,6 +118,8 @@ class SpannerDialect(DefaultDialect):
     supports_sequences = True
     supports_native_enum = True
     supports_native_boolean = True
+
+    ddl_compiler = SpannerDDLCompiler
 
     type_compiler = SpannerTypeCompiler
 
