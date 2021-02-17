@@ -235,10 +235,10 @@ WHERE
         )
 
         with connection.connection.database.snapshot() as snap:
-            fks = snap.execute_sql(sql)
+            rows = snap.execute_sql(sql)
 
         keys = []
-        for key in fks:
+        for row in rows:
             keys.append(
                 {
                     "name": row[0],
