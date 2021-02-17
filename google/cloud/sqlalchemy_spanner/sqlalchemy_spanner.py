@@ -131,8 +131,11 @@ class SpannerDialect(DefaultDialect):
         The method is used by SQLAlchemy introspection systems.
 
         Args:
-            connection (sqlalchemy.engine.base.Connection):
-                SQLAlchemy connection object.
+            connection (Union[
+                sqlalchemy.engine.base.Connection,
+                sqlalchemy.engine.Engine
+            ]):
+                SQLAlchemy connection or engine object.
             table_name (str): Name of the table to introspect.
             schema (str): Optional. Schema name
 
@@ -158,21 +161,21 @@ ORDER BY
             table_name
         )
 
+        cols_desc = []
         with connection.connection.database.snapshot() as snap:
             columns = snap.execute_sql(sql)
 
-        cols_desc = []
-        for col in columns:
-            type_ = "STRING" if col[1].startswith("STRING") else col[1]
+            for col in columns:
+                type_ = "STRING" if col[1].startswith("STRING") else col[1]
 
-            cols_desc.append(
-                {
-                    "name": col[0],
-                    "type": _type_map[type_],
-                    "nullable": col[2] == "YES",
-                    "default": None,
-                }
-            )
+                cols_desc.append(
+                    {
+                        "name": col[0],
+                        "type": _type_map[type_],
+                        "nullable": col[2] == "YES",
+                        "default": None,
+                    }
+                )
         return cols_desc
 
     def get_indexes(self, connection, table_name, schema=None, **kw):
@@ -181,8 +184,11 @@ ORDER BY
         The method is used by SQLAlchemy introspection systems.
 
         Args:
-            connection (sqlalchemy.engine.base.Connection):
-                SQLAlchemy connection object.
+            connection (Union[
+                sqlalchemy.engine.base.Connection,
+                sqlalchemy.engine.Engine
+            ]):
+                SQLAlchemy connection or engine object.
             table_name (str): Name of the table to introspect.
             schema (str): Optional. Schema name
 
@@ -202,20 +208,20 @@ WHERE i.TABLE_NAME="{table_name}"
             table_name=table_name
         )
 
+        ind_desc = []
         with connection.connection.database.snapshot() as snap:
             rows = snap.execute_sql(sql)
 
-        ind_descs = []
-        for row in rows:
-            ind_descs.append(
-                {
-                    "name": row[0],
-                    "column_names": [row[1]],
-                    "unique": row[2],
-                    "column_sorting": {row[0]: row[3]},
-                }
-            )
-        return ind_descs
+            for row in rows:
+                ind_desc.append(
+                    {
+                        "name": row[0],
+                        "column_names": [row[1]],
+                        "unique": row[2],
+                        "column_sorting": {row[0]: row[3]},
+                    }
+                )
+        return ind_desc
 
     def get_pk_constraint(self, connection, table_name, schema=None, **kw):
         """Get the table primary key constraint.
@@ -223,8 +229,11 @@ WHERE i.TABLE_NAME="{table_name}"
         The method is used by SQLAlchemy introspection systems.
 
         Args:
-            connection (sqlalchemy.engine.base.Connection):
-                SQLAlchemy connection object.
+            connection (Union[
+                sqlalchemy.engine.base.Connection,
+                sqlalchemy.engine.Engine
+            ]):
+                SQLAlchemy connection or engine object.
             table_name (str): Name of the table to introspect.
             schema (str): Optional. Schema name
 
@@ -244,12 +253,12 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "PRIMARY KEY"
             table_name=table_name
         )
 
+        cols = []
         with connection.connection.database.snapshot() as snap:
             rows = snap.execute_sql(sql)
 
-        cols = []
-        for row in rows:
-            cols.append(row[0])
+            for row in rows:
+                cols.append(row[0])
 
         return {"constrained_columns": cols}
 
@@ -259,8 +268,11 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "PRIMARY KEY"
         The method is used by SQLAlchemy introspection systems.
 
         Args:
-            connection (sqlalchemy.engine.base.Connection):
-                SQLAlchemy connection object.
+            connection (Union[
+                sqlalchemy.engine.base.Connection,
+                sqlalchemy.engine.Engine
+            ]):
+                SQLAlchemy connection or engine object.
             table_name (str): Name of the table to introspect.
             schema (str): Optional. Schema name
 
@@ -280,20 +292,20 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "FOREIGN KEY"
             table_name=table_name
         )
 
+        keys = []
         with connection.connection.database.snapshot() as snap:
             rows = snap.execute_sql(sql)
 
-        keys = []
-        for row in rows:
-            keys.append(
-                {
-                    "constrained_columns": [row[0]],
-                    "referred_schema": row[1],
-                    "referred_table": row[2],
-                    "referred_columns": [row[0]],
-                    "name": row[3],
-                }
-            )
+            for row in rows:
+                keys.append(
+                    {
+                        "constrained_columns": [row[0]],
+                        "referred_schema": row[1],
+                        "referred_table": row[2],
+                        "referred_columns": [row[0]],
+                        "name": row[3],
+                    }
+                )
         return keys
 
     def get_table_names(self, connection, schema=None, **kw):
@@ -302,8 +314,11 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "FOREIGN KEY"
         The method is used by SQLAlchemy introspection systems.
 
         Args:
-            connection (sqlalchemy.engine.base.Connection):
-                SQLAlchemy connection object.
+            connection (Union[
+                sqlalchemy.engine.base.Connection,
+                sqlalchemy.engine.Engine
+            ]):
+                SQLAlchemy connection or engine object.
             schema (str): Optional. Schema name.
 
         Returns:
@@ -320,12 +335,12 @@ WHERE table_schema = '{}'
             schema
         )
 
+        table_names = []
         with connection.connection.database.snapshot() as snap:
             rows = snap.execute_sql(sql)
 
-        table_names = []
-        for row in rows:
-            table_names.append(row[0])
+            for row in rows:
+                table_names.append(row[0])
 
         return table_names
 
@@ -335,8 +350,11 @@ WHERE table_schema = '{}'
         The method is used by SQLAlchemy introspection systems.
 
         Args:
-            connection (sqlalchemy.engine.base.Connection):
-                SQLAlchemy connection object.
+            connection (Union[
+                sqlalchemy.engine.base.Connection,
+                sqlalchemy.engine.Engine
+            ]):
+                SQLAlchemy connection or engine object.
             table_name (str): Name of the table to introspect.
             schema (str): Optional. Schema name
 
@@ -356,12 +374,12 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "UNIQUE"
             table_name=table_name
         )
 
+        cols = []
         with connection.connection.database.snapshot() as snap:
             rows = snap.execute_sql(sql)
 
-        cols = []
-        for row in rows:
-            cols.append({"name": row[0], "column_names": [row[1]]})
+            for row in rows:
+                cols.append({"name": row[0], "column_names": [row[1]]})
 
         return cols
 
@@ -371,8 +389,11 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "UNIQUE"
         The method is used by SQLAlchemy introspection systems.
 
         Args:
-            connection (sqlalchemy.engine.base.Connection):
-                SQLAlchemy connection object.
+            connection (Union[
+                sqlalchemy.engine.base.Connection,
+                sqlalchemy.engine.Engine
+            ]):
+                SQLAlchemy connection or engine object.
             table_name (str): Name of the table to introspect.
             schema (str): Optional. Schema name.
 
@@ -394,7 +415,7 @@ LIMIT 1
                 )
             )
 
-        for _ in rows:
-            return True
+            for _ in rows:
+                return True
 
         return False
