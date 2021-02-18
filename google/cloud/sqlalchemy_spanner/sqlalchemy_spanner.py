@@ -221,9 +221,11 @@ GROUP BY i.index_name, i.is_unique
                 ind_desc.append(
                     {
                         "name": row[0],
-                        "column_names": [row[1]],
+                        "column_names": row[1],
                         "unique": row[2],
-                        "column_sorting": {row[0]: row[3]},
+                        "column_sorting": {
+                            col: order for col, order in zip(row[1], row[3])
+                        },
                     }
                 )
         return ind_desc
