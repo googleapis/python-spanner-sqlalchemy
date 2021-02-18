@@ -120,7 +120,6 @@ class SpannerDialect(DefaultDialect):
     supports_native_boolean = True
 
     ddl_compiler = SpannerDDLCompiler
-
     type_compiler = SpannerTypeCompiler
 
     @classmethod
