@@ -142,11 +142,16 @@ WHERE TABLE_NAME="{table_name}"
             list: List with indexes description.
         """
         sql = """
-SELECT i.INDEX_NAME, ic.COLUMN_NAME, i.IS_UNIQUE, ic.COLUMN_ORDERING
-FROM INFORMATION_SCHEMA.INDEXES as i
-JOIN INFORMATION_SCHEMA.INDEX_COLUMNS AS ic
-    ON ic.INDEX_NAME = i.INDEX_NAME AND ic.TABLE_NAME = i.TABLE_NAME
-WHERE i.TABLE_NAME="{table_name}"
+SELECT
+    i.index_name,
+    ARRAY_AGG(ic.column_name),
+    i.is_unique,
+    ARRAY_AGG(ic.column_ordering)
+FROM information_schema.indexes as i
+JOIN information_schema.index_columns AS ic
+    ON ic.index_name = i.index_name AND ic.table_name = i.table_name
+WHERE i.table_name="{table_name}"
+GROUP BY i.index_name, i.is_unique
 """.format(
             table_name=table_name
         )
@@ -158,10 +163,12 @@ WHERE i.TABLE_NAME="{table_name}"
         for ind in inds:
             ind_descs.append(
                 {
-                    "name": ind[0],
-                    "column_names": [ind[1]],
-                    "unique": ind[2],
-                    "column_sorting": {ind[0]: ind[3]},
+                    "name": row[0],
+                    "column_names": row[1],
+                    "unique": row[2],
+                    "column_sorting": {
+                        col: order for col, order in zip(row[1], row[3])
+                    },
                 }
             )
         return ind_descs
