@@ -317,11 +317,11 @@ WHERE
             for row in rows:
                 keys.append(
                     {
-                        "constrained_columns": [row[0]],
-                        "referred_schema": row[1],
-                        "referred_table": row[2],
-                        "referred_columns": [row[0]],
-                        "name": row[3],
+                        "name": row[0],
+                        "referred_table": row[1],
+                        "referred_schema": row[2] or None,
+                        "referred_columns": [row[3]],
+                        "constrained_columns": [row[4]],
                     }
                 )
         return keys
