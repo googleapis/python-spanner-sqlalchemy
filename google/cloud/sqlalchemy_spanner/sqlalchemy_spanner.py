@@ -426,3 +426,16 @@ LIMIT 1
                 return True
 
         return False
+
+    def set_isolation_level(self, conn_proxy, level):
+        """Set the connection isolation level.
+
+        Args:
+            conn_proxy (sqlalchemy.pool._ConnectionFairy):
+                Database connection proxy object.
+            level (string): Isolation level.
+        """
+        if level == "AUTOCOMMIT":
+            conn_proxy.connection.autocommit = True
+        else:
+            conn_proxy.connection.autocommit = False
