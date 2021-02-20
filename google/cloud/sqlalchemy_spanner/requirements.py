@@ -20,3 +20,15 @@ class Requirements(SuiteRequirements):
     @property
     def autocommit(self):
         return exclusions.open()
+
+    @property
+    def order_by_collation(self):
+        return exclusions.open()
+
+    def get_order_by_collation(self, _):
+        """Get the default collation name.
+
+        Returns:
+            str: Collation name.
+        """
+        return '"unicode"'
