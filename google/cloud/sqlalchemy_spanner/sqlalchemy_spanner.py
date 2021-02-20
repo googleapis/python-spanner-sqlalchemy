@@ -35,6 +35,7 @@ _type_map = {
     "TIME": types.TIME,
     "TIMESTAMP": types.TIMESTAMP,
 }
+
 _compound_keywords = {
     selectable.CompoundSelect.UNION: "UNION DISTINCT",
     selectable.CompoundSelect.UNION_ALL: "UNION ALL",
@@ -49,7 +50,6 @@ class SpannerSQLCompiler(SQLCompiler):
     """Spanner SQL statements compiler."""
 
     compound_keywords = _compound_keywords
-
 
 
 class SpannerTypeCompiler(GenericTypeCompiler):
