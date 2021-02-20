@@ -19,6 +19,8 @@ from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.sql.compiler import GenericTypeCompiler
 from google.cloud import spanner_dbapi
 
+from sqlalchemy.sql.compiler import selectable, SQLCompiler
+
 # Spanner-to-SQLAlchemy types map
 _type_map = {
     "BOOL": types.Boolean,
@@ -33,6 +35,21 @@ _type_map = {
     "TIME": types.TIME,
     "TIMESTAMP": types.TIMESTAMP,
 }
+_compound_keywords = {
+    selectable.CompoundSelect.UNION: "UNION DISTINCT",
+    selectable.CompoundSelect.UNION_ALL: "UNION ALL",
+    selectable.CompoundSelect.EXCEPT: "EXCEPT DISTINCT",
+    selectable.CompoundSelect.EXCEPT_ALL: "EXCEPT ALL",
+    selectable.CompoundSelect.INTERSECT: "INTERSECT DISTINCT",
+    selectable.CompoundSelect.INTERSECT_ALL: "INTERSECT ALL",
+}
+
+
+class SpannerSQLCompiler(SQLCompiler):
+    """Spanner SQL statements compiler."""
+
+    compound_keywords = _compound_keywords
+
 
 
 class SpannerTypeCompiler(GenericTypeCompiler):
@@ -91,6 +108,7 @@ class SpannerDialect(DefaultDialect):
     supports_native_enum = True
     supports_native_boolean = True
 
+    statement_compiler = SpannerSQLCompiler
     type_compiler = SpannerTypeCompiler
 
     @classmethod
