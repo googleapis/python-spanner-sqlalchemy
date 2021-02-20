@@ -16,10 +16,8 @@ import re
 
 from sqlalchemy import types
 from sqlalchemy.engine.default import DefaultDialect
-from sqlalchemy.sql.compiler import GenericTypeCompiler
+from sqlalchemy.sql.compiler import selectable, GenericTypeCompiler, SQLCompiler
 from google.cloud import spanner_dbapi
-
-from sqlalchemy.sql.compiler import selectable, SQLCompiler
 
 # Spanner-to-SQLAlchemy types map
 _type_map = {
