@@ -22,7 +22,7 @@ import nox
 BLACK_VERSION = "black==19.10b0"
 BLACK_PATHS = ["google", "test", "noxfile.py", "setup.py"]
 
-DEFAULT_PYTHON_VERSION = "3.7"
+DEFAULT_PYTHON_VERSION = "3.8"
 
 
 @nox.session(python=DEFAULT_PYTHON_VERSION)
