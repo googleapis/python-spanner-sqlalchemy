@@ -59,8 +59,8 @@ class SpannerDDLCompiler(DDLCompiler):
         """
         cols = [col.name for col in table.primary_key.columns]
 
-        post_create_lines = " PRIMARY KEY ({})".format(", ".join(cols))
-        return post_create_lines
+        return " PRIMARY KEY ({})".format(", ".join(cols))
+
 
 
 class SpannerTypeCompiler(GenericTypeCompiler):
