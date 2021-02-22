@@ -73,4 +73,5 @@ def compliance_test(session):
         "git+https://github.com/googleapis/python-spanner.git#egg=google-cloud-spanner"
     )
     session.install("-e", ".")
+    session.run("python create_test_database.py")
     session.run("pytest", "-v")
