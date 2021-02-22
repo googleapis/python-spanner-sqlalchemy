@@ -62,7 +62,6 @@ class SpannerDDLCompiler(DDLCompiler):
         return " PRIMARY KEY ({})".format(", ".join(cols))
 
 
-
 class SpannerTypeCompiler(GenericTypeCompiler):
     """Spanner types compiler.
 
