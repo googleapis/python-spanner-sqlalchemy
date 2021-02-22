@@ -96,6 +96,9 @@ class SpannerTypeCompiler(GenericTypeCompiler):
     def visit_BOOLEAN(self, type_, **kw):
         return "BOOL"
 
+    def visit_DATETIME(self, type_, **kw):
+        return "TIMESTAMP"
+
 
 class SpannerDialect(DefaultDialect):
     """Cloud Spanner dialect.
