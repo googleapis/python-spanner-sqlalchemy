@@ -27,4 +27,4 @@ jobs:
         run: nox
         env:
           SPANNER_EMULATOR_HOST: localhost:9010
-          GOOGLE_CLOUD_PROJECT: emulator-test-project
+          GOOGLE_CLOUD_PROJECT: appdev-soda-spanner-staging
