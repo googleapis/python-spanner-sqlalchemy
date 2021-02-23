@@ -29,7 +29,6 @@ class CTETest(_CTETest):
         INSERT INTO some_other_table (...)
         SELECT * FROM some_cte
 
-
         Such queries are not supported by Spanner.
         """
         pass
