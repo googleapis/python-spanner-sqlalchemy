@@ -14,4 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
+
 from sqlalchemy.testing.suite import *  # noqa: F401, F403
+
+
+class CTETest(_CTETest):
+    @pytest.mark.skip()
+    def test_insert_from_select_round_trip(self):
+        """
+        The test checks if an INSERT can be done from a cte, like:
+
+        WITH some_cte AS (...)
+        INSERT INTO some_other_table (...)
+        SELECT * FROM some_cte
+
+
+        Such queries are not supported by Spanner.
+        """
+        pass
