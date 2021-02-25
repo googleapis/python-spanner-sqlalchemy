@@ -35,3 +35,11 @@ class Requirements(SuiteRequirements):
             str: Collation name.
         """
         return '"unicode"'
+
+    def get_isolation_levels(self, _):
+        """Get isolation levels supported by the dialect.
+
+        Returns:
+            dict: isolation levels description.
+        """
+        return {"default": "SERIALIZABLE", "supported": ["SERIALIZABLE", "AUTOCOMMIT"]}
