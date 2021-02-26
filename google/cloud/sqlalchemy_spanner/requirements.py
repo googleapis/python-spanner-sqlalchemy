@@ -28,6 +28,10 @@ class Requirements(SuiteRequirements):
     def ctes(self):
         return exclusions.open()
 
+    @property
+    def isolation_level(self):
+        return exclusions.open()
+
     def get_order_by_collation(self, _):
         """Get the default collation name.
 
