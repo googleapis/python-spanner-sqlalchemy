@@ -1,7 +1,6 @@
 # python-sqlalchemy-spanner
 
-**Warning**  
-The project is under development yet, and some features can work in unexpected way.  
+**NOTE: This project is still in DEVELOPMENT. It may make breaking changes without prior notice and should not yet be used for production purposes.**  
 
 **Usage example**:
 
