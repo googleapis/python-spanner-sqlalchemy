@@ -23,6 +23,7 @@ from sqlalchemy import literal_column
 from sqlalchemy import select
 from sqlalchemy import String
 
+from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
 
 from sqlalchemy.testing.suite.test_dialect import (  # noqa: F401, F403
