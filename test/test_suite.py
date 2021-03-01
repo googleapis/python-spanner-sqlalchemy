@@ -34,7 +34,7 @@ from sqlalchemy.testing.suite.test_dialect import (  # noqa: F401, F403
 class EscapingTest(_EscapingTest):
     @provide_metadata
     def test_percent_sign_round_trip(self):
-        """test that the DBAPI accommodates for escaped / nonescaped
+        """Test that the DBAPI accommodates for escaped / nonescaped
         percent signs in a way that matches the compiler
 
         SPANNER OVERRIDE
