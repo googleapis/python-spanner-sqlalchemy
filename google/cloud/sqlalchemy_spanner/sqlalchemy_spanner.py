@@ -17,7 +17,12 @@ import re
 from sqlalchemy import types
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.engine.default import DefaultDialect
-from sqlalchemy.sql.compiler import DDLCompiler, GenericTypeCompiler
+from sqlalchemy.sql.compiler import (
+    selectable,
+    DDLCompiler,
+    GenericTypeCompiler,
+    SQLCompiler,
+)
 from google.cloud import spanner_dbapi
 
 # Spanner-to-SQLAlchemy types map
@@ -33,6 +38,21 @@ _type_map = {
     "TIME": types.TIME,
     "TIMESTAMP": types.TIMESTAMP,
 }
+
+_compound_keywords = {
+    selectable.CompoundSelect.UNION: "UNION DISTINCT",
+    selectable.CompoundSelect.UNION_ALL: "UNION ALL",
+    selectable.CompoundSelect.EXCEPT: "EXCEPT DISTINCT",
+    selectable.CompoundSelect.EXCEPT_ALL: "EXCEPT ALL",
+    selectable.CompoundSelect.INTERSECT: "INTERSECT DISTINCT",
+    selectable.CompoundSelect.INTERSECT_ALL: "INTERSECT ALL",
+}
+
+
+class SpannerSQLCompiler(SQLCompiler):
+    """Spanner SQL statements compiler."""
+
+    compound_keywords = _compound_keywords
 
 
 class SpannerDDLCompiler(DDLCompiler):
@@ -60,7 +80,6 @@ class SpannerDDLCompiler(DDLCompiler):
         cols = [col.name for col in table.primary_key.columns]
 
         return " PRIMARY KEY ({})".format(", ".join(cols))
-
 
 
 class SpannerTypeCompiler(GenericTypeCompiler):
@@ -123,6 +142,7 @@ class SpannerDialect(DefaultDialect):
     supports_native_boolean = True
 
     ddl_compiler = SpannerDDLCompiler
+    statement_compiler = SpannerSQLCompiler
     type_compiler = SpannerTypeCompiler
 
     @classmethod
@@ -132,6 +152,20 @@ class SpannerDialect(DefaultDialect):
         Used to initiate connections to the Cloud Spanner databases.
         """
         return spanner_dbapi
+
+    @property
+    def default_isolation_level(self):
+        """Default isolation level name.
+
+        Returns:
+            str: default isolation level.
+        """
+        return "SERIALIZABLE"
+
+    @default_isolation_level.setter
+    def default_isolation_level(self, value):
+        """Default isolation level should not be changed."""
+        pass
 
     def _check_unicode_returns(self, connection, additional_tests=None):
         """Ensure requests are returning Unicode responses."""
@@ -322,11 +356,22 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "PRIMARY KEY"
             connection = connection.connect()
 
         sql = """
-SELECT ccu.COLUMN_NAME, ccu.TABLE_SCHEMA, ccu.TABLE_NAME, ccu.CONSTRAINT_NAME
-FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc
-JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS ccu
-    ON ccu.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
-WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "FOREIGN KEY"
+SELECT
+    tc.constraint_name,
+    ctu.table_name,
+    ctu.table_schema,
+    ccu.column_name,
+    kcu.column_name
+FROM information_schema.table_constraints AS tc
+JOIN information_schema.constraint_column_usage AS ccu
+    ON ccu.constraint_name = tc.constraint_name
+JOIN information_schema.constraint_table_usage AS ctu
+    ON ctu.constraint_name = tc.constraint_name
+JOIN information_schema.key_column_usage AS kcu
+    ON kcu.constraint_name = tc.constraint_name
+WHERE
+    tc.table_name="{table_name}"
+    AND tc.constraint_type = "FOREIGN KEY"
 """.format(
             table_name=table_name
         )
@@ -338,11 +383,11 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "FOREIGN KEY"
             for row in rows:
                 keys.append(
                     {
-                        "constrained_columns": [row[0]],
-                        "referred_schema": row[1],
-                        "referred_table": row[2],
-                        "referred_columns": [row[0]],
-                        "name": row[3],
+                        "name": row[0],
+                        "referred_table": row[1],
+                        "referred_schema": row[2] or None,
+                        "referred_columns": [row[3]],
+                        "constrained_columns": [row[4]],
                     }
                 )
         return keys
@@ -458,3 +503,45 @@ LIMIT 1
                 return True
 
         return False
+
+    def set_isolation_level(self, conn_proxy, level):
+        """Set the connection isolation level.
+
+        Args:
+            conn_proxy (
+                Union[
+                    sqlalchemy.pool._ConnectionFairy,
+                    spanner_dbapi.connection.Connection,
+                ]
+            ):
+                Database connection proxy object or the connection iself.
+            level (string): Isolation level.
+        """
+        if isinstance(conn_proxy, spanner_dbapi.Connection):
+            conn = conn_proxy
+        else:
+            conn = conn_proxy.connection
+
+        conn.autocommit = level == "AUTOCOMMIT"
+
+    def get_isolation_level(self, conn_proxy):
+        """Get the connection isolation level.
+
+        Args:
+            conn_proxy (
+                Union[
+                    sqlalchemy.pool._ConnectionFairy,
+                    spanner_dbapi.connection.Connection,
+                ]
+            ):
+                Database connection proxy object or the connection iself.
+
+        Returns:
+            str: the connection isolation level.
+        """
+        if isinstance(conn_proxy, spanner_dbapi.Connection):
+            conn = conn_proxy
+        else:
+            conn = conn_proxy.connection
+
+        return "AUTOCOMMIT" if conn.autocommit else "SERIALIZABLE"
