@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
 from sqlalchemy.testing import config
 from sqlalchemy.testing import eq_
 from sqlalchemy.testing import provide_metadata
@@ -33,16 +32,17 @@ from sqlalchemy.testing.suite.test_dialect import (  # noqa: F401, F403
     EscapingTest as _EscapingTest,
 )
 
+
 from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
+    DateHistoricTest as _DateHistoricTest,
     DateTest as _DateTest,
-)
-
-from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
+    DateTimeCoercedToDateTimeTest as _DateTimeCoercedToDateTimeTest,
+    DateTimeHistoricTest as _DateTimeHistoricTest,
     DateTimeMicrosecondsTest as _DateTimeMicrosecondsTest,
-)
-
-from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     DateTimeTest as _DateTimeTest,
+    TimeTest as _TimeTest,
+    TimeMicrosecondsTest as _TimeMicrosecondsTest,
+    TimestampMicrosecondsTest as _TimestampMicrosecondsTest,
 )
 
 
@@ -120,7 +120,7 @@ class DateTest(_DateTest):
                 case(
                     [
                         (
-                            bindparam("foo", type_=self.datatype) is not None,
+                            bindparam("foo", type_=self.datatype) != None,
                             bindparam("foo", type_=self.datatype),
                         )
                     ],
@@ -153,7 +153,6 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
 
     def test_round_trip(self):
         date_table = self.tables.datetime_table
-
         config.db.execute(date_table.insert(), {"id": 1, "date_data": self.data})
 
         row = config.db.execute(select([date_table.c.date_data])).first()
@@ -177,7 +176,7 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
                 case(
                     [
                         (
-                            bindparam("foo", type_=self.datatype) is not None,
+                            bindparam("foo", type_=self.datatype) != None,
                             bindparam("foo", type_=self.datatype),
                         )
                     ],
@@ -191,4 +190,47 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
 
 
 class DateTimeTest(_DateTimeTest, DateTimeMicrosecondsTest):
+    pass
+
+
+class DateTimeCoercedToDateTimeTest(
+    _DateTimeCoercedToDateTimeTest, DateTimeMicrosecondsTest
+):
+    def test_round_trip(self):
+        date_table = self.tables.datetime_table
+        config.db.execute(date_table.insert(), {"id": 1, "date_data": self.data})
+
+        row = config.db.execute(select([date_table.c.date_data])).first()
+        compare = self.compare or self.data
+
+        eq_(row[0].date(), compare)
+        assert isinstance(row[0], DatetimeWithNanoseconds)
+
+
+class DateTimeHistoricTest(_DateTimeHistoricTest):
+    pass
+
+
+class DateHistoricTest(_DateHistoricTest):
+    pass
+
+
+class TimestampMicrosecondsTest(_TimestampMicrosecondsTest):
+    pass
+
+
+class TimeMicrosecondsTest(_TimeMicrosecondsTest):
+    # Time data type doesn't support by python-spanner.
+    def test_null(self):
+        pass
+
+    def test_round_trip(self):
+        pass
+
+    @requires.standalone_null_binds_whereclause
+    def test_null_bound_comparison(self):
+        pass
+
+
+class TimeTest(_TimeTest, TimeMicrosecondsTest):
     pass
