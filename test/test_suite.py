@@ -25,6 +25,7 @@ from sqlalchemy import literal_column
 from sqlalchemy import select
 from sqlalchemy import String
 
+from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
 
@@ -87,6 +88,18 @@ class CTETest(_CTETest):
         pass
 
     @pytest.mark.skip("DELETE from WITH subquery is not supported")
+    def test_delete_scalar_subq_round_trip(self):
+        """
+        The test checks if a DELETE can be done from a cte, like:
+
+        WITH some_cte AS (...)
+        DELETE FROM some_other_table (... SELECT * FROM some_cte)
+
+        Such queries are not supported by Spanner.
+        """
+        pass
+
+    @pytest.mark.skip("DELETE from WITH subquery is not supported")
     def test_delete_from_round_trip(self):
         """
         The test checks if a DELETE can be done from a cte, like:
@@ -109,4 +122,8 @@ class CTETest(_CTETest):
 
         Such queries are not supported by Spanner.
         """
+        pass
+
+    @pytest.mark.skip("WITH RECURSIVE subqueries are not supported")
+    def test_select_recursive_round_trip(self):
         pass
