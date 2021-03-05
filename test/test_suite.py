@@ -20,6 +20,7 @@ from sqlalchemy.testing import provide_metadata
 from sqlalchemy.testing.schema import Column
 from sqlalchemy.testing.schema import Table
 from sqlalchemy import literal_column
+from sqlalchemy import exists
 from sqlalchemy import select
 from sqlalchemy import String
 
@@ -29,6 +30,7 @@ from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_dialect import (  # noqa: F401, F403
     EscapingTest as _EscapingTest,
 )
+from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
 
 
 class EscapingTest(_EscapingTest):
@@ -68,3 +70,49 @@ class EscapingTest(_EscapingTest):
                 ),
                 "some %% other value",
             )
+
+
+class ExistsTest(_ExistsTest):
+    def test_select_exists(self, connection):
+        """
+        SPANNER OVERRIDE:
+
+        The original test is trying to execute a query like:
+
+        SELECT ...
+        WHERE EXISTS (SELECT ...)
+
+        SELECT WHERE without FROM clause is not supported by Spanner.
+        Rewriting the test to force it generating query like:
+
+        SELECT EXISTS (SELECT ...)
+        """
+        stuff = self.tables.stuff
+        eq_(
+            connection.execute(
+                select((exists().where(stuff.c.data == "some data"),))
+            ).fetchall(),
+            [(True,)],
+        )
+
+    def test_select_exists_false(self, connection):
+        """
+        SPANNER OVERRIDE:
+
+        The original test is trying to execute a query like:
+
+        SELECT ...
+        WHERE EXISTS (SELECT ...)
+
+        SELECT WHERE without FROM clause is not supported by Spanner.
+        Rewriting the test to force it generating query like:
+
+        SELECT EXISTS (SELECT ...)
+        """
+        stuff = self.tables.stuff
+        eq_(
+            connection.execute(
+                select((exists().where(stuff.c.data == "no data"),))
+            ).fetchall(),
+            [(False,)],
+        )
