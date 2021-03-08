@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from sqlalchemy.testing import assert_raises
 from sqlalchemy.testing import config
 from sqlalchemy.testing import eq_
 from sqlalchemy.testing import provide_metadata
@@ -21,13 +22,15 @@ from sqlalchemy.testing.schema import Column
 from sqlalchemy.testing.schema import Table
 from sqlalchemy import literal_column
 from sqlalchemy import select
-from sqlalchemy import String
+from sqlalchemy import String, exc
 
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
 
 from sqlalchemy.testing.suite.test_dialect import (  # noqa: F401, F403
+    AutocommitTest,
     EscapingTest as _EscapingTest,
+    ExceptionTest as _ExceptionTest,
+    IsolationLevelTest,
 )
 
 
@@ -45,7 +48,9 @@ class EscapingTest(_EscapingTest):
         """
         m = self.metadata
         t = Table("t", m, Column("data", String(50)))
+        t.drop(checkfirst=True)
         t.create(config.db)
+        config.db.connect().connection.connection.autocommit = True
         with config.db.begin() as conn:
             conn.execute(t.insert(), dict(data="some % value"))
 
@@ -68,3 +73,21 @@ class EscapingTest(_EscapingTest):
                 ),
                 "some %% other value",
             )
+
+
+class ExceptionTest(_ExceptionTest):
+    @config.requirements.duplicate_key_raises_integrity_error
+    def test_integrity_error(self):
+        with config.db.connect() as conn:
+            conn.connection.connection.autocommit = True
+            trans = conn.begin()
+            conn.execute(self.tables.manual_pk.insert(), {"id": 1, "data": "d1"})
+
+            assert_raises(
+                exc.IntegrityError,
+                conn.execute,
+                self.tables.manual_pk.insert(),
+                {"id": 1, "data": "d1"},
+            )
+
+            trans.rollback()
