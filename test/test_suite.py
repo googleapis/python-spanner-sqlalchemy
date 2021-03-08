@@ -14,14 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from sqlalchemy.testing import config
+from sqlalchemy.testing import config, db
 from sqlalchemy.testing import eq_
 from sqlalchemy.testing import provide_metadata
 from sqlalchemy.testing.schema import Column
 from sqlalchemy.testing.schema import Table
 from sqlalchemy import literal_column
-from sqlalchemy import select
+from sqlalchemy import literal, select, util
 from sqlalchemy import String
+from sqlalchemy.types import Integer
 
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
@@ -29,6 +30,8 @@ from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_dialect import (  # noqa: F401, F403
     EscapingTest as _EscapingTest,
 )
+
+from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
 
 
 class EscapingTest(_EscapingTest):
@@ -68,3 +71,68 @@ class EscapingTest(_EscapingTest):
                 ),
                 "some %% other value",
             )
+
+
+class IntegerTest(_IntegerTest):
+    @provide_metadata
+    def _round_trip(self, datatype, data):
+        metadata = self.metadata
+        int_table = Table(
+            "integer_table",
+            metadata,
+            Column("id", Integer, primary_key=True, test_needs_autoincrement=True),
+            Column("integer_data", Integer),
+        )
+
+        metadata.create_all(config.db)
+
+        config.db.execute(int_table.insert(), {"id": 1, "integer_data": data})
+
+        row = config.db.execute(select([int_table.c.integer_data])).first()
+
+        eq_(row, (data,))
+
+        if util.py3k:
+            assert isinstance(row[0], int)
+        else:
+            assert isinstance(row[0], (long, int))  # noqa
+
+        config.db.execute(int_table.delete())
+
+    @provide_metadata
+    def _literal_round_trip(self, type_, input_, output, filter_=None):
+        """test literal rendering """
+
+        # for literal, we test the literal render in an INSERT
+        # into a typed column.  we can then SELECT it back as its
+        # official type; ideally we'd be able to use CAST here
+        # but MySQL in particular can't CAST fully
+        t = Table("int_t", self.metadata, Column("x", type_))
+        t.drop(checkfirst=True)
+        t.create()
+
+        with db.connect() as conn:
+            for value in input_:
+                ins = (
+                    t.insert()
+                    .values(x=literal(value))
+                    .compile(
+                        dialect=db.dialect, compile_kwargs=dict(literal_binds=True),
+                    )
+                )
+                conn.execute(ins)
+
+            if self.supports_whereclause:
+                stmt = t.select().where(t.c.x == literal(value))
+            else:
+                stmt = t.select()
+
+            stmt = stmt.compile(
+                dialect=db.dialect, compile_kwargs=dict(literal_binds=True),
+            )
+            for row in conn.execute(stmt):
+                value = row[0]
+                if filter_ is not None:
+                    value = filter_(value)
+                assert value in output
+            conn.execute(t.delete())
