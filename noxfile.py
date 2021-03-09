@@ -69,10 +69,8 @@ def compliance_test(session):
     """Run SQLAlchemy dialect compliance test suite."""
     session.install("pytest")
     session.install("sqlalchemy")
-    # TODO: install python-spanner from the released package, when
-    # the error caused by the PR #223 is fixed
     session.install(
-        "git+https://github.com/q-logic/lastrowid.git#egg=google-cloud-spanner"
+        "git+https://github.com/googleapis/python-spanner.git#egg=google-cloud-spanner"
     )
     session.install("-e", ".")
     session.run("python", "create_test_database.py")
