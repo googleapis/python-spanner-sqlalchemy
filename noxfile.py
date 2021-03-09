@@ -72,7 +72,7 @@ def compliance_test(session):
     # TODO: install python-spanner from the released package, when
     # the error caused by the PR #223 is fixed
     session.install(
-        "git+https://github.com/q-logic/lastrowid.git#egg=google-cloud-spanner"
+        "git+https://github.com/q-logic/python-spanner.git@lastrowid#egg=google-cloud-spanner"
     )
     session.install("-e", ".")
     session.run("python", "create_test_database.py")
