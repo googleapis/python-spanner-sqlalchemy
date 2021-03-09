@@ -177,7 +177,7 @@ class SpannerDialect(DefaultDialect):
         Returns:
             str: Schema name.
         """
-        return "unnamed"
+        return ""
 
     def create_connect_args(self, url):
         """Parse connection args from the given URL.
