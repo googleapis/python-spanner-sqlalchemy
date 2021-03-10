@@ -76,6 +76,17 @@ class EscapingTest(_EscapingTest):
 class IntegerTest(_IntegerTest):
     @provide_metadata
     def _round_trip(self, datatype, data):
+        """This is the helper method for integer class tests which creates table and
+        perform insert operation.
+        Cloud Spanner supports tables with empty primary key, but
+        only single one row can be inserted into such a table -
+        following insertions will fail with `400 id must not be NULL in table date_table`.
+        Overriding the tests and add a manual primary key value to avoid the same failures
+        and delete the from the table at the end.
+
+        Cloud Spanner doesn't support BIGINT data type, so column data type converted
+        in to the Integer.
+        """
         metadata = self.metadata
         int_table = Table(
             "integer_table",
@@ -101,7 +112,13 @@ class IntegerTest(_IntegerTest):
 
     @provide_metadata
     def _literal_round_trip(self, type_, input_, output, filter_=None):
-        """test literal rendering """
+        """Sql alchemy is not able cleanup data and drop the table correctly,
+        table was already exists after related tests finished, so it doesn't
+        create a new table and when started tests for other data type  following
+        insertions will fail with `400 Duplicate name in schema: t.
+        Overriding the tests to create a new table for test and drop table manually
+        before it creates a new table to avoid the same failures.
+        """
 
         # for literal, we test the literal render in an INSERT
         # into a typed column.  we can then SELECT it back as its
@@ -135,4 +152,3 @@ class IntegerTest(_IntegerTest):
                 if filter_ is not None:
                     value = filter_(value)
                 assert value in output
-            conn.execute(t.delete())
