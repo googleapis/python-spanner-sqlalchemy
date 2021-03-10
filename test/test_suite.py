@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
+
 from sqlalchemy.testing import config
 from sqlalchemy.testing import eq_
 from sqlalchemy.testing import provide_metadata
@@ -34,15 +36,14 @@ from sqlalchemy.testing.suite.test_dialect import (  # noqa: F401, F403
 
 
 from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
-    DateHistoricTest as _DateHistoricTest,
     DateTest as _DateTest,
+    DateTimeHistoricTest,
     DateTimeCoercedToDateTimeTest as _DateTimeCoercedToDateTimeTest,
-    DateTimeHistoricTest as _DateTimeHistoricTest,
     DateTimeMicrosecondsTest as _DateTimeMicrosecondsTest,
     DateTimeTest as _DateTimeTest,
     TimeTest as _TimeTest,
     TimeMicrosecondsTest as _TimeMicrosecondsTest,
-    TimestampMicrosecondsTest as _TimestampMicrosecondsTest,
+    TimestampMicrosecondsTest,
 )
 
 
@@ -86,6 +87,12 @@ class EscapingTest(_EscapingTest):
 
 
 class DateTest(_DateTest):
+    """Cloud Spanner supports tables with empty primary key, but
+    only single one row can be inserted into such a table -
+    following insertions will fail with `400 id must not be NULL in table date_table`.
+    Overriding the tests and add a manual primary key value to avoid the same failures.
+    """
+
     def test_round_trip(self):
         date_table = self.tables.date_table
 
@@ -136,6 +143,13 @@ class DateTest(_DateTest):
 class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
     @classmethod
     def define_tables(cls, metadata):
+        """Sql alchemy is not able cleanup data and drop the table correctly,
+            table was already exists after related tests finished, so it doesn't
+            create a new table and when started tests for other data type  following
+            insertions will fail with `400 Invalid value for column date_data in
+            table date_table: Expected DATE`.
+            Overriding the tests to create a new table for test to avoid the same failures.
+        """
         Table(
             "datetime_table",
             metadata,
@@ -144,6 +158,11 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
         )
 
     def test_null(self):
+        """Cloud Spanner supports tables with empty primary key, but
+            only single one row can be inserted into such a table -
+            following insertions will fail with `400 id must not be NULL in table date_table`.
+            Overriding the tests and add a manual primary key value to avoid the same failures.
+        """
         date_table = self.tables.datetime_table
 
         config.db.execute(date_table.insert(), {"id": 1, "date_data": None})
@@ -152,6 +171,14 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
         eq_(row, (None,))
 
     def test_round_trip(self):
+        """Cloud Spanner supports tables with empty primary key, but
+            only single one row can be inserted into such a table -
+            following insertions will fail with `400 id must not be NULL in table date_table`.
+            Overriding the tests and add a manual primary key value to avoid the same failures.
+
+            Spanner convert timestamp into `%Y-%m-%dT%H:%M:%S.%fZ` format, so avoid assert
+            failures convert datetime input to the desire timestamp format.
+        """
         date_table = self.tables.datetime_table
         config.db.execute(date_table.insert(), {"id": 1, "date_data": self.data})
 
@@ -163,6 +190,11 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
 
     @requires.standalone_null_binds_whereclause
     def test_null_bound_comparison(self):
+        """Cloud Spanner supports tables with empty primary key, but
+            only single one row can be inserted into such a table -
+            following insertions will fail with `400 id must not be NULL in table date_table`.
+            Overriding the tests and add a manual primary key value to avoid the same failures.
+        """
         # this test is based on an Oracle issue observed in #4886.
         # passing NULL for an expression that needs to be interpreted as
         # a certain type, does the DBAPI have the info it needs to do this.
@@ -190,47 +222,40 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
 
 
 class DateTimeTest(_DateTimeTest, DateTimeMicrosecondsTest):
+    """
+    DateTime class tests have same failures same as DateTimeMicrosecondsTest class tests,
+    so to avoid that failures and maintain DRY concept just inherit the class to run tests
+    successfully.
+    """
+
     pass
 
 
-class DateTimeCoercedToDateTimeTest(
-    _DateTimeCoercedToDateTimeTest, DateTimeMicrosecondsTest
-):
-    def test_round_trip(self):
-        date_table = self.tables.datetime_table
-        config.db.execute(date_table.insert(), {"id": 1, "date_data": self.data})
-
-        row = config.db.execute(select([date_table.c.date_data])).first()
-        compare = self.compare or self.data
-
-        eq_(row[0].date(), compare)
-        assert isinstance(row[0], DatetimeWithNanoseconds)
-
-
-class DateTimeHistoricTest(_DateTimeHistoricTest):
-    pass
-
-
-class DateHistoricTest(_DateHistoricTest):
-    pass
-
-
-class TimestampMicrosecondsTest(_TimestampMicrosecondsTest):
-    pass
-
-
-class TimeMicrosecondsTest(_TimeMicrosecondsTest):
-    # Time data type doesn't support by python-spanner.
+class TimeTests(_TimeMicrosecondsTest, _TimeTest):
+    @pytest.mark.skip("Spanner doesn't support Time data type.")
     def test_null(self):
         pass
 
+    @pytest.mark.skip("Spanner doesn't support Time data type.")
     def test_round_trip(self):
         pass
 
+    @pytest.mark.skip("Spanner doesn't support Time data type.")
     @requires.standalone_null_binds_whereclause
     def test_null_bound_comparison(self):
         pass
 
 
-class TimeTest(_TimeTest, TimeMicrosecondsTest):
-    pass
+class DateTimeCoercedToDateTimeTest(_DateTimeCoercedToDateTimeTest, TimeTests):
+    @pytest.mark.skip("Spanner doesn't date coerces from datetime.")
+    def test_null(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't date coerces from datetime.")
+    def test_round_trip(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't date coerces from datetime.")
+    @requires.standalone_null_binds_whereclause
+    def test_null_bound_comparison(self):
+        pass
