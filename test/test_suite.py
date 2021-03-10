@@ -158,7 +158,7 @@ class ExistsTest(_ExistsTest):
         WHERE EXISTS (SELECT ...)
 
         SELECT WHERE without FROM clause is not supported by Spanner.
-        Rewriting the test to force it generating query like:
+        Rewriting the test to force it to generate a query like:
 
         SELECT EXISTS (SELECT ...)
         """
@@ -180,7 +180,7 @@ class ExistsTest(_ExistsTest):
         WHERE EXISTS (SELECT ...)
 
         SELECT WHERE without FROM clause is not supported by Spanner.
-        Rewriting the test to force it generating query like:
+        Rewriting the test to force it to generate a query like:
 
         SELECT EXISTS (SELECT ...)
         """
