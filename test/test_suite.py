@@ -136,8 +136,8 @@ class BooleanTest(_BooleanTest):
         """
         SPANNER OVERRIDE:
 
-        Cloud Spanner supports tables with empty primary key, but
-        only single one row can be inserted into such a table -
+        Cloud Spanner supports tables with an empty primary key, but
+        only a single row can be inserted into such a table -
         following insertions will fail with `Row [] already exists".
         Overriding the test to avoid the same failure.
         """
