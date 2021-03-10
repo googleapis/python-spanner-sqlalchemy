@@ -27,13 +27,12 @@ from sqlalchemy import Boolean
 from sqlalchemy import String
 
 from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 
-from sqlalchemy.testing.suite.test_dialect import (  # noqa: F401, F403
-    EscapingTest as _EscapingTest,
-)
-from sqlalchemy.testing.suite.test_cte import CTETest as _CTETest  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_cte import CTETest as _CTETest
+from sqlalchemy.testing.suite.test_ddl import TableDDLTest as _TableDDLTest
+from sqlalchemy.testing.suite.test_dialect import EscapingTest as _EscapingTest
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
 
 
@@ -143,3 +142,11 @@ class BooleanTest(_BooleanTest):
         """
         self._literal_round_trip(Boolean(), [True], [True])
         self._literal_round_trip(Boolean(), [False], [False])
+
+
+class TableDDLTest(_TableDDLTest):
+    @pytest.mark.skip(
+        "Spanner table name must start with an uppercase or lowercase letter"
+    )
+    def test_underscore_names(self):
+        pass
