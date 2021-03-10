@@ -23,16 +23,22 @@ from sqlalchemy.testing.schema import Column
 from sqlalchemy.testing.schema import Table
 from sqlalchemy import literal_column
 from sqlalchemy import select, case, bindparam
+from sqlalchemy import exists
+from sqlalchemy import Boolean
 from sqlalchemy import String
 from sqlalchemy.testing import requires
 from sqlalchemy.types import Integer
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
+from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 
 from sqlalchemy.testing.suite.test_dialect import (  # noqa: F401, F403
     EscapingTest as _EscapingTest,
 )
+from sqlalchemy.testing.suite.test_cte import CTETest as _CTETest  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
+from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
 
 
 from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
@@ -84,6 +90,121 @@ class EscapingTest(_EscapingTest):
                 ),
                 "some %% other value",
             )
+
+
+class CTETest(_CTETest):
+    @pytest.mark.skip("INSERT from WITH subquery is not supported")
+    def test_insert_from_select_round_trip(self):
+        """
+        The test checks if an INSERT can be done from a cte, like:
+
+        WITH some_cte AS (...)
+        INSERT INTO some_other_table (... SELECT * FROM some_cte)
+
+        Such queries are not supported by Spanner.
+        """
+        pass
+
+    @pytest.mark.skip("DELETE from WITH subquery is not supported")
+    def test_delete_scalar_subq_round_trip(self):
+        """
+        The test checks if a DELETE can be done from a cte, like:
+
+        WITH some_cte AS (...)
+        DELETE FROM some_other_table (... SELECT * FROM some_cte)
+
+        Such queries are not supported by Spanner.
+        """
+        pass
+
+    @pytest.mark.skip("DELETE from WITH subquery is not supported")
+    def test_delete_from_round_trip(self):
+        """
+        The test checks if a DELETE can be done from a cte, like:
+
+        WITH some_cte AS (...)
+        DELETE FROM some_other_table (... SELECT * FROM some_cte)
+
+        Such queries are not supported by Spanner.
+        """
+        pass
+
+    @pytest.mark.skip("UPDATE from WITH subquery is not supported")
+    def test_update_from_round_trip(self):
+        """
+        The test checks if an UPDATE can be done from a cte, like:
+
+        WITH some_cte AS (...)
+        UPDATE some_other_table
+        SET (... SELECT * FROM some_cte)
+
+        Such queries are not supported by Spanner.
+        """
+        pass
+
+    @pytest.mark.skip("WITH RECURSIVE subqueries are not supported")
+    def test_select_recursive_round_trip(self):
+        pass
+
+
+class BooleanTest(_BooleanTest):
+    def test_render_literal_bool(self):
+        """
+        SPANNER OVERRIDE:
+
+        Cloud Spanner supports tables with an empty primary key, but
+        only a single row can be inserted into such a table -
+        following insertions will fail with `Row [] already exists".
+        Overriding the test to avoid the same failure.
+        """
+        self._literal_round_trip(Boolean(), [True], [True])
+        self._literal_round_trip(Boolean(), [False], [False])
+
+
+class ExistsTest(_ExistsTest):
+    def test_select_exists(self, connection):
+        """
+        SPANNER OVERRIDE:
+
+        The original test is trying to execute a query like:
+
+        SELECT ...
+        WHERE EXISTS (SELECT ...)
+
+        SELECT WHERE without FROM clause is not supported by Spanner.
+        Rewriting the test to force it to generate a query like:
+
+        SELECT EXISTS (SELECT ...)
+        """
+        stuff = self.tables.stuff
+        eq_(
+            connection.execute(
+                select((exists().where(stuff.c.data == "some data"),))
+            ).fetchall(),
+            [(True,)],
+        )
+
+    def test_select_exists_false(self, connection):
+        """
+        SPANNER OVERRIDE:
+
+        The original test is trying to execute a query like:
+
+        SELECT ...
+        WHERE EXISTS (SELECT ...)
+
+        SELECT WHERE without FROM clause is not supported by Spanner.
+        Rewriting the test to force it to generate a query like:
+
+        SELECT EXISTS (SELECT ...)
+        """
+        stuff = self.tables.stuff
+        eq_(
+            connection.execute(
+                select((exists().where(stuff.c.data == "no data"),))
+            ).fetchall(),
+            [(False,)],
+        )
 
 
 class DateTest(_DateTest):
