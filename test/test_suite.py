@@ -220,10 +220,10 @@ class DateTest(_DateTest):
         """
         SPANNER OVERRIDE:
 
-        Cloud Spanner supports tables with empty primary key, but
-        only single one row can be inserted into such a table -
-        following insertions will fail with `400 id must not be NULL in table date_table`.
-        Overriding the tests and add a manual primary key value to avoid the same failures.
+        Cloud Spanner supports tables with an empty primary key, but only one
+        row can be inserted into such a table - following insertions will fail
+        with `400 id must not be NULL in table date_table`.
+        Overriding the tests to add a manual primary key value to avoid the same failures.
         """
         date_table = self.tables.date_table
 
@@ -239,10 +239,10 @@ class DateTest(_DateTest):
         """
         SPANNER OVERRIDE:
 
-        Cloud Spanner supports tables with empty primary key, but
-        only single one row can be inserted into such a table -
-        following insertions will fail with `400 id must not be NULL in table date_table`.
-        Overriding the tests and add a manual primary key value to avoid the same failures.
+        Cloud Spanner supports tables with an empty primary key, but only one
+        row can be inserted into such a table - following insertions will fail
+        with `400 id must not be NULL in table date_table`.
+        Overriding the tests to add a manual primary key value to avoid the same failures.
         """
         date_table = self.tables.date_table
 
@@ -256,10 +256,10 @@ class DateTest(_DateTest):
         """
         SPANNER OVERRIDE:
 
-        Cloud Spanner supports tables with empty primary key, but
-        only single one row can be inserted into such a table -
-        following insertions will fail with `400 id must not be NULL in table date_table`.
-        Overriding the tests and add a manual primary key value to avoid the same failures.
+        Cloud Spanner supports tables with an empty primary key, but only one
+        row can be inserted into such a table - following insertions will fail
+        with `400 id must not be NULL in table date_table`.
+        Overriding the tests to add a manual primary key value to avoid the same failures.
         """
 
         # this test is based on an Oracle issue observed in #4886.
@@ -295,11 +295,11 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
         SPANNER OVERRIDE:
 
         Spanner is not able cleanup data and drop the table correctly,
-        table was already exists after related tests finished, so it doesn't
-        create a new table and when started tests for other data type  following
-        insertions will fail with `400 Invalid value for column date_data in
+        table already exists after related tests finished, so it doesn't
+        create a new table and insertions for tests for other data types
+        will fail with `400 Invalid value for column date_data in
         table date_table: Expected DATE`.
-        Overriding the tests to create a new table for test to avoid the same failures.
+        Overriding the tests to create a new table for tests to avoid the same failures.
         """
         Table(
             "datetime_table",
@@ -312,10 +312,10 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
         """
         SPANNER OVERRIDE:
 
-        Cloud Spanner supports tables with empty primary key, but
-        only single one row can be inserted into such a table -
-        following insertions will fail with `400 id must not be NULL in table date_table`.
-        Overriding the tests and add a manual primary key value to avoid the same failures.
+        Cloud Spanner supports tables with an empty primary key, but only one
+        row can be inserted into such a table - following insertions will fail
+        with `400 id must not be NULL in table datetime_table`.
+        Overriding the tests to add a manual primary key value to avoid the same failures.
         """
         date_table = self.tables.datetime_table
 
@@ -328,12 +328,12 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
         """
         SPANNER OVERRIDE:
 
-        Cloud Spanner supports tables with empty primary key, but
-        only single one row can be inserted into such a table -
-        following insertions will fail with `400 id must not be NULL in table date_table`.
-        Overriding the tests and add a manual primary key value to avoid the same failures.
+        Cloud Spanner supports tables with an empty primary key, but only one
+        row can be inserted into such a table - following insertions will fail
+        with `400 id must not be NULL in table datetime_table`.
+        Overriding the tests to add a manual primary key value to avoid the same failures.
 
-        Spanner convert timestamp into `%Y-%m-%dT%H:%M:%S.%fZ` format, so avoid assert
+        Spanner converts timestamp into `%Y-%m-%dT%H:%M:%S.%fZ` format, so to avoid assert
         failures convert datetime input to the desire timestamp format.
         """
         date_table = self.tables.datetime_table
@@ -350,10 +350,10 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
         """
         SPANNER OVERRIDE:
 
-        Cloud Spanner supports tables with empty primary key, but
-        only single one row can be inserted into such a table -
-        following insertions will fail with `400 id must not be NULL in table date_table`.
-        Overriding the tests and add a manual primary key value to avoid the same failures.
+        Cloud Spanner supports tables with an empty primary key, but only one
+        row can be inserted into such a table - following insertions will fail
+        with `400 id must not be NULL in table datetime_table`.
+        Overriding the tests to add a manual primary key value to avoid the same failures.
         """
         # this test is based on an Oracle issue observed in #4886.
         # passing NULL for an expression that needs to be interpreted as
