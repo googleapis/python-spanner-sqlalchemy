@@ -31,12 +31,12 @@ from sqlalchemy.types import Integer
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
 from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 
-from sqlalchemy.testing.suite.test_dialect import (  # noqa: F401, F403
-    EscapingTest as _EscapingTest,
-)
-from sqlalchemy.testing.suite.test_cte import CTETest as _CTETest  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_cte import CTETest as _CTETest
+from sqlalchemy.testing.suite.test_ddl import TableDDLTest as _TableDDLTest
+from sqlalchemy.testing.suite.test_dialect import EscapingTest as _EscapingTest
 from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
 
@@ -205,6 +205,14 @@ class ExistsTest(_ExistsTest):
             ).fetchall(),
             [(False,)],
         )
+
+
+class TableDDLTest(_TableDDLTest):
+    @pytest.mark.skip(
+        "Spanner table name must start with an uppercase or lowercase letter"
+    )
+    def test_underscore_names(self):
+        pass
 
 
 class DateTest(_DateTest):
