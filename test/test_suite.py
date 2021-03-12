@@ -30,12 +30,17 @@ from sqlalchemy.testing import requires
 from sqlalchemy.types import Integer
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
+from sqlalchemy.testing.suite.test_ddl import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 
 from sqlalchemy.testing.suite.test_cte import CTETest as _CTETest
 from sqlalchemy.testing.suite.test_ddl import TableDDLTest as _TableDDLTest
+from sqlalchemy.testing.suite.test_ddl import (
+    LongNameBlowoutTest as _LongNameBlowoutTest,
+)
+
 from sqlalchemy.testing.suite.test_dialect import EscapingTest as _EscapingTest
 from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
@@ -213,6 +218,11 @@ class TableDDLTest(_TableDDLTest):
     )
     def test_underscore_names(self):
         pass
+
+
+@pytest.mark.skip("Max identifier length in Spanner is 128")
+class LongNameBlowoutTest(_LongNameBlowoutTest):
+    pass
 
 
 class DateTest(_DateTest):
