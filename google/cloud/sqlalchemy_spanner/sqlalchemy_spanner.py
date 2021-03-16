@@ -314,6 +314,7 @@ FROM information_schema.indexes as i
 JOIN information_schema.index_columns AS ic
     ON ic.index_name = i.index_name AND ic.table_name = i.table_name
 WHERE i.table_name="{table_name}"
+AND i.index_type != 'PRIMARY_KEY'
 GROUP BY i.index_name, i.is_unique
 """.format(
             table_name=table_name
