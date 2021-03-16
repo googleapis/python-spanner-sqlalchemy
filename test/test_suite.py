@@ -37,8 +37,6 @@ from sqlalchemy import String
 
 from google.cloud import spanner_dbapi
 
-from sqlalchemy.testing.suite.test_reflection import *  # noqa: F401, F403
-
 from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_ddl import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
