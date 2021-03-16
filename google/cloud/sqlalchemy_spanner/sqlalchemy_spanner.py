@@ -146,6 +146,9 @@ class SpannerTypeCompiler(GenericTypeCompiler):
     def visit_DATETIME(self, type_, **kw):
         return "TIMESTAMP"
 
+    def visit_NUMERIC(self, type_, **kw):
+        return "NUMERIC"
+
 
 class SpannerDialect(DefaultDialect):
     """Cloud Spanner dialect.
