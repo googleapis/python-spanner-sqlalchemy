@@ -42,6 +42,8 @@ from sqlalchemy.testing.suite.test_dialect import EscapingTest as _EscapingTest
 from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
 
+config.test_schema = ""
+
 
 class EscapingTest(_EscapingTest):
     @provide_metadata
