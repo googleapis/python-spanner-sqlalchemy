@@ -88,19 +88,20 @@ class SpannerDDLCompiler(DDLCompiler):
 
     def visit_drop_table(self, drop_table):
         """
-        Cloud Spanner doesn't let to drop table which has indexes
-        or foreign key constraints. Building several DDLs (separated
-        by semicolons) to drop indexes and foreign keys of the table
-        before actually executing DROP TABLE statement.
+        Cloud Spanner doesn't drop tables which have indexes
+        or foreign key constraints. This method builds several DDL
+        statements separated by semicolons to drop the indexes and
+        foreign keys constraints of the table before the DROP TABLE
+        statement.
 
         Args:
             (sqlalchemy.schema.DropTable): DROP TABLE statement object.
 
         Returns:
             str:
-                DDLs separated by semicolons, which will sequentially
-                drop indexes, foreign keys constraints and then the
-                table itself.
+                DDL statements separated by semicolons, which will
+                sequentially drop indexes, foreign keys constraints
+                and then the table itself.
         """
         constrs = ""
         for cons in drop_table.element.constraints:
