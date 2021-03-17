@@ -432,13 +432,13 @@ class IntegerTest(_IntegerTest):
         """
         SPANNER OVERRIDE:
 
-        This is the helper method for integer class tests which creates table and
-        perform insert operation.
-        Cloud Spanner supports tables with empty primary key, but only single one
+        This is the helper method for integer class tests which creates a table and
+        performs an insert operation.
+        Cloud Spanner supports tables with an empty primary key, but only one
         row can be inserted into such a table - following insertions will fail with
         `400 id must not be NULL in table date_table`.
-        Overriding the tests and add a manual primary key value to avoid the same
-        failures and delete the from the table at the end.
+        Overriding the tests and adding a manual primary key value to avoid the same
+        failures and deleting the table at the end.
         """
         metadata = self.metadata
         int_table = Table(
@@ -466,6 +466,8 @@ class IntegerTest(_IntegerTest):
     @provide_metadata
     def _literal_round_trip(self, type_, input_, output, filter_=None):
         """
+        TODO: Remove this override method once DDL issue resolved in spanner_dbapi
+
         SPANNER OVERRIDE:
 
         Spanner is not able cleanup data and drop the table correctly,
