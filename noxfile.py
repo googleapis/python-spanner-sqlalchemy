@@ -68,7 +68,7 @@ def lint_setup_py(session):
 def compliance_test(session):
     """Run SQLAlchemy dialect compliance test suite."""
     session.install("pytest")
-    session.install("sqlalchemy")
+    session.install("sqlalchemy==1.3.23")
     session.install(
         "git+https://github.com/googleapis/python-spanner.git#egg=google-cloud-spanner"
     )
