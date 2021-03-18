@@ -48,9 +48,6 @@ from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
 from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
 
-config.test_schema = ""
-
-
 from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     DateTest as _DateTest,
     DateTimeHistoricTest,
@@ -61,6 +58,8 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     TimeMicrosecondsTest as _TimeMicrosecondsTest,
     TimestampMicrosecondsTest,
 )
+
+config.test_schema = ""
 
 
 class EscapingTest(_EscapingTest):
@@ -467,16 +466,15 @@ class IntegerTest(_IntegerTest):
     @provide_metadata
     def _literal_round_trip(self, type_, input_, output, filter_=None):
         """
-        TODO: Remove this override method once DDL issue resolved in spanner_dbapi
-
         SPANNER OVERRIDE:
 
-        Spanner is not able cleanup data and drop the table correctly,
-        table was already exists after related tests finished, so it doesn't
-        create a new table and when started tests for other data type  following
-        insertions will fail with `400 Duplicate name in schema: t.
-        Overriding the tests to create a new table for test and drop table manually
-        before it creates a new table to avoid the same failures.
+        Spanner DBAPI does not execute DDL statements unless followed by a
+        non DDL statement, which is preventing correct table clean up.
+        The table already exists after related tests finish, so it doesn't
+        create a new table and when running tests for other data types
+        insertions will fail with `400 Duplicate name in schema: t`.
+        Overriding the tests to create and drop a new table to prevent
+        database existence errors.
         """
 
         # for literal, we test the literal render in an INSERT
@@ -484,7 +482,6 @@ class IntegerTest(_IntegerTest):
         # official type; ideally we'd be able to use CAST here
         # but MySQL in particular can't CAST fully
         t = Table("int_t", self.metadata, Column("x", type_))
-        t.drop(checkfirst=True)
         t.create()
 
         with db.connect() as conn:
@@ -497,6 +494,7 @@ class IntegerTest(_IntegerTest):
                     )
                 )
                 conn.execute(ins)
+                conn.execute("SELECT 1")
 
             if self.supports_whereclause:
                 stmt = t.select().where(t.c.x == literal(value))
