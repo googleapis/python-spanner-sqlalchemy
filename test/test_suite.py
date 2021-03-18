@@ -46,8 +46,9 @@ from sqlalchemy.testing.suite.test_ddl import (
 from sqlalchemy.testing.suite.test_dialect import EscapingTest as _EscapingTest
 from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
-
 from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
+
+config.test_schema = ""
 
 
 from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
