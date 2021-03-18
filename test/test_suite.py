@@ -46,9 +46,6 @@ from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
 from sqlalchemy.testing.suite.test_types import StringTest as _StringTest
 
-config.test_schema = ""
-
-
 from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     DateTest as _DateTest,
     DateTimeHistoricTest,
@@ -59,6 +56,8 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     TimeMicrosecondsTest as _TimeMicrosecondsTest,
     TimestampMicrosecondsTest,
 )
+
+config.test_schema = ""
 
 
 class EscapingTest(_EscapingTest):
@@ -433,12 +432,13 @@ class StringTest(_StringTest):
 
         SPANNER OVERRIDE:
 
-        Spanner is not cleaning up data and dropping the table correctly,
-        as the DDL statements are being queued, so it doesn't
-        create a new table and when started new tests, following
-        insertions will fail with `400 Duplicate name in schema: t.
-        Overriding the tests to create a new table for test and drop table manually
-        before it creates a new table to avoid the same failures.
+        Spanner DBAPI does not execute DDL statements unless followed by a
+        non DDL statement, which is preventing correct table clean up.
+        The table already exists after related tests finish, so it doesn't
+        create a new table and when running tests for other data types
+        insertions will fail with `400 Duplicate name in schema: t`.
+        Overriding the tests to create and drop a new table to prevent
+        database existence errors.
         """
 
         # for literal, we test the literal render in an INSERT
@@ -446,7 +446,6 @@ class StringTest(_StringTest):
         # official type; ideally we'd be able to use CAST here
         # but MySQL in particular can't CAST fully
         t = Table("t_string", self.metadata, Column("x", type_))
-        t.drop(checkfirst=True)
         t.create()
 
         with db.connect() as conn:
@@ -459,6 +458,7 @@ class StringTest(_StringTest):
                     )
                 )
                 conn.execute(ins)
+                conn.execute("SELECT 1")
 
             if self.supports_whereclause:
                 stmt = t.select().where(t.c.x == literal(value))
