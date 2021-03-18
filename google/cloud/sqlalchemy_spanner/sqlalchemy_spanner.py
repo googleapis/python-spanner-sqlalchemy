@@ -14,7 +14,7 @@
 
 import re
 
-from sqlalchemy import types
+from sqlalchemy import types, ForeignKeyConstraint
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.sql.compiler import (
@@ -85,6 +85,36 @@ class SpannerSQLCompiler(SQLCompiler):
 
 class SpannerDDLCompiler(DDLCompiler):
     """Spanner DDL statements compiler."""
+
+    def visit_drop_table(self, drop_table):
+        """
+        Cloud Spanner doesn't drop tables which have indexes
+        or foreign key constraints. This method builds several DDL
+        statements separated by semicolons to drop the indexes and
+        foreign keys constraints of the table before the DROP TABLE
+        statement.
+
+        Args:
+            (sqlalchemy.schema.DropTable): DROP TABLE statement object.
+
+        Returns:
+            str:
+                DDL statements separated by semicolons, which will
+                sequentially drop indexes, foreign keys constraints
+                and then the table itself.
+        """
+        constrs = ""
+        for cons in drop_table.element.constraints:
+            if isinstance(cons, ForeignKeyConstraint) and cons.name:
+                constrs += "ALTER TABLE {table} DROP CONSTRAINT {constr};".format(
+                    table=drop_table.element.name, constr=cons.name
+                )
+
+        indexes = ""
+        for index in drop_table.element.indexes:
+            indexes += "DROP INDEX {};".format(index.name)
+
+        return indexes + constrs + str(drop_table)
 
     def visit_primary_key_constraint(self, constraint):
         """Build primary key definition.
@@ -310,7 +340,9 @@ SELECT
 FROM information_schema.indexes as i
 JOIN information_schema.index_columns AS ic
     ON ic.index_name = i.index_name AND ic.table_name = i.table_name
-WHERE i.table_name="{table_name}"
+WHERE
+    i.table_name="{table_name}"
+    AND i.index_type != 'PRIMARY_KEY'
 GROUP BY i.index_name, i.is_unique
 """.format(
             table_name=table_name
@@ -371,6 +403,33 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "PRIMARY KEY"
                 cols.append(row[0])
 
         return {"constrained_columns": cols}
+
+    def get_schema_names(self, connection, **kw):
+        """Get all the schemas in the database.
+
+        Args:
+            connection (Union[
+                sqlalchemy.engine.base.Connection,
+                sqlalchemy.engine.Engine
+            ]):
+                SQLAlchemy connection or engine object.
+
+        Returns:
+            list: Schema names.
+        """
+        if isinstance(connection, Engine):
+            connection = connection.connect()
+
+        schemas = []
+        with connection.connection.database.snapshot() as snap:
+            rows = snap.execute_sql(
+                "SELECT schema_name FROM information_schema.schemata"
+            )
+
+            for row in rows:
+                schemas.append(row[0])
+
+        return schemas
 
     def get_foreign_keys(self, connection, table_name, schema=None, **kw):
         """Get the table foreign key constraints.
