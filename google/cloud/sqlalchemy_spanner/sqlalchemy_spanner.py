@@ -385,7 +385,7 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "PRIMARY KEY"
                 SQLAlchemy connection or engine object.
 
         Returns:
-            list: Schemas' names.
+            list: Schema names.
         """
         if isinstance(connection, Engine):
             connection = connection.connect()
