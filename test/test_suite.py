@@ -20,6 +20,7 @@ import pytest
 import sqlalchemy
 from sqlalchemy import inspect
 from sqlalchemy import testing
+from sqlalchemy import ForeignKey
 from sqlalchemy import MetaData
 from sqlalchemy.schema import DDL
 from sqlalchemy.testing import config
@@ -118,6 +119,29 @@ class EscapingTest(_EscapingTest):
 
 
 class CTETest(_CTETest):
+    @classmethod
+    def define_tables(cls, metadata):
+        """
+        The original method creates a foreign key without a name,
+        which causes troubles on test cleanup. Overriding the
+        method to explicitly set a foreign key name.
+        """
+        Table(
+            "some_table",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("data", String(50)),
+            Column("parent_id", ForeignKey("some_table.id", name="fk_some_table")),
+        )
+
+        Table(
+            "some_other_table",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("data", String(50)),
+            Column("parent_id", Integer),
+        )
+
     @pytest.mark.skip("INSERT from WITH subquery is not supported")
     def test_insert_from_select_round_trip(self):
         """
