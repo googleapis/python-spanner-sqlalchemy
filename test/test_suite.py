@@ -41,6 +41,7 @@ from sqlalchemy import exists
 from sqlalchemy import Boolean
 from sqlalchemy import String
 from sqlalchemy.types import Integer
+from sqlalchemy.types import Numeric
 from sqlalchemy.testing import requires
 
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
@@ -727,3 +728,18 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             else:
                 answer = ["dingalings", "email_addresses", "user_tmp", "users"]
                 eq_(sorted(table_names), answer)
+
+    @testing.requires.table_reflection
+    def test_numeric_reflection(self):
+        """
+        SPANNER OVERRIDE:
+
+        Spanner defines NUMERIC type with the constant precision=38
+        and scale=9. Overriding the test to check if the NUMERIC
+        column is successfully created and has dimensions
+        correct for Cloud Spanner.
+        """
+        for typ in self._type_round_trip(Numeric(18, 5)):
+            assert isinstance(typ, Numeric)
+            eq_(typ.precision, 38)
+            eq_(typ.scale, 9)
