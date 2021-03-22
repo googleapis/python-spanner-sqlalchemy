@@ -16,7 +16,7 @@
 
 import pytest
 
-from sqlalchemy.testing import config, db
+from sqlalchemy.testing import config, db, engines
 from sqlalchemy.testing import eq_
 from sqlalchemy.testing import provide_metadata
 from sqlalchemy.testing.schema import Column
@@ -60,6 +60,37 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
 )
 
 config.test_schema = ""
+
+
+def drop_all_tables(metadata, bind):
+    """
+    SPANNER OVERRIDE:
+
+    Spanner DBAPI does not execute DDL statements unless followed by a
+    non DDL statement, which is preventing correct table clean up.
+    Here need to call the method `connection.run_prior_DDL_statements()`
+    manually  after `DROP TABLE` executed, especially when `autocommit=False`.
+    """
+
+    engines.testing_reaper.close_all()
+    if hasattr(bind, "close"):
+        bind.close()
+
+    if not config.db.dialect.supports_alter:
+        from . import assertions
+
+        with assertions.expect_warnings("Can't sort tables", assert_=False):
+            metadata.drop_all(bind)
+    else:
+        metadata.drop_all(bind)
+
+    list_connection = list(engines.testing_reaper.conns)
+
+    if list_connection:
+        list_connection[0][0].run_prior_DDL_statements()
+
+
+engines.drop_all_tables = drop_all_tables
 
 
 class EscapingTest(_EscapingTest):
