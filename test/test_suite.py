@@ -16,7 +16,7 @@
 
 import pytest
 
-from sqlalchemy.testing import config, db, engines
+from sqlalchemy.testing import config, db
 from sqlalchemy.testing import eq_
 from sqlalchemy.testing import provide_metadata
 from sqlalchemy.testing.schema import Column
@@ -47,7 +47,6 @@ from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
 from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
 from sqlalchemy.testing.suite.test_types import StringTest as _StringTest
-
 
 from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     DateTest as _DateTest,
@@ -467,7 +466,6 @@ class IntegerTest(_IntegerTest):
     @provide_metadata
     def _literal_round_trip(self, type_, input_, output, filter_=None):
         """
-
         SPANNER OVERRIDE:
 
         Spanner DBAPI does not execute DDL statements unless followed by a
