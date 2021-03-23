@@ -17,17 +17,20 @@
 import pytest
 import decimal
 
-from sqlalchemy.testing import config
+from sqlalchemy.testing import config, db
 from sqlalchemy.testing import eq_
 from sqlalchemy.testing import provide_metadata, emits_warning, requires
 from sqlalchemy.testing.schema import Column
 from sqlalchemy.testing.schema import Table
 from sqlalchemy import literal_column
-from sqlalchemy import select, case, bindparam
+
+from sqlalchemy import bindparam, case, literal, select, util
 from sqlalchemy import exists
 from sqlalchemy import Boolean, Float, Numeric, literal
 from sqlalchemy import String
 from sqlalchemy.types import Integer
+from sqlalchemy.testing import requires
+
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
 from sqlalchemy.testing.suite.test_ddl import *  # noqa: F401, F403
@@ -44,8 +47,8 @@ from sqlalchemy.testing.suite.test_ddl import (
 from sqlalchemy.testing.suite.test_dialect import EscapingTest as _EscapingTest
 from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
+from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
 from sqlalchemy.testing.suite.test_types import NumericTest as _NumericTest
-
 
 from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     DateTest as _DateTest,
@@ -57,6 +60,8 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     TimeMicrosecondsTest as _TimeMicrosecondsTest,
     TimestampMicrosecondsTest,
 )
+
+config.test_schema = ""
 
 
 class EscapingTest(_EscapingTest):
@@ -423,7 +428,43 @@ class DateTimeCoercedToDateTimeTest(_DateTimeCoercedToDateTimeTest):
     pass
 
 
-class NumericTest(_NumericTest):
+class IntegerTest(_IntegerTest):
+    @provide_metadata
+    def _round_trip(self, datatype, data):
+        """
+        SPANNER OVERRIDE:
+
+        This is the helper method for integer class tests which creates a table and
+        performs an insert operation.
+        Cloud Spanner supports tables with an empty primary key, but only one
+        row can be inserted into such a table - following insertions will fail with
+        `400 id must not be NULL in table date_table`.
+        Overriding the tests and adding a manual primary key value to avoid the same
+        failures and deleting the table at the end.
+        """
+        metadata = self.metadata
+        int_table = Table(
+            "integer_table",
+            metadata,
+            Column("id", Integer, primary_key=True, test_needs_autoincrement=True),
+            Column("integer_data", datatype),
+        )
+
+        metadata.create_all(config.db)
+
+        config.db.execute(int_table.insert(), {"id": 1, "integer_data": data})
+
+        row = config.db.execute(select([int_table.c.integer_data])).first()
+
+        eq_(row, (data,))
+
+        if util.py3k:
+            assert isinstance(row[0], int)
+        else:
+            assert isinstance(row[0], (long, int))  # noqa
+
+        config.db.execute(int_table.delete())
+
     @provide_metadata
     def _literal_round_trip(self, type_, input_, output, filter_=None):
         """
@@ -440,12 +481,57 @@ class NumericTest(_NumericTest):
         # into a typed column.  we can then SELECT it back as its
         # official type; ideally we'd be able to use CAST here
         # but MySQL in particular can't CAST fully
-        t = Table("t", self.metadata, Column("x", type_))
+
+        t = Table("int_t", self.metadata, Column("x", type_))
+        t.create()
+
+        with db.connect() as conn:
+            for value in input_:
+                ins = (
+                    t.insert()
+                    .values(x=literal(value))
+                    .compile(
+                        dialect=db.dialect, compile_kwargs=dict(literal_binds=True),
+                    )
+                )
+                conn.execute(ins)
+
+            if self.supports_whereclause:
+                stmt = t.select().where(t.c.x == literal(value))
+            else:
+                stmt = t.select()
+
+            stmt = stmt.compile(
+                dialect=db.dialect, compile_kwargs=dict(literal_binds=True),
+            )
+            for row in conn.execute(stmt):
+                value = row[0]
+                if filter_ is not None:
+                    value = filter_(value)
+                assert value in output
+
+
+class NumericTest(_NumericTest):
+    @provide_metadata
+    def _literal_round_trip(self, type_, input_, output, filter_=None):
+        """
+        SPANNER OVERRIDE:
+        Spanner is not able cleanup data and drop the table correctly,
+        table was already exists after related tests finished, so it doesn't
+        create a new table and when started tests for other data type  following
+        insertions will fail with `400 Duplicate name in schema: t.
+        Overriding the tests to create a new table for test and drop table manually
+        before it creates a new table to avoid the same failures."""
+
+        # for literal, we test the literal render in an INSERT
+        # into a typed column.  we can then SELECT it back as its
+        # official type; ideally we'd be able to use CAST here
+        # but MySQL in particular can't CAST fully
+        t = Table("t_numeric", self.metadata, Column("x", type_))
         t.drop(checkfirst=True)
         t.create()
 
         with config.db.connect() as conn:
-            config.db.execute(t.delete())
             for value in input_:
                 ins = (
                     t.insert()
@@ -499,14 +585,6 @@ class NumericTest(_NumericTest):
 
         if check_scale:
             eq_([str(x) for x in result], [str(x) for x in output])
-
-    @pytest.mark.skip(
-        "Dialect spanner+spanner does *not* support Decimal objects natively, "
-        "and SQLAlchemy must convert from floating point - rounding errors and "
-        "other issues may occur"
-    )
-    def test_decimal_coerce_round_trip_w_cast(self):
-        pass
 
     @emits_warning(r".*does \*not\* support Decimal objects natively")
     def test_render_literal_numeric(self):
@@ -571,12 +649,29 @@ class NumericTest(_NumericTest):
             filter_=lambda n: n is not None and round(n, 5) or None,
         )
 
-    @pytest.mark.skip(
-        "It's flaky test, due to drop table raise column schema mismatch error."
-    )
     @requires.precision_generic_float_type
     def test_float_custom_scale(self):
-        pass
+        """
+        SPANNER OVERRIDE:
+
+        Cloud Spanner supports tables with an empty primary key, but
+        only a single row can be inserted into such a table -
+        following insertions will fail with `Row [] already exists".
+        Overriding the test to avoid the same failure.
+        """
+        self._do_test(
+            Float(None, decimal_return_scale=7, asdecimal=True),
+            [15.7563827],
+            [decimal.Decimal("15.7563827")],
+            check_scale=True,
+        )
+
+        self._do_test(
+            Float(None, decimal_return_scale=7, asdecimal=True),
+            [15.7563827],
+            [decimal.Decimal("15.7563827")],
+            check_scale=True,
+        )
 
     @pytest.mark.skip("Spanner doesn't support")
     def test_numeric_as_decimal(self):
@@ -592,18 +687,47 @@ class NumericTest(_NumericTest):
         in numeric type column"""
         pass
 
-    @pytest.mark.skip(
-        "It's flaky test, due to drop table raise column schema mismatch error."
-    )
     @requires.floats_to_four_decimals
     def test_float_as_decimal(self):
-        pass
+        """
+        SPANNER OVERRIDE:
 
-    @pytest.mark.skip(
-        "It's flaky test, due to drop table raise column schema mismatch error."
-    )
+        Cloud Spanner supports tables with an empty primary key, but
+        only a single row can be inserted into such a table -
+        following insertions will fail with `Row [] already exists".
+        Overriding the test to avoid the same failure.
+        """
+        self._do_test(
+            Float(precision=8, asdecimal=True), [15.7563], [decimal.Decimal("15.7563")],
+        )
+        self._do_test(
+            Float(precision=8, asdecimal=True),
+            [decimal.Decimal("15.7563")],
+            [decimal.Decimal("15.7563")],
+        )
+
     def test_float_as_float(self):
-        pass
+        """
+        SPANNER OVERRIDE:
+
+        Cloud Spanner supports tables with an empty primary key, but
+        only a single row can be inserted into such a table -
+        following insertions will fail with `Row [] already exists".
+        Overriding the test to avoid the same failure.
+        """
+        self._do_test(
+            Float(precision=8),
+            [15.7563],
+            [15.7563],
+            filter_=lambda n: n is not None and round(n, 5) or None,
+        )
+
+        self._do_test(
+            Float(precision=8),
+            [decimal.Decimal("15.7563")],
+            [15.7563],
+            filter_=lambda n: n is not None and round(n, 5) or None,
+        )
 
     @pytest.mark.skip("Spanner doesn't support")
     @requires.precision_numerics_general
