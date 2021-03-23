@@ -567,10 +567,10 @@ class StringTest(_StringTest):
         for `'\'` Spanner throws an error `400 Syntax error: Illegal escape sequence`.
         See: https://cloud.google.com/spanner/docs/lexical#string_and_bytes_literals
         """
-        data = r"backslash one \\ backslash \\\\ two end"
-        data1 = r"backslash one \ backslash \\ two end"
+        input_data = r"backslash one \\ backslash \\\\ two end"
+        output_data = r"backslash one \ backslash \\ two end"
 
-        self._literal_round_trip(String(40), [data], [data1])
+        self._literal_round_trip(String(40), [input_data], [output_data])
 
     def test_literal_quoting(self):
         """
