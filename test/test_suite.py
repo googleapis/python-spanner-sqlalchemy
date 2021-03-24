@@ -512,80 +512,6 @@ class IntegerTest(_IntegerTest):
 
 
 class NumericTest(_NumericTest):
-    @provide_metadata
-    def _literal_round_trip(self, type_, input_, output, filter_=None):
-        """
-        SPANNER OVERRIDE:
-        Spanner is not able cleanup data and drop the table correctly,
-        table was already exists after related tests finished, so it doesn't
-        create a new table and when started tests for other data type  following
-        insertions will fail with `400 Duplicate name in schema: t.
-        Overriding the tests to create a new table for test and drop table manually
-        before it creates a new table to avoid the same failures."""
-
-        # for literal, we test the literal render in an INSERT
-        # into a typed column.  we can then SELECT it back as its
-        # official type; ideally we'd be able to use CAST here
-        # but MySQL in particular can't CAST fully
-        t = Table("t_numeric", self.metadata, Column("x", type_))
-        t.drop(checkfirst=True)
-        t.create()
-
-        with config.db.connect() as conn:
-            for value in input_:
-                ins = (
-                    t.insert()
-                    .values(x=literal(value))
-                    .compile(
-                        dialect=config.db.dialect,
-                        compile_kwargs=dict(literal_binds=True),
-                    )
-                )
-                conn.execute(ins)
-
-            if self.supports_whereclause:
-                stmt = t.select().where(t.c.x == literal(value))
-            else:
-                stmt = t.select()
-
-            stmt = stmt.compile(
-                dialect=config.db.dialect, compile_kwargs=dict(literal_binds=True),
-            )
-            for row in conn.execute(stmt):
-                value = row[0]
-                if filter_ is not None:
-                    value = filter_(value)
-                assert value in output
-
-    @emits_warning(r".*does \*not\* support Decimal objects natively")
-    @provide_metadata
-    def _do_test(self, type_, input_, output, filter_=None, check_scale=False):
-        """
-        SPANNER OVERRIDE:
-
-        Spanner is not able cleanup data and drop the table correctly,
-        table was already exists after related tests finished, so it doesn't
-        create a new table and when started tests for other data type  following
-        insertions will fail with `400 Duplicate name in schema: t.
-        Overriding the tests to create a new table for test and drop table manually
-        before it creates a new table to avoid the same failures.
-        """
-        metadata = self.metadata
-        t = Table("t_decimal", metadata, Column("x", type_))
-        t.drop(checkfirst=True)
-        t.create()
-        t.insert().execute([{"x": x} for x in input_])
-
-        result = {row[0] for row in t.select().execute()}
-        output = set(output)
-        if filter_:
-            result = set(filter_(x) for x in result)
-            output = set(filter_(x) for x in output)
-        eq_(result, output)
-
-        if check_scale:
-            eq_([str(x) for x in result], [str(x) for x in output])
-
     @emits_warning(r".*does \*not\* support Decimal objects natively")
     def test_render_literal_numeric(self):
         """
@@ -687,9 +613,6 @@ class NumericTest(_NumericTest):
         in numeric type column"""
         pass
 
-    @pytest.mark.skip(
-        "Skip the test as always thows an error `sqlalchemy.exc.IntegrityError`"
-    )
     @requires.floats_to_four_decimals
     def test_float_as_decimal(self):
         """
@@ -709,9 +632,6 @@ class NumericTest(_NumericTest):
             [decimal.Decimal("15.7563")],
         )
 
-    @pytest.mark.skip(
-        "Skip the test as always thows an error `sqlalchemy.exc.IntegrityError`"
-    )
     def test_float_as_float(self):
         """
         SPANNER OVERRIDE:
