@@ -512,53 +512,6 @@ class IntegerTest(_IntegerTest):
 
 
 class StringTest(_StringTest):
-    @provide_metadata
-    def _literal_round_trip(self, type_, input_, output, filter_=None):
-        """
-        SPANNER OVERRIDE:
-
-        Spanner DBAPI does not execute DDL statements unless followed by a
-        non DDL statement, which is preventing correct table clean up.
-        The table already exists after related tests finish, so it doesn't
-        create a new table and when running tests for other data types
-        insertions will fail with `400 Duplicate name in schema: t`.
-        Overriding the tests to create and drop a new table to prevent
-        database existence errors.
-        """
-
-        # for literal, we test the literal render in an INSERT
-        # into a typed column.  we can then SELECT it back as its
-        # official type; ideally we'd be able to use CAST here
-        # but MySQL in particular can't CAST fully
-        t = Table("t_string", self.metadata, Column("x", type_))
-        t.create()
-
-        with db.connect() as conn:
-            for value in input_:
-                ins = (
-                    t.insert()
-                    .values(x=literal(value))
-                    .compile(
-                        dialect=db.dialect, compile_kwargs=dict(literal_binds=True),
-                    )
-                )
-                conn.execute(ins)
-
-            if self.supports_whereclause:
-                stmt = t.select().where(t.c.x == literal(value))
-            else:
-                stmt = t.select()
-
-            stmt = stmt.compile(
-                dialect=db.dialect, compile_kwargs=dict(literal_binds=True),
-            )
-            for row in conn.execute(stmt):
-                value = row[0]
-                if filter_ is not None:
-                    value = filter_(value)
-                assert value in output
-            conn.execute(t.delete())
-
     def test_literal_backslashes(self):
         """
         SPANNER OVERRIDE:
