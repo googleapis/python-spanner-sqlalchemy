@@ -16,6 +16,7 @@
 
 import operator
 import pytest
+import pytz
 
 import sqlalchemy
 from sqlalchemy import inspect
@@ -62,6 +63,7 @@ from sqlalchemy.testing.suite.test_dialect import EscapingTest as _EscapingTest
 from sqlalchemy.testing.suite.test_reflection import (
     ComponentReflectionTest as _ComponentReflectionTest,
 )
+from sqlalchemy.testing.suite.test_results import RowFetchTest as _RowFetchTest
 from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
 from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
@@ -743,3 +745,30 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             assert isinstance(typ, Numeric)
             eq_(typ.precision, 38)
             eq_(typ.scale, 9)
+
+
+class RowFetchTest(_RowFetchTest):
+    def test_row_w_scalar_select(self):
+        """
+        SPANNER OVERRIDE:
+
+        Cloud Spanner returns a DatetimeWithNanoseconds() for date
+        data types. Overriding the test to use a DatetimeWithNanoseconds
+        type value as an expected result.
+        --------------
+
+        test that a scalar select as a column is returned as such
+        and that type conversion works OK.
+
+        (this is half a SQLAlchemy Core test and half to catch database
+        backends that may have unusual behavior with scalar selects.)
+        """
+        datetable = self.tables.has_dates
+        s = select([datetable.alias("x").c.today]).as_scalar()
+        s2 = select([datetable.c.id, s.label("somelabel")])
+        row = config.db.execute(s2).first()
+
+        eq_(
+            row["somelabel"],
+            DatetimeWithNanoseconds(2006, 5, 12, 12, 0, 0, tzinfo=pytz.UTC),
+        )
