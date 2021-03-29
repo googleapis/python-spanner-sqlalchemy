@@ -70,6 +70,10 @@ user = Table(
 
 metadata.create_all(engine)
 ```
+Migration
+-----------
+SQLAlchemy uses [Alembic](https://alembic.sqlalchemy.org/en/latest/#) tool to organize database migrations.
+
 Features and limitations
 -----------
 **Unique constraints**  
@@ -102,8 +106,39 @@ DDL statements are executed outside the regular transactions mechanism, which me
 **Dropping a table**  
 Cloud Spanner, by default, doesn't drop tables, which has secondary indexes and/or foreign key constraints. In Spanner dialect for SQLAlchemy, however, this restriction is omitted - if a table you are trying to delete has indexes/foreign keys, they will be dropped automatically right before dropping the table.
 
+**Data types**  
+Data types table mapping SQLAlchemy types to Cloud Spanner types:
+
+| SQLAlchemy  | Spanner |
+| ------------- | ------------- |
+| INTEGER  | INT64  |
+| BIGINT  | INT64  |
+| DECIMAL  | NUMERIC  |
+| FLOAT  | FLOAT64  |
+| TEXT  | STRING  |
+| ARRAY  | ARRAY  |
+| BINARY  | BYTES  |
+| VARCHAR  | STRING  |
+| CHAR  | STRING  |
+| BOOLEAN  | BOOL  |
+| DATETIME  | TIMESTAMP  |
+| NUMERIC  | NUMERIC  |
+
+
 **Other limitations**  
 - WITH RECURSIVE statement is not supported.
 - Named schemas are not supported.
 - Temporary tables are not supported, real tables are used instead.
 - Numeric type dimensions (scale and precision) are constant. See the [docs](https://cloud.google.com/spanner/docs/data-types#numeric_types).
+
+Contributing
+------------
+
+Contributions to this library are welcome and encouraged.
+
+See [CONTRIBUTING](https://github.com/cloudspannerecosystem/python-spanner-sqlalchemy/blob/main/contributing.md) for more information on how to get
+started.
+
+Please note that this project is released with a Contributor Code of Conduct.
+By participating in this project you agree to abide by its terms. See the [Code
+of Conduct](https://github.com/cloudspannerecosystem/python-spanner-sqlalchemy/blob/main/code-of-conduct.md) for more information.
