@@ -97,7 +97,7 @@ Table(
 Spanner dialect supports both "autocommit" and "manual commit" modes. To set/change the current mode isolation levels can be used: `SERIALIZABLE` and `AUTOCOMMIT`.
 
 **DDL and transactions**  
-DDL statements are executed aside of regular transactions mechanism, which means DDL statements will not be rolled back on normal transaction rollback.
+DDL statements are executed outside the regular transactions mechanism, which means DDL statements will not be rolled back on normal transaction rollback.
 
 **Dropping a table**  
 Cloud Spanner, by default, doesn't drop tables, which has secondary indexes and/or foreign key constraints. In Spanner dialect for SQLAlchemy, however, this restriction is omitted - if a table you are trying to delete has indexes/foreign keys, they will be dropped automatically right before dropping the table.
