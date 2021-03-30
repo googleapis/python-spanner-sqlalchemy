@@ -153,6 +153,8 @@ class SpannerTypeCompiler(GenericTypeCompiler):
         return "FLOAT64"
 
     def visit_TEXT(self, type_, **kw):
+        if type_.length is None:
+            type_.length = "MAX"
         return "STRING({})".format(type_.length)
 
     def visit_ARRAY(self, type_, **kw):
@@ -165,6 +167,8 @@ class SpannerTypeCompiler(GenericTypeCompiler):
         return "NUMERIC"
 
     def visit_VARCHAR(self, type_, **kw):
+        if type_.length is None:
+            type_.length = "MAX"
         return "STRING({})".format(type_.length)
 
     def visit_CHAR(self, type_, **kw):
