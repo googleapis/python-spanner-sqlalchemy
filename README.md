@@ -104,7 +104,7 @@ Spanner dialect supports both "autocommit" and "manual commit" modes. To set/cha
 DDL statements are executed outside the regular transactions mechanism, which means DDL statements will not be rolled back on normal transaction rollback.
 
 **Dropping a table**  
-Cloud Spanner, by default, doesn't drop tables, which has secondary indexes and/or foreign key constraints. In Spanner dialect for SQLAlchemy, however, this restriction is omitted - if a table you are trying to delete has indexes/foreign keys, they will be dropped automatically right before dropping the table.
+Cloud Spanner, by default, doesn't drop tables, which have secondary indexes and/or foreign key constraints. In Spanner dialect for SQLAlchemy, however, this restriction is omitted - if a table you are trying to delete has indexes/foreign keys, they will be dropped automatically right before dropping the table.
 
 **Data types**  
 Data types table mapping SQLAlchemy types to Cloud Spanner types:
