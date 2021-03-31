@@ -7,16 +7,10 @@ jobs:
   build-and-test:
     executor: python/default
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-      - name: Install nox
-        run: python -m pip install nox
-      - name: Run SQLAlchemy tests
-        run: nox
+      - checkout
+      - run: sudo apt install python3.8
+      - run: python3 -m pip install nox
+      - run: nox
 
 workflows:
   main:
