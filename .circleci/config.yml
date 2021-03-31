@@ -10,7 +10,7 @@ jobs:
       - checkout
       - run: sudo apt install python3.8
       - run: python3 -m pip install nox
-      - run: nox
+      - run: python3 -m nox
 
 workflows:
   main:
