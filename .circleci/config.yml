@@ -8,6 +8,8 @@ jobs:
     executor: python/default
     steps:
       - checkout
+      
+      - run: echo $GCLOUD_SERVICE_KEY > "$GOOGLE_APPLICATION_CREDENTIALS"
       - run: sudo apt install python3.8
       - run: python3 -m pip install nox
       - run: python3 -m nox
