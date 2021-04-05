@@ -682,3 +682,11 @@ class ComponentReflectionTest(_ComponentReflectionTest):
 
         with pytest.raises(spanner_dbapi.exceptions.ProgrammingError):
             self.metadata.create_all()
+
+    @pytest.mark.skip("Spanner doesn't support temporary tables")
+    def test_get_temp_table_indexes(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support temporary tables")
+    def test_get_temp_table_unique_constraints(self):
+        pass
