@@ -61,7 +61,14 @@ from sqlalchemy.testing.suite.test_dialect import EscapingTest as _EscapingTest
 from sqlalchemy.testing.suite.test_reflection import (
     ComponentReflectionTest as _ComponentReflectionTest,
 )
-from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
+from sqlalchemy.testing.suite.test_select import (  # noqa: F401, F403
+    CollateTest,
+    CompoundSelectTest as _CompoundSelectTest,
+    ExistsTest as _ExistsTest,
+    ExpandingBoundInTest as _ExpandingBoundInTest,
+    LimitOffsetTest,
+    OrderByLabelTest as _OrderByLabelTest,
+)
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
 from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
 
@@ -727,3 +734,25 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             else:
                 answer = ["dingalings", "email_addresses", "user_tmp", "users"]
                 eq_(sorted(table_names), answer)
+
+
+class OrderByLabelTest(_OrderByLabelTest):
+    @pytest.mark.skip("Spanner throws a syntax error.")
+    def test_group_by_composed(self):
+        pass
+
+
+class CompoundSelectTest(_CompoundSelectTest):
+    @pytest.mark.skip("Spanner throws a syntax error.")
+    def test_limit_offset_selectable_in_unions(self):
+        pass
+
+    @pytest.mark.skip("Spanner throws a syntax error.")
+    def test_order_by_selectable_in_unions(self):
+        pass
+
+
+class ExpandingBoundInTest(_ExpandingBoundInTest):
+    @pytest.mark.skip("Spanner doesn't support NULL data type.")
+    def test_null_in_empty_set_is_false(self):
+        pass
