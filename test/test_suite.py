@@ -61,6 +61,9 @@ from sqlalchemy.testing.suite.test_ddl import (
     LongNameBlowoutTest as _LongNameBlowoutTest,
 )
 from sqlalchemy.testing.suite.test_dialect import EscapingTest as _EscapingTest
+from sqlalchemy.testing.suite.test_insert import (
+    InsertBehaviorTest as _InsertBehaviorTest,
+)
 from sqlalchemy.testing.suite.test_reflection import (
     ComponentReflectionTest as _ComponentReflectionTest,
 )
@@ -732,6 +735,14 @@ class ComponentReflectionTest(_ComponentReflectionTest):
                 answer = ["dingalings", "email_addresses", "user_tmp", "users"]
                 eq_(sorted(table_names), answer)
 
+    @pytest.mark.skip("Spanner doesn't support temporary tables")
+    def test_get_temp_table_indexes(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support temporary tables")
+    def test_get_temp_table_unique_constraints(self):
+        pass
+
     @testing.requires.table_reflection
     def test_numeric_reflection(self):
         """
@@ -773,3 +784,9 @@ class RowFetchTest(_RowFetchTest):
             row["somelabel"],
             DatetimeWithNanoseconds(2006, 5, 12, 12, 0, 0, tzinfo=pytz.UTC),
         )
+
+
+class InsertBehaviorTest(_InsertBehaviorTest):
+    @pytest.mark.skip("Spanner doesn't support empty inserts")
+    def test_empty_insert(self):
+        pass
