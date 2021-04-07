@@ -2,6 +2,7 @@ version: 2.1
 
 orbs:
   python: circleci/python@1.3.3
+  gcp-cli: circleci/gcp-cli@2.1.0
 
 jobs:
   build-and-test:
@@ -12,8 +13,14 @@ jobs:
       - run: echo $GCLOUD_SERVICE_KEY | python3 -mjson.tool > "$GOOGLE_APPLICATION_CREDENTIALS"
       - run: python3 -m pip install nox
       - run: python3 -m nox
+  install_and_init_cli:
+    executor: gcp-cli/default
+    context: sqlalchemy_compliance_test
+    steps:
+      - gcp-cli/install
 
 workflows:
   main:
     jobs:
+      - install_and_init_cli
       - build-and-test
