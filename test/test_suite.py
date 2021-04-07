@@ -63,9 +63,11 @@ from sqlalchemy.testing.suite.test_reflection import (
 )
 from sqlalchemy.testing.suite.test_select import (  # noqa: F401, F403
     CollateTest,
+    ComputedColumnTest,
     CompoundSelectTest as _CompoundSelectTest,
     ExistsTest as _ExistsTest,
     ExpandingBoundInTest as _ExpandingBoundInTest,
+    LikeFunctionsTest as _LikeFunctionsTest,
     LimitOffsetTest,
     OrderByLabelTest as _OrderByLabelTest,
 )
@@ -755,4 +757,69 @@ class CompoundSelectTest(_CompoundSelectTest):
 class ExpandingBoundInTest(_ExpandingBoundInTest):
     @pytest.mark.skip("Spanner doesn't support NULL data type.")
     def test_null_in_empty_set_is_false(self):
+        pass
+
+
+class LikeFunctionsTest(_LikeFunctionsTest):
+    @pytest.mark.skip(
+        "Spanner throws an Syntax error: Parenthesized expression "
+        "cannot be parsed as an expression"
+    )
+    def test_contains_autoescape(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner throws an Syntax error: Parenthesized expression "
+        "cannot be parsed as an expression"
+    )
+    def test_contains_autoescape_escape(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner throws an Syntax error: Parenthesized expression "
+        "cannot be parsed as an expression"
+    )
+    def test_contains_escape(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner throws an Syntax error: Parenthesized expression "
+        "cannot be parsed as an expression"
+    )
+    def test_endswith_autoescape(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner throws an Syntax error: Parenthesized expression "
+        "cannot be parsed as an expression"
+    )
+    def test_endswith_escape(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner throws an Syntax error: Parenthesized expression "
+        "cannot be parsed as an expression"
+    )
+    def test_endswith_autoescape_escape(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner throws an Syntax error: Parenthesized expression "
+        "cannot be parsed as an expression"
+    )
+    def test_startswith_autoescape(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner throws an Syntax error: Parenthesized expression "
+        "cannot be parsed as an expression"
+    )
+    def test_startswith_escape(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner throws an Syntax error: Parenthesized expression "
+        "cannot be parsed as an expression"
+    )
+    def test_startswith_autoescape_escape(self):
         pass
