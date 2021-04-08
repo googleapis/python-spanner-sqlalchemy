@@ -17,6 +17,7 @@
 import operator
 import pytest
 import decimal
+import pytz
 
 import sqlalchemy
 from sqlalchemy import inspect
@@ -42,6 +43,7 @@ from sqlalchemy import exists
 from sqlalchemy import Boolean, Float, Numeric
 from sqlalchemy import String
 from sqlalchemy.types import Integer
+from sqlalchemy.types import Numeric
 from sqlalchemy.testing import requires
 
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
@@ -51,6 +53,7 @@ from google.cloud import spanner_dbapi
 from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_ddl import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_results import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 
 from sqlalchemy.testing.suite.test_cte import CTETest as _CTETest
@@ -59,9 +62,13 @@ from sqlalchemy.testing.suite.test_ddl import (
     LongNameBlowoutTest as _LongNameBlowoutTest,
 )
 from sqlalchemy.testing.suite.test_dialect import EscapingTest as _EscapingTest
+from sqlalchemy.testing.suite.test_insert import (
+    InsertBehaviorTest as _InsertBehaviorTest,
+)
 from sqlalchemy.testing.suite.test_reflection import (
     ComponentReflectionTest as _ComponentReflectionTest,
 )
+from sqlalchemy.testing.suite.test_results import RowFetchTest as _RowFetchTest
 from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
 from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
@@ -835,3 +842,104 @@ class ComponentReflectionTest(_ComponentReflectionTest):
 
         with pytest.raises(spanner_dbapi.exceptions.ProgrammingError):
             self.metadata.create_all()
+
+    @testing.provide_metadata
+    def _test_get_table_names(self, schema=None, table_type="table", order_by=None):
+        """
+        SPANNER OVERRIDE:
+
+        Spanner doesn't support temporary tables, so real tables are
+        used for testing. As the original test expects only real
+        tables to be read, and in Spanner all the tables are real,
+        expected results override is required.
+        """
+        _ignore_tables = [
+            "comment_test",
+            "noncol_idx_test_pk",
+            "noncol_idx_test_nopk",
+            "local_table",
+            "remote_table",
+            "remote_table_2",
+        ]
+        meta = self.metadata
+
+        insp = inspect(meta.bind)
+
+        if table_type == "view":
+            table_names = insp.get_view_names(schema)
+            table_names.sort()
+            answer = ["email_addresses_v", "users_v"]
+            eq_(sorted(table_names), answer)
+        else:
+            if order_by:
+                tables = [
+                    rec[0]
+                    for rec in insp.get_sorted_table_and_fkc_names(schema)
+                    if rec[0]
+                ]
+            else:
+                tables = insp.get_table_names(schema)
+            table_names = [t for t in tables if t not in _ignore_tables]
+
+            if order_by == "foreign_key":
+                answer = ["users", "user_tmp", "email_addresses", "dingalings"]
+                eq_(table_names, answer)
+            else:
+                answer = ["dingalings", "email_addresses", "user_tmp", "users"]
+                eq_(sorted(table_names), answer)
+
+    @pytest.mark.skip("Spanner doesn't support temporary tables")
+    def test_get_temp_table_indexes(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support temporary tables")
+    def test_get_temp_table_unique_constraints(self):
+        pass
+
+    @testing.requires.table_reflection
+    def test_numeric_reflection(self):
+        """
+        SPANNER OVERRIDE:
+
+        Spanner defines NUMERIC type with the constant precision=38
+        and scale=9. Overriding the test to check if the NUMERIC
+        column is successfully created and has dimensions
+        correct for Cloud Spanner.
+        """
+        for typ in self._type_round_trip(Numeric(18, 5)):
+            assert isinstance(typ, Numeric)
+            eq_(typ.precision, 38)
+            eq_(typ.scale, 9)
+
+
+class RowFetchTest(_RowFetchTest):
+    def test_row_w_scalar_select(self):
+        """
+        SPANNER OVERRIDE:
+
+        Cloud Spanner returns a DatetimeWithNanoseconds() for date
+        data types. Overriding the test to use a DatetimeWithNanoseconds
+        type value as an expected result.
+        --------------
+
+        test that a scalar select as a column is returned as such
+        and that type conversion works OK.
+
+        (this is half a SQLAlchemy Core test and half to catch database
+        backends that may have unusual behavior with scalar selects.)
+        """
+        datetable = self.tables.has_dates
+        s = select([datetable.alias("x").c.today]).as_scalar()
+        s2 = select([datetable.c.id, s.label("somelabel")])
+        row = config.db.execute(s2).first()
+
+        eq_(
+            row["somelabel"],
+            DatetimeWithNanoseconds(2006, 5, 12, 12, 0, 0, tzinfo=pytz.UTC),
+        )
+
+
+class InsertBehaviorTest(_InsertBehaviorTest):
+    @pytest.mark.skip("Spanner doesn't support empty inserts")
+    def test_empty_insert(self):
+        pass

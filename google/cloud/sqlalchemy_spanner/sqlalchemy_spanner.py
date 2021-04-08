@@ -176,6 +176,9 @@ class SpannerTypeCompiler(GenericTypeCompiler):
     def visit_DECIMAL(self, type_, **kw):
         return "NUMERIC"
 
+    def visit_NUMERIC(self, type_, **kw):
+        return "NUMERIC"
+
     def visit_VARCHAR(self, type_, **kw):
         return "STRING({})".format(type_.length)
 
@@ -317,12 +320,17 @@ ORDER BY
             columns = snap.execute_sql(sql)
 
             for col in columns:
-                type_ = "STRING" if col[1].startswith("STRING") else col[1]
+                if col[1].startswith("STRING"):
+                    end = col[1].index(")")
+                    size = int(col[1][7:end])
+                    type_ = _type_map["STRING"](length=size)
+                else:
+                    type_ = _type_map[col[1]]
 
                 cols_desc.append(
                     {
                         "name": col[0],
-                        "type": _type_map[type_],
+                        "type": type_,
                         "nullable": col[2] == "YES",
                         "default": None,
                     }
@@ -530,7 +538,7 @@ SELECT table_name
 FROM information_schema.tables
 WHERE table_schema = '{}'
 """.format(
-            schema
+            schema or ""
         )
 
         table_names = []
