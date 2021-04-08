@@ -798,7 +798,7 @@ class InsertBehaviorTest(_InsertBehaviorTest):
 class BytesTest(_LiteralRoundTripFixture, fixtures.TestBase):
     __backend__ = True
 
-    def test_nolength_string(self):
+    def test_nolength_binary(self):
         metadata = MetaData()
         foo = Table("foo", metadata, Column("one", LargeBinary))
 
