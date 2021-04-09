@@ -16,6 +16,7 @@
 
 import operator
 import pytest
+import pytz
 
 import sqlalchemy
 from sqlalchemy import inspect
@@ -41,6 +42,7 @@ from sqlalchemy import exists
 from sqlalchemy import Boolean
 from sqlalchemy import String
 from sqlalchemy.types import Integer
+from sqlalchemy.types import Numeric
 from sqlalchemy.testing import requires
 
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
@@ -50,6 +52,7 @@ from google.cloud import spanner_dbapi
 from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_ddl import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_results import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 
 from sqlalchemy.testing.suite.test_cte import CTETest as _CTETest
@@ -64,6 +67,7 @@ from sqlalchemy.testing.suite.test_insert import (
 from sqlalchemy.testing.suite.test_reflection import (
     ComponentReflectionTest as _ComponentReflectionTest,
 )
+from sqlalchemy.testing.suite.test_results import RowFetchTest as _RowFetchTest
 from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
 from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
@@ -351,26 +355,6 @@ class DateTest(_DateTest):
 
 
 class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
-    @classmethod
-    def define_tables(cls, metadata):
-        """
-        SPANNER OVERRIDE:
-
-        Spanner is not able cleanup data and drop the table correctly,
-        table already exists after related tests finished, so it doesn't
-        create a new table and insertions for tests for other data types
-        will fail with `400 Invalid value for column date_data in
-        table date_table: Expected DATE`.
-        Overriding the tests to create a new table for tests to avoid the same
-        failures.
-        """
-        Table(
-            "datetime_table",
-            metadata,
-            Column("id", Integer, primary_key=True, test_needs_autoincrement=True),
-            Column("date_data", cls.datatype),
-        )
-
     def test_null(self):
         """
         SPANNER OVERRIDE:
@@ -381,7 +365,7 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
         Overriding the tests to add a manual primary key value to avoid the same
         failures.
         """
-        date_table = self.tables.datetime_table
+        date_table = self.tables.date_table
 
         config.db.execute(date_table.insert(), {"id": 1, "date_data": None})
 
@@ -401,7 +385,7 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
         Spanner converts timestamp into `%Y-%m-%dT%H:%M:%S.%fZ` format, so to avoid
         assert failures convert datetime input to the desire timestamp format.
         """
-        date_table = self.tables.datetime_table
+        date_table = self.tables.date_table
         config.db.execute(date_table.insert(), {"id": 1, "date_data": self.data})
 
         row = config.db.execute(select([date_table.c.date_data])).first()
@@ -424,7 +408,7 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
         # this test is based on an Oracle issue observed in #4886.
         # passing NULL for an expression that needs to be interpreted as
         # a certain type, does the DBAPI have the info it needs to do this.
-        date_table = self.tables.datetime_table
+        date_table = self.tables.date_table
         with config.db.connect() as conn:
             result = conn.execute(
                 date_table.insert(), {"id": 1, "date_data": self.data}
@@ -482,7 +466,7 @@ class IntegerTest(_IntegerTest):
         row can be inserted into such a table - following insertions will fail with
         `400 id must not be NULL in table date_table`.
         Overriding the tests and adding a manual primary key value to avoid the same
-        failures and deleting the table at the end.
+        failures.
         """
         metadata = self.metadata
         int_table = Table(
@@ -504,8 +488,6 @@ class IntegerTest(_IntegerTest):
             assert isinstance(row[0], int)
         else:
             assert isinstance(row[0], (long, int))  # noqa
-
-        config.db.execute(int_table.delete())
 
     @provide_metadata
     def _literal_round_trip(self, type_, input_, output, filter_=None):
@@ -770,6 +752,48 @@ class ComponentReflectionTest(_ComponentReflectionTest):
     @pytest.mark.skip("Spanner doesn't support temporary tables")
     def test_get_temp_table_unique_constraints(self):
         pass
+
+    @testing.requires.table_reflection
+    def test_numeric_reflection(self):
+        """
+        SPANNER OVERRIDE:
+
+        Spanner defines NUMERIC type with the constant precision=38
+        and scale=9. Overriding the test to check if the NUMERIC
+        column is successfully created and has dimensions
+        correct for Cloud Spanner.
+        """
+        for typ in self._type_round_trip(Numeric(18, 5)):
+            assert isinstance(typ, Numeric)
+            eq_(typ.precision, 38)
+            eq_(typ.scale, 9)
+
+
+class RowFetchTest(_RowFetchTest):
+    def test_row_w_scalar_select(self):
+        """
+        SPANNER OVERRIDE:
+
+        Cloud Spanner returns a DatetimeWithNanoseconds() for date
+        data types. Overriding the test to use a DatetimeWithNanoseconds
+        type value as an expected result.
+        --------------
+
+        test that a scalar select as a column is returned as such
+        and that type conversion works OK.
+
+        (this is half a SQLAlchemy Core test and half to catch database
+        backends that may have unusual behavior with scalar selects.)
+        """
+        datetable = self.tables.has_dates
+        s = select([datetable.alias("x").c.today]).as_scalar()
+        s2 = select([datetable.c.id, s.label("somelabel")])
+        row = config.db.execute(s2).first()
+
+        eq_(
+            row["somelabel"],
+            DatetimeWithNanoseconds(2006, 5, 12, 12, 0, 0, tzinfo=pytz.UTC),
+        )
 
 
 class InsertBehaviorTest(_InsertBehaviorTest):
