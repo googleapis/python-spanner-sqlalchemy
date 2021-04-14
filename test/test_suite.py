@@ -54,6 +54,7 @@ from google.cloud import spanner_dbapi
 from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_ddl import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_insert import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_results import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 
@@ -71,6 +72,9 @@ from sqlalchemy.testing.suite.test_reflection import (
 )
 from sqlalchemy.testing.suite.test_results import RowFetchTest as _RowFetchTest
 from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
+from sqlalchemy.testing.suite.test_select import (
+    IsOrIsNotDistinctFromTest as _IsOrIsNotDistinctFromTest,
+)
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
 from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
 from sqlalchemy.testing.suite.test_types import _LiteralRoundTripFixture
@@ -357,26 +361,6 @@ class DateTest(_DateTest):
 
 
 class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
-    @classmethod
-    def define_tables(cls, metadata):
-        """
-        SPANNER OVERRIDE:
-
-        Spanner is not able cleanup data and drop the table correctly,
-        table already exists after related tests finished, so it doesn't
-        create a new table and insertions for tests for other data types
-        will fail with `400 Invalid value for column date_data in
-        table date_table: Expected DATE`.
-        Overriding the tests to create a new table for tests to avoid the same
-        failures.
-        """
-        Table(
-            "datetime_table",
-            metadata,
-            Column("id", Integer, primary_key=True, test_needs_autoincrement=True),
-            Column("date_data", cls.datatype),
-        )
-
     def test_null(self):
         """
         SPANNER OVERRIDE:
@@ -387,7 +371,7 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
         Overriding the tests to add a manual primary key value to avoid the same
         failures.
         """
-        date_table = self.tables.datetime_table
+        date_table = self.tables.date_table
 
         config.db.execute(date_table.insert(), {"id": 1, "date_data": None})
 
@@ -407,7 +391,7 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
         Spanner converts timestamp into `%Y-%m-%dT%H:%M:%S.%fZ` format, so to avoid
         assert failures convert datetime input to the desire timestamp format.
         """
-        date_table = self.tables.datetime_table
+        date_table = self.tables.date_table
         config.db.execute(date_table.insert(), {"id": 1, "date_data": self.data})
 
         row = config.db.execute(select([date_table.c.date_data])).first()
@@ -430,7 +414,7 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
         # this test is based on an Oracle issue observed in #4886.
         # passing NULL for an expression that needs to be interpreted as
         # a certain type, does the DBAPI have the info it needs to do this.
-        date_table = self.tables.datetime_table
+        date_table = self.tables.date_table
         with config.db.connect() as conn:
             result = conn.execute(
                 date_table.insert(), {"id": 1, "date_data": self.data}
@@ -488,7 +472,7 @@ class IntegerTest(_IntegerTest):
         row can be inserted into such a table - following insertions will fail with
         `400 id must not be NULL in table date_table`.
         Overriding the tests and adding a manual primary key value to avoid the same
-        failures and deleting the table at the end.
+        failures.
         """
         metadata = self.metadata
         int_table = Table(
@@ -510,8 +494,6 @@ class IntegerTest(_IntegerTest):
             assert isinstance(row[0], int)
         else:
             assert isinstance(row[0], (long, int))  # noqa
-
-        config.db.execute(int_table.delete())
 
     @provide_metadata
     def _literal_round_trip(self, type_, input_, output, filter_=None):
@@ -793,6 +775,23 @@ class InsertBehaviorTest(_InsertBehaviorTest):
     @pytest.mark.skip("Spanner doesn't support empty inserts")
     def test_empty_insert(self):
         pass
+
+    @pytest.mark.skip("Spanner doesn't support auto increment")
+    def test_insert_from_select_autoinc(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support auto increment")
+    def test_insert_from_select_autoinc_no_rows(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support default column values")
+    def test_insert_from_select_with_defaults(self):
+        pass
+
+
+@pytest.mark.skip("Spanner doesn't support IS DISTINCT FROM clause")
+class IsOrIsNotDistinctFromTest(_IsOrIsNotDistinctFromTest):
+    pass
 
 
 class BytesTest(_LiteralRoundTripFixture, fixtures.TestBase):
