@@ -72,7 +72,7 @@ from sqlalchemy.testing.suite.test_select import (  # noqa: F401, F403
     ComputedColumnTest,
     CompoundSelectTest as _CompoundSelectTest,
     ExistsTest as _ExistsTest,
-    ExpandingBoundInTest as _ExpandingBoundInTest,
+    ExpandingBoundInTest,
     LikeFunctionsTest as _LikeFunctionsTest,
     LimitOffsetTest,
     OrderByLabelTest as _OrderByLabelTest,
@@ -759,12 +759,6 @@ class CompoundSelectTest(_CompoundSelectTest):
 
     @pytest.mark.skip("Spanner throws a syntax error.")
     def test_order_by_selectable_in_unions(self):
-        pass
-
-
-class ExpandingBoundInTest(_ExpandingBoundInTest):
-    @pytest.mark.skip("Spanner doesn't support NULL data type.")
-    def test_null_in_empty_set_is_false(self):
         pass
 
 
