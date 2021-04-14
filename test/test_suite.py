@@ -70,6 +70,9 @@ from sqlalchemy.testing.suite.test_reflection import (
 )
 from sqlalchemy.testing.suite.test_results import RowFetchTest as _RowFetchTest
 from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
+from sqlalchemy.testing.suite.test_select import (
+    IsOrIsNotDistinctFromTest as _IsOrIsNotDistinctFromTest,
+)
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
 from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
 
@@ -781,3 +784,8 @@ class InsertBehaviorTest(_InsertBehaviorTest):
     @pytest.mark.skip("Spanner doesn't support default column values")
     def test_insert_from_select_with_defaults(self):
         pass
+
+
+@pytest.mark.skip("Spanner doesn't support IS DISTINCT FROM clause")
+class IsOrIsNotDistinctFromTest(_IsOrIsNotDistinctFromTest):
+    pass
