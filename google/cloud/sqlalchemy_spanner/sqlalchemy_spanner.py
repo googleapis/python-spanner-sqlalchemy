@@ -21,7 +21,9 @@ from sqlalchemy.sql.compiler import (
     selectable,
     DDLCompiler,
     GenericTypeCompiler,
+    IdentifierPreparer,
     SQLCompiler,
+    RESERVED_WORDS,
 )
 from google.cloud import spanner_dbapi
 
@@ -85,6 +87,21 @@ def engine_to_connection(function):
         return function(self, connection, *args, **kwargs)
 
     return wrapper
+
+
+class SpannerIdentifierPreparer(IdentifierPreparer):
+    """Identifiers compiler.
+
+    In Cloud Spanner backticks "`" are used for keywords escaping.
+    """
+
+    reserved_words = RESERVED_WORDS.copy()
+    reserved_words.update(spanner_dbapi.parse_utils.SPANNER_RESERVED_KEYWORDS)
+
+    def __init__(self, dialect):
+        super(SpannerIdentifierPreparer, self).__init__(
+            dialect, initial_quote="`", final_quote="`"
+        )
 
 
 class SpannerSQLCompiler(SQLCompiler):
@@ -246,6 +263,7 @@ class SpannerDialect(DefaultDialect):
     supports_native_boolean = True
 
     ddl_compiler = SpannerDDLCompiler
+    preparer = SpannerIdentifierPreparer
     statement_compiler = SpannerSQLCompiler
     type_compiler = SpannerTypeCompiler
 
