@@ -27,6 +27,7 @@ from sqlalchemy.schema import DDL
 from sqlalchemy.testing import config
 from sqlalchemy.testing import db
 from sqlalchemy.testing import eq_
+from sqlalchemy.testing import fixtures
 from sqlalchemy.testing import provide_metadata
 from sqlalchemy.testing.provision import temp_table_keyword_args
 from sqlalchemy.testing.schema import Column
@@ -39,6 +40,7 @@ from sqlalchemy import select
 from sqlalchemy import util
 from sqlalchemy import event
 from sqlalchemy import exists
+from sqlalchemy import LargeBinary
 from sqlalchemy import Boolean
 from sqlalchemy import String
 from sqlalchemy.types import Integer
@@ -52,6 +54,7 @@ from google.cloud import spanner_dbapi
 from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_ddl import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_insert import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_results import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 
@@ -78,8 +81,12 @@ from sqlalchemy.testing.suite.test_select import (  # noqa: F401, F403
     OrderByLabelTest as _OrderByLabelTest,
 )
 from sqlalchemy.testing.suite.test_results import RowFetchTest as _RowFetchTest
+from sqlalchemy.testing.suite.test_select import (
+    IsOrIsNotDistinctFromTest as _IsOrIsNotDistinctFromTest,
+)
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
 from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
+from sqlalchemy.testing.suite.test_types import _LiteralRoundTripFixture
 
 from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     DateTest as _DateTest,
@@ -90,6 +97,12 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     TimeTest as _TimeTest,
     TimeMicrosecondsTest as _TimeMicrosecondsTest,
     TimestampMicrosecondsTest,
+)
+
+from sqlalchemy.testing.suite.test_sequence import (
+    SequenceCompilerTest as _SequenceCompilerTest,
+    HasSequenceTest as _HasSequenceTest,
+    SequenceTest as _SequenceTest,
 )
 
 config.test_schema = ""
@@ -545,6 +558,21 @@ class IntegerTest(_IntegerTest):
                 assert value in output
 
 
+@pytest.mark.skip("Spanner doesn't support CREATE SEQUENCE.")
+class SequenceCompilerTest(_SequenceCompilerTest):
+    pass
+
+
+@pytest.mark.skip("Spanner doesn't support CREATE SEQUENCE.")
+class HasSequenceTest(_HasSequenceTest):
+    pass
+
+
+@pytest.mark.skip("Spanner doesn't support CREATE SEQUENCE.")
+class SequenceTest(_SequenceTest):
+    pass
+
+
 class ComponentReflectionTest(_ComponentReflectionTest):
     @classmethod
     def define_temp_tables(cls, metadata):
@@ -858,3 +886,31 @@ class InsertBehaviorTest(_InsertBehaviorTest):
     @pytest.mark.skip("Spanner doesn't support empty inserts")
     def test_empty_insert(self):
         pass
+
+    @pytest.mark.skip("Spanner doesn't support auto increment")
+    def test_insert_from_select_autoinc(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support auto increment")
+    def test_insert_from_select_autoinc_no_rows(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support default column values")
+    def test_insert_from_select_with_defaults(self):
+        pass
+
+
+@pytest.mark.skip("Spanner doesn't support IS DISTINCT FROM clause")
+class IsOrIsNotDistinctFromTest(_IsOrIsNotDistinctFromTest):
+    pass
+
+
+class BytesTest(_LiteralRoundTripFixture, fixtures.TestBase):
+    __backend__ = True
+
+    def test_nolength_binary(self):
+        metadata = MetaData()
+        foo = Table("foo", metadata, Column("one", LargeBinary))
+
+        foo.create(config.db)
+        foo.drop(config.db)
