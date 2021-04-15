@@ -27,6 +27,7 @@ from sqlalchemy.schema import DDL
 from sqlalchemy.testing import config
 from sqlalchemy.testing import db
 from sqlalchemy.testing import eq_
+from sqlalchemy.testing import fixtures
 from sqlalchemy.testing import provide_metadata
 from sqlalchemy.testing.provision import temp_table_keyword_args
 from sqlalchemy.testing.schema import Column
@@ -39,6 +40,7 @@ from sqlalchemy import select
 from sqlalchemy import util
 from sqlalchemy import event
 from sqlalchemy import exists
+from sqlalchemy import LargeBinary
 from sqlalchemy import Boolean
 from sqlalchemy import String
 from sqlalchemy.types import Integer
@@ -52,6 +54,7 @@ from google.cloud import spanner_dbapi
 from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_ddl import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_insert import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_results import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 
@@ -69,22 +72,30 @@ from sqlalchemy.testing.suite.test_reflection import (
 )
 from sqlalchemy.testing.suite.test_results import RowFetchTest as _RowFetchTest
 from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
-from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
-from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
-from sqlalchemy.testing.suite.test_types import (
-    UnicodeVarcharTest as _UnicodeVarcharTest,
+from sqlalchemy.testing.suite.test_select import (
+    IsOrIsNotDistinctFromTest as _IsOrIsNotDistinctFromTest,
 )
-from sqlalchemy.testing.suite.test_types import UnicodeTextTest as _UnicodeTextTest
 
 from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
+    BooleanTest as _BooleanTest,
     DateTest as _DateTest,
     DateTimeHistoricTest,
     DateTimeCoercedToDateTimeTest as _DateTimeCoercedToDateTimeTest,
     DateTimeMicrosecondsTest as _DateTimeMicrosecondsTest,
     DateTimeTest as _DateTimeTest,
+    IntegerTest as _IntegerTest,
+    _LiteralRoundTripFixture,
     TimeTest as _TimeTest,
     TimeMicrosecondsTest as _TimeMicrosecondsTest,
     TimestampMicrosecondsTest,
+    UnicodeVarcharTest as _UnicodeVarcharTest,
+    UnicodeTextTest as _UnicodeTextTest,
+)
+
+from sqlalchemy.testing.suite.test_sequence import (
+    SequenceCompilerTest as _SequenceCompilerTest,
+    HasSequenceTest as _HasSequenceTest,
+    SequenceTest as _SequenceTest,
 )
 
 config.test_schema = ""
@@ -358,26 +369,6 @@ class DateTest(_DateTest):
 
 
 class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
-    @classmethod
-    def define_tables(cls, metadata):
-        """
-        SPANNER OVERRIDE:
-
-        Spanner is not able cleanup data and drop the table correctly,
-        table already exists after related tests finished, so it doesn't
-        create a new table and insertions for tests for other data types
-        will fail with `400 Invalid value for column date_data in
-        table date_table: Expected DATE`.
-        Overriding the tests to create a new table for tests to avoid the same
-        failures.
-        """
-        Table(
-            "datetime_table",
-            metadata,
-            Column("id", Integer, primary_key=True, test_needs_autoincrement=True),
-            Column("date_data", cls.datatype),
-        )
-
     def test_null(self):
         """
         SPANNER OVERRIDE:
@@ -388,7 +379,7 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
         Overriding the tests to add a manual primary key value to avoid the same
         failures.
         """
-        date_table = self.tables.datetime_table
+        date_table = self.tables.date_table
 
         config.db.execute(date_table.insert(), {"id": 1, "date_data": None})
 
@@ -408,7 +399,7 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
         Spanner converts timestamp into `%Y-%m-%dT%H:%M:%S.%fZ` format, so to avoid
         assert failures convert datetime input to the desire timestamp format.
         """
-        date_table = self.tables.datetime_table
+        date_table = self.tables.date_table
         config.db.execute(date_table.insert(), {"id": 1, "date_data": self.data})
 
         row = config.db.execute(select([date_table.c.date_data])).first()
@@ -431,7 +422,7 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest):
         # this test is based on an Oracle issue observed in #4886.
         # passing NULL for an expression that needs to be interpreted as
         # a certain type, does the DBAPI have the info it needs to do this.
-        date_table = self.tables.datetime_table
+        date_table = self.tables.date_table
         with config.db.connect() as conn:
             result = conn.execute(
                 date_table.insert(), {"id": 1, "date_data": self.data}
@@ -489,7 +480,7 @@ class IntegerTest(_IntegerTest):
         row can be inserted into such a table - following insertions will fail with
         `400 id must not be NULL in table date_table`.
         Overriding the tests and adding a manual primary key value to avoid the same
-        failures and deleting the table at the end.
+        failures.
         """
         metadata = self.metadata
         int_table = Table(
@@ -511,8 +502,6 @@ class IntegerTest(_IntegerTest):
             assert isinstance(row[0], int)
         else:
             assert isinstance(row[0], (long, int))  # noqa
-
-        config.db.execute(int_table.delete())
 
     @provide_metadata
     def _literal_round_trip(self, type_, input_, output, filter_=None):
@@ -652,6 +641,21 @@ class UnicodeTextTest(_UnicodeTextTest, UnicodeVarcharTest):
         rollback the connection after the test executed successfully.
         The error is `ValueError: Transaction is already rolled back`.
         """
+
+
+@pytest.mark.skip("Spanner doesn't support CREATE SEQUENCE.")
+class SequenceCompilerTest(_SequenceCompilerTest):
+    pass
+
+
+@pytest.mark.skip("Spanner doesn't support CREATE SEQUENCE.")
+class HasSequenceTest(_HasSequenceTest):
+    pass
+
+
+@pytest.mark.skip("Spanner doesn't support CREATE SEQUENCE.")
+class SequenceTest(_SequenceTest):
+    pass
 
 
 class ComponentReflectionTest(_ComponentReflectionTest):
@@ -886,3 +890,31 @@ class InsertBehaviorTest(_InsertBehaviorTest):
     @pytest.mark.skip("Spanner doesn't support empty inserts")
     def test_empty_insert(self):
         pass
+
+    @pytest.mark.skip("Spanner doesn't support auto increment")
+    def test_insert_from_select_autoinc(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support auto increment")
+    def test_insert_from_select_autoinc_no_rows(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support default column values")
+    def test_insert_from_select_with_defaults(self):
+        pass
+
+
+@pytest.mark.skip("Spanner doesn't support IS DISTINCT FROM clause")
+class IsOrIsNotDistinctFromTest(_IsOrIsNotDistinctFromTest):
+    pass
+
+
+class BytesTest(_LiteralRoundTripFixture, fixtures.TestBase):
+    __backend__ = True
+
+    def test_nolength_binary(self):
+        metadata = MetaData()
+        foo = Table("foo", metadata, Column("one", LargeBinary))
+
+        foo.create(config.db)
+        foo.drop(config.db)
