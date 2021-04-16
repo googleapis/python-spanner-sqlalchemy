@@ -148,12 +148,13 @@ class SpannerDDLCompiler(DDLCompiler):
         for cons in drop_table.element.constraints:
             if isinstance(cons, ForeignKeyConstraint) and cons.name:
                 constrs += "ALTER TABLE {table} DROP CONSTRAINT {constr};".format(
-                    table=drop_table.element.name, constr=cons.name
+                    table=drop_table.element.name,
+                    constr=self.preparer.quote(cons.name),
                 )
 
         indexes = ""
         for index in drop_table.element.indexes:
-            indexes += "DROP INDEX {};".format(index.name)
+            indexes += "DROP INDEX {};".format(self.preparer.quote(index.name))
 
         return indexes + constrs + str(drop_table)
 
