@@ -17,6 +17,15 @@ import uuid
 
 import pytest
 
+from sqlalchemy import (
+        Column,
+        Integer,
+        MetaData,
+        String,
+        Table,
+        create_engine,
+)
+
 
 @pytest.fixture
 def db_url():
@@ -31,4 +40,20 @@ def random_table_id():
         now.strftime("%Y%m%d%H%M%S"), uuid.uuid4().hex[:8]
     )
     return random_table_id
+
+
+@pytest.fixture
+def table_id(db_url, random_table_id):
+    engine = create_engine(db_url)
+    metadata = MetaData(bind=engine)
+
+    table = Table(
+        random_table_id,
+        metadata,
+        Column("user_id", Integer, primary_key=True),
+        Column("user_name", String(16), nullable=False),
+    )
+    table.create()
+    yield table
+    table.drop()
 
