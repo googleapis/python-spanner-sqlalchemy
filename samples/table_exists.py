@@ -7,8 +7,9 @@
 import argparse
 
 
-def fetch_rows(table):
-    """fetch all rows from the table"""
+def table_exists(table):
+    """Check the table exists"""
+    # [START sqlalchemy_spanner_table_exists]
 
     # TODO(developer): Create the table
     # table = Table(
@@ -19,17 +20,9 @@ def fetch_rows(table):
     # )
     # table.create()
 
-    table.insert().execute([
-        {"user_id": 1, "user_name": 'ABC'},
-        {"user_id": 2, "user_name": 'DEF'}
-    ])
-
-    # [START sqlalchemy_spanner_fetch_rows]
-    result = [row for row in table.select().execute()]
-
-    print("Total rows:", result)
-    # [END sqlalchemy_spanner_fetch_rows]
-    return result
+    result = table.exists()
+    print("Table exists:", result)
+    # [END sqlalchemy_spanner_table_exists]
 
 
 if __name__ == "__main__":
@@ -43,9 +36,9 @@ if __name__ == "__main__":
         help="Your sqlalchemy table object.",
     )
     subparsers = parser.add_subparsers(dest="command")
-    subparsers.add_parser("fetch_rows", help=fetch_rows.__doc__)
+    subparsers.add_parser("table_exists", help=table_exists.__doc__)
     args = parser.parse_args()
-    if args.command == "fetch_rows":
-        fetch_rows(args.table)
+    if args.command == "table_exists":
+        table_exists(args.table)
     else:
         print(f"Command {args.command} did not match expected commands.")

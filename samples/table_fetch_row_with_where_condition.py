@@ -7,8 +7,8 @@
 import argparse
 
 
-def fetch_rows(table):
-    """fetch all rows from the table"""
+def fetch_row_with_where_condition(table):
+    """Fetch row with where condition from the table"""
 
     # TODO(developer): Create the table
     # table = Table(
@@ -24,11 +24,11 @@ def fetch_rows(table):
         {"user_id": 2, "user_name": 'DEF'}
     ])
 
-    # [START sqlalchemy_spanner_fetch_rows]
-    result = [row for row in table.select().execute()]
+    # [START sqlalchemy_spanner_fetch_row_with_where_condition]
+    result = list(table.select().where(table.c.user_id == 1).execute())
 
-    print("Total rows:", result)
-    # [END sqlalchemy_spanner_fetch_rows]
+    print("Output is :", result)
+    # [END sqlalchemy_spanner_fetch_row_with_where_condition]
     return result
 
 
@@ -43,9 +43,9 @@ if __name__ == "__main__":
         help="Your sqlalchemy table object.",
     )
     subparsers = parser.add_subparsers(dest="command")
-    subparsers.add_parser("fetch_rows", help=fetch_rows.__doc__)
+    subparsers.add_parser("fetch_row_with_where_condition", help=fetch_row_with_where_condition.__doc__)
     args = parser.parse_args()
-    if args.command == "fetch_rows":
-        fetch_rows(args.table)
+    if args.command == "fetch_row_with_where_condition":
+        fetch_row_with_where_condition(args.table)
     else:
         print(f"Command {args.command} did not match expected commands.")
