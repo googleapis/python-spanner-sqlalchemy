@@ -571,6 +571,11 @@ class SequenceTest(_SequenceTest):
     pass
 
 
+@pytest.mark.skip("Spanner doesn't support quotes in table names.")
+class QuotedNameArgumentTest(_QuotedNameArgumentTest):
+    pass
+
+
 class ComponentReflectionTest(_ComponentReflectionTest):
     @classmethod
     def define_temp_tables(cls, metadata):
