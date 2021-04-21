@@ -56,6 +56,7 @@ from sqlalchemy.testing.suite.test_ddl import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_insert import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_results import *  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_sequence import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 
 from sqlalchemy.testing.suite.test_cte import CTETest as _CTETest
@@ -88,12 +89,6 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     TimeTest as _TimeTest,
     TimeMicrosecondsTest as _TimeMicrosecondsTest,
     TimestampMicrosecondsTest,
-)
-
-from sqlalchemy.testing.suite.test_sequence import (
-    SequenceCompilerTest as _SequenceCompilerTest,
-    HasSequenceTest as _HasSequenceTest,
-    SequenceTest as _SequenceTest,
 )
 
 config.test_schema = ""
@@ -547,21 +542,6 @@ class IntegerTest(_IntegerTest):
                 if filter_ is not None:
                     value = filter_(value)
                 assert value in output
-
-
-@pytest.mark.skip("Spanner doesn't support CREATE SEQUENCE.")
-class SequenceCompilerTest(_SequenceCompilerTest):
-    pass
-
-
-@pytest.mark.skip("Spanner doesn't support CREATE SEQUENCE.")
-class HasSequenceTest(_HasSequenceTest):
-    pass
-
-
-@pytest.mark.skip("Spanner doesn't support CREATE SEQUENCE.")
-class SequenceTest(_SequenceTest):
-    pass
 
 
 class ComponentReflectionTest(_ComponentReflectionTest):
