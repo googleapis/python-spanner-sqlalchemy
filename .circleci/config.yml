@@ -10,7 +10,7 @@ jobs:
     steps:
       - checkout
       - run: sudo apt install python3.8
-      - run: echo $GCLOUD_SERVICE_KEY | python3 -mjson.tool > "$GOOGLE_APPLICATION_CREDENTIALS"
+      - run: echo $GCLOUD_SERVICE_KEY > "$GOOGLE_APPLICATION_CREDENTIALS"
       - run: python3 -m pip install nox
       - run: python3 -m nox
   install_and_init_cli:
