@@ -5,12 +5,12 @@
 # https://developers.google.com/open-source/licenses/bsd
 
 
-from .. import table_update_row
+from .. import table_delete_all_rows
 
 
-def test_table_update_row(capsys, table_id):
-    rows = table_update_row.update_row(table_id)
+def test_table_delete_all_rows(capsys, table_id):
+    table_delete_all_rows.delete_all_rows(table_id)
 
     out, err = capsys.readouterr()
-    assert "Updated row is :" in out
-    assert "GEH" == rows[0][1]
+    assert "Total inserted rows: 2" in out
+    assert "Total rows: 0" in out

@@ -7,8 +7,8 @@
 import argparse
 
 
-def insert_row(table):
-    """Insert row in the table"""
+def fetch_rows_with_order_by(table):
+    """fetch all rows from the table in order"""
 
     # TODO(developer): Create the table
     # table = Table(
@@ -19,13 +19,18 @@ def insert_row(table):
     # )
     # table.create()
 
-    # [START sqlalchemy_spanner_insert_row]
-    table.insert().execute({"user_id": 1, "user_name": 'ABC'})
+    table.insert().execute([
+        {"user_id": 1, "user_name": 'GEH'},
+        {"user_id": 2, "user_name": 'DEF'},
+        {"user_id": 3, "user_name": 'HIJ'},
+        {"user_id": 4, "user_name": 'ABC'}
+    ])
 
-    result = [row for row in table.select().execute()]
-
-    print("Total rows:", result)
-    # [END sqlalchemy_spanner_insert_row]
+    # [START sqlalchemy_spanner_fetch_rows_with_order_by]
+    result = table.select().order_by(table.c.user_name).execute().fetchall()
+    import pdb;pdb.set_trace()
+    print("The order by result is:", result)
+    # [END sqlalchemy_spanner_fetch_rows_with_order_by]
     return result
 
 
@@ -40,9 +45,9 @@ if __name__ == "__main__":
         help="Your sqlalchemy table object.",
     )
     subparsers = parser.add_subparsers(dest="command")
-    subparsers.add_parser("insert_row", help=insert_row.__doc__)
+    subparsers.add_parser("fetch_rows_with_order_by", help=fetch_rows_with_order_by.__doc__)
     args = parser.parse_args()
-    if args.command == "insert_row":
-        insert_row(args.table)
+    if args.command == "fetch_rows_with_order_by":
+        fetch_rows_with_order_by(args.table)
     else:
         print(f"Command {args.command} did not match expected commands.")

@@ -7,8 +7,8 @@
 import argparse
 
 
-def insert_row(table):
-    """Insert row in the table"""
+def delete_row_with_where_condition(table):
+    """Delete selected row from the table"""
 
     # TODO(developer): Create the table
     # table = Table(
@@ -19,14 +19,20 @@ def insert_row(table):
     # )
     # table.create()
 
-    # [START sqlalchemy_spanner_insert_row]
-    table.insert().execute({"user_id": 1, "user_name": 'ABC'})
+    table.insert().execute(
+        {"user_id": 1, "user_name": 'ABC'},
+        {"user_id": 2, "user_name": 'DEF'}
+    )
 
-    result = [row for row in table.select().execute()]
+    result = table.select().execute().fetchall()
+    print("Total inserted rows:", len(result))
 
-    print("Total rows:", result)
-    # [END sqlalchemy_spanner_insert_row]
-    return result
+    # [START sqlalchemy_spanner_delete_row_with_where_condition]
+    table.delete().where(table.c.user_id == 1).execute()
+
+    result = table.select().execute().fetchall()
+    print("Total rows:", len(result))
+    # [END sqlalchemy_spanner_delete_row_with_where_condition]
 
 
 if __name__ == "__main__":
@@ -40,9 +46,9 @@ if __name__ == "__main__":
         help="Your sqlalchemy table object.",
     )
     subparsers = parser.add_subparsers(dest="command")
-    subparsers.add_parser("insert_row", help=insert_row.__doc__)
+    subparsers.add_parser("delete_row_with_where_condition", help=delete_row_with_where_condition.__doc__)
     args = parser.parse_args()
-    if args.command == "insert_row":
-        insert_row(args.table)
+    if args.command == "delete_row_with_where_condition":
+        delete_row_with_where_condition(args.table)
     else:
         print(f"Command {args.command} did not match expected commands.")

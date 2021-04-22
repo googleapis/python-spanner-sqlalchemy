@@ -25,8 +25,7 @@ def fetch_rows(table):
     ])
 
     # [START sqlalchemy_spanner_fetch_rows]
-    result = [row for row in table.select().execute()]
-
+    result = table.select().execute().fetchall()
     print("Total rows:", result)
     # [END sqlalchemy_spanner_fetch_rows]
     return result
