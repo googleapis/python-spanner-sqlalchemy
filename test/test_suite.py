@@ -55,7 +55,9 @@ from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_ddl import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_insert import *  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_reflection import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_results import *  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_sequence import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 
 from sqlalchemy.testing.suite.test_cte import CTETest as _CTETest
@@ -67,23 +69,23 @@ from sqlalchemy.testing.suite.test_dialect import EscapingTest as _EscapingTest
 from sqlalchemy.testing.suite.test_insert import (
     InsertBehaviorTest as _InsertBehaviorTest,
 )
-from sqlalchemy.testing.suite.test_reflection import (
-    ComponentReflectionTest as _ComponentReflectionTest,
-)
 from sqlalchemy.testing.suite.test_select import (  # noqa: F401, F403
     CollateTest,
     ComputedColumnTest,
     CompoundSelectTest as _CompoundSelectTest,
     ExistsTest as _ExistsTest,
     ExpandingBoundInTest,
+    IsOrIsNotDistinctFromTest as _IsOrIsNotDistinctFromTest,
     LikeFunctionsTest as _LikeFunctionsTest,
     LimitOffsetTest,
     OrderByLabelTest as _OrderByLabelTest,
 )
-from sqlalchemy.testing.suite.test_results import RowFetchTest as _RowFetchTest
-from sqlalchemy.testing.suite.test_select import (
-    IsOrIsNotDistinctFromTest as _IsOrIsNotDistinctFromTest,
+from sqlalchemy.testing.suite.test_reflection import (
+    QuotedNameArgumentTest as _QuotedNameArgumentTest,
+    ComponentReflectionTest as _ComponentReflectionTest,
+    CompositeKeyReflectionTest as _CompositeKeyReflectionTest,
 )
+from sqlalchemy.testing.suite.test_results import RowFetchTest as _RowFetchTest
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
 from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
 from sqlalchemy.testing.suite.test_types import _LiteralRoundTripFixture
@@ -97,12 +99,6 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     TimeTest as _TimeTest,
     TimeMicrosecondsTest as _TimeMicrosecondsTest,
     TimestampMicrosecondsTest,
-)
-
-from sqlalchemy.testing.suite.test_sequence import (
-    SequenceCompilerTest as _SequenceCompilerTest,
-    HasSequenceTest as _HasSequenceTest,
-    SequenceTest as _SequenceTest,
 )
 
 config.test_schema = ""
@@ -558,21 +554,6 @@ class IntegerTest(_IntegerTest):
                 assert value in output
 
 
-@pytest.mark.skip("Spanner doesn't support CREATE SEQUENCE.")
-class SequenceCompilerTest(_SequenceCompilerTest):
-    pass
-
-
-@pytest.mark.skip("Spanner doesn't support CREATE SEQUENCE.")
-class HasSequenceTest(_HasSequenceTest):
-    pass
-
-
-@pytest.mark.skip("Spanner doesn't support CREATE SEQUENCE.")
-class SequenceTest(_SequenceTest):
-    pass
-
-
 class ComponentReflectionTest(_ComponentReflectionTest):
     @classmethod
     def define_temp_tables(cls, metadata):
@@ -632,7 +613,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             key=operator.itemgetter("name"),
         )
         orig_meta = self.metadata
-        table = Table(
+        Table(
             "testtbl",
             orig_meta,
             Column("a", sqlalchemy.String(20)),
@@ -641,12 +622,12 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             # reserved identifiers
             Column("asc", sqlalchemy.String(30)),
             Column("key", sqlalchemy.String(30)),
+            sqlalchemy.Index("unique_a", "a", unique=True),
+            sqlalchemy.Index("unique_a_b_c", "a", "b", "c", unique=True),
+            sqlalchemy.Index("unique_c_a_b", "c", "a", "b", unique=True),
+            sqlalchemy.Index("unique_asc_key", "asc", "key", unique=True),
             schema=schema,
         )
-        for uc in uniques:
-            table.append_constraint(
-                sqlalchemy.Index(uc["name"], *uc["column_names"], unique=True)
-            )
         orig_meta.create_all()
 
         inspector = inspect(orig_meta.bind)
@@ -774,8 +755,97 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             eq_(typ.scale, 9)
 
 
+class CompositeKeyReflectionTest(_CompositeKeyReflectionTest):
+    @testing.requires.foreign_key_constraint_reflection
+    @testing.provide_metadata
+    def test_fk_column_order(self):
+        """
+        SPANNER OVERRIDE:
+
+        Spanner column usage reflection doesn't support determenistic
+        ordering. Overriding the test to check that columns are
+        reflected correctly, without considering their order.
+        """
+        # test for issue #5661
+        meta = self.metadata
+        insp = inspect(meta.bind)
+        foreign_keys = insp.get_foreign_keys(self.tables.tb2.name)
+        eq_(len(foreign_keys), 1)
+        fkey1 = foreign_keys[0]
+        eq_(set(fkey1.get("referred_columns")), {"name", "id", "attr"})
+        eq_(set(fkey1.get("constrained_columns")), {"pname", "pid", "pattr"})
+
+
+class RowFetchTest(_RowFetchTest):
+    def test_row_w_scalar_select(self):
+        """
+        SPANNER OVERRIDE:
+
+        Cloud Spanner returns a DatetimeWithNanoseconds() for date
+        data types. Overriding the test to use a DatetimeWithNanoseconds
+        type value as an expected result.
+        --------------
+
+        test that a scalar select as a column is returned as such
+        and that type conversion works OK.
+
+        (this is half a SQLAlchemy Core test and half to catch database
+        backends that may have unusual behavior with scalar selects.)
+        """
+        datetable = self.tables.has_dates
+        s = select([datetable.alias("x").c.today]).as_scalar()
+        s2 = select([datetable.c.id, s.label("somelabel")])
+        row = config.db.execute(s2).first()
+
+        eq_(
+            row["somelabel"],
+            DatetimeWithNanoseconds(2006, 5, 12, 12, 0, 0, tzinfo=pytz.UTC),
+        )
+
+
+class InsertBehaviorTest(_InsertBehaviorTest):
+    @pytest.mark.skip("Spanner doesn't support empty inserts")
+    def test_empty_insert(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support auto increment")
+    def test_insert_from_select_autoinc(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support auto increment")
+    def test_insert_from_select_autoinc_no_rows(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support default column values")
+    def test_insert_from_select_with_defaults(self):
+        pass
+
+
+class BytesTest(_LiteralRoundTripFixture, fixtures.TestBase):
+    __backend__ = True
+
+    def test_nolength_binary(self):
+        metadata = MetaData()
+        foo = Table("foo", metadata, Column("one", LargeBinary))
+
+        foo.create(config.db)
+        foo.drop(config.db)
+
+
+@pytest.mark.skip("Spanner doesn't support quotes in table names.")
+class QuotedNameArgumentTest(_QuotedNameArgumentTest):
+    pass
+
+
+@pytest.mark.skip("Spanner doesn't support IS DISTINCT FROM clause")
+class IsOrIsNotDistinctFromTest(_IsOrIsNotDistinctFromTest):
+    pass
+
+
 class OrderByLabelTest(_OrderByLabelTest):
-    @pytest.mark.skip("Spanner throws a syntax error.")
+    @pytest.mark.skip(
+        "Spanner throws a syntax error as group by composed doesn't support."
+    )
     def test_group_by_composed(self):
         pass
 
@@ -853,64 +923,3 @@ class LikeFunctionsTest(_LikeFunctionsTest):
     )
     def test_startswith_autoescape_escape(self):
         pass
-
-
-class RowFetchTest(_RowFetchTest):
-    def test_row_w_scalar_select(self):
-        """
-        SPANNER OVERRIDE:
-
-        Cloud Spanner returns a DatetimeWithNanoseconds() for date
-        data types. Overriding the test to use a DatetimeWithNanoseconds
-        type value as an expected result.
-        --------------
-
-        test that a scalar select as a column is returned as such
-        and that type conversion works OK.
-
-        (this is half a SQLAlchemy Core test and half to catch database
-        backends that may have unusual behavior with scalar selects.)
-        """
-        datetable = self.tables.has_dates
-        s = select([datetable.alias("x").c.today]).as_scalar()
-        s2 = select([datetable.c.id, s.label("somelabel")])
-        row = config.db.execute(s2).first()
-
-        eq_(
-            row["somelabel"],
-            DatetimeWithNanoseconds(2006, 5, 12, 12, 0, 0, tzinfo=pytz.UTC),
-        )
-
-
-class InsertBehaviorTest(_InsertBehaviorTest):
-    @pytest.mark.skip("Spanner doesn't support empty inserts")
-    def test_empty_insert(self):
-        pass
-
-    @pytest.mark.skip("Spanner doesn't support auto increment")
-    def test_insert_from_select_autoinc(self):
-        pass
-
-    @pytest.mark.skip("Spanner doesn't support auto increment")
-    def test_insert_from_select_autoinc_no_rows(self):
-        pass
-
-    @pytest.mark.skip("Spanner doesn't support default column values")
-    def test_insert_from_select_with_defaults(self):
-        pass
-
-
-@pytest.mark.skip("Spanner doesn't support IS DISTINCT FROM clause")
-class IsOrIsNotDistinctFromTest(_IsOrIsNotDistinctFromTest):
-    pass
-
-
-class BytesTest(_LiteralRoundTripFixture, fixtures.TestBase):
-    __backend__ = True
-
-    def test_nolength_binary(self):
-        metadata = MetaData()
-        foo = Table("foo", metadata, Column("one", LargeBinary))
-
-        foo.create(config.db)
-        foo.drop(config.db)

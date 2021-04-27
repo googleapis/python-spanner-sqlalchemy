@@ -21,8 +21,11 @@ from sqlalchemy.sql.compiler import (
     selectable,
     DDLCompiler,
     GenericTypeCompiler,
+    IdentifierPreparer,
     SQLCompiler,
+    RESERVED_WORDS,
 )
+from sqlalchemy import util
 from google.cloud import spanner_dbapi
 
 # Spanner-to-SQLAlchemy types map
@@ -87,6 +90,34 @@ def engine_to_connection(function):
     return wrapper
 
 
+class SpannerIdentifierPreparer(IdentifierPreparer):
+    """Identifiers compiler.
+
+    In Cloud Spanner backticks "`" are used for keywords escaping.
+    """
+
+    reserved_words = RESERVED_WORDS.copy()
+    reserved_words.update(spanner_dbapi.parse_utils.SPANNER_RESERVED_KEYWORDS)
+
+    def __init__(self, dialect):
+        super(SpannerIdentifierPreparer, self).__init__(
+            dialect, initial_quote="`", final_quote="`"
+        )
+
+    def _requires_quotes(self, value):
+        """Return True if the given identifier requires quoting."""
+        lc_value = value.lower()
+        if lc_value == '"unicode"':  # don't escape default Spanner colation
+            return False
+
+        return (
+            lc_value in self.reserved_words
+            or value[0] in self.illegal_initial_characters
+            or not self.legal_characters.match(util.text_type(value))
+            or (lc_value != value)
+        )
+
+
 class SpannerSQLCompiler(SQLCompiler):
     """Spanner SQL statements compiler."""
 
@@ -131,12 +162,13 @@ class SpannerDDLCompiler(DDLCompiler):
         for cons in drop_table.element.constraints:
             if isinstance(cons, ForeignKeyConstraint) and cons.name:
                 constrs += "ALTER TABLE {table} DROP CONSTRAINT {constr};".format(
-                    table=drop_table.element.name, constr=cons.name
+                    table=drop_table.element.name,
+                    constr=self.preparer.quote(cons.name),
                 )
 
         indexes = ""
         for index in drop_table.element.indexes:
-            indexes += "DROP INDEX {};".format(index.name)
+            indexes += "DROP INDEX {};".format(self.preparer.quote(index.name))
 
         return indexes + constrs + str(drop_table)
 
@@ -246,6 +278,7 @@ class SpannerDialect(DefaultDialect):
     supports_native_boolean = True
 
     ddl_compiler = SpannerDDLCompiler
+    preparer = SpannerIdentifierPreparer
     statement_compiler = SpannerSQLCompiler
     type_compiler = SpannerTypeCompiler
 
@@ -481,8 +514,8 @@ SELECT
     tc.constraint_name,
     ctu.table_name,
     ctu.table_schema,
-    ccu.column_name,
-    kcu.column_name
+    ARRAY_AGG(DISTINCT ccu.column_name),
+    ARRAY_AGG(kcu.column_name)
 FROM information_schema.table_constraints AS tc
 JOIN information_schema.constraint_column_usage AS ccu
     ON ccu.constraint_name = tc.constraint_name
@@ -493,6 +526,7 @@ JOIN information_schema.key_column_usage AS kcu
 WHERE
     tc.table_name="{table_name}"
     AND tc.constraint_type = "FOREIGN KEY"
+GROUP BY tc.constraint_name, ctu.table_name, ctu.table_schema
 """.format(
             table_name=table_name
         )
@@ -507,8 +541,8 @@ WHERE
                         "name": row[0],
                         "referred_table": row[1],
                         "referred_schema": row[2] or None,
-                        "referred_columns": [row[3]],
-                        "constrained_columns": [row[4]],
+                        "referred_columns": row[3],
+                        "constrained_columns": row[4],
                     }
                 )
         return keys
