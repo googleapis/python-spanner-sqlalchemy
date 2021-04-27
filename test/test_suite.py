@@ -55,7 +55,9 @@ from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_ddl import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_insert import *  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_reflection import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_results import *  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_sequence import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 
 from sqlalchemy.testing.suite.test_cte import CTETest as _CTETest
@@ -69,6 +71,12 @@ from sqlalchemy.testing.suite.test_insert import (
 )
 from sqlalchemy.testing.suite.test_reflection import (
     ComponentReflectionTest as _ComponentReflectionTest,
+)
+from sqlalchemy.testing.suite.test_reflection import (
+    QuotedNameArgumentTest as _QuotedNameArgumentTest,
+)
+from sqlalchemy.testing.suite.test_reflection import (
+    CompositeKeyReflectionTest as _CompositeKeyReflectionTest,
 )
 from sqlalchemy.testing.suite.test_results import RowFetchTest as _RowFetchTest
 from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
@@ -89,12 +97,6 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     TimeTest as _TimeTest,
     TimeMicrosecondsTest as _TimeMicrosecondsTest,
     TimestampMicrosecondsTest,
-)
-
-from sqlalchemy.testing.suite.test_sequence import (
-    SequenceCompilerTest as _SequenceCompilerTest,
-    HasSequenceTest as _HasSequenceTest,
-    SequenceTest as _SequenceTest,
 )
 
 config.test_schema = ""
@@ -550,90 +552,6 @@ class IntegerTest(_IntegerTest):
                 assert value in output
 
 
-class TextTest(_TextTest):
-    @pytest.mark.skip("Spanner throws an error")
-    def test_text_empty_strings(self, connection):
-        """
-        SPANNER OVERRIDE:
-
-        Spanner DBAPI throws an error when cleanup tried to
-        rollback the connection after the test executed successfully.
-        The error is `ValueError: Transaction is already rolled back`.
-        """
-        pass
-
-    @pytest.mark.skip("Spanner throws an error")
-    def test_text_null_strings(self, connection):
-        """
-        SPANNER OVERRIDE:
-
-        Spanner DBAPI throws an error when cleanup tried to
-        rollback the connection after the test executed successfully.
-        The error is `ValueError: Transaction is already rolled back`.
-        """
-        pass
-
-    @pytest.mark.skip("Spanner doesn't support non-ascii characters")
-    def test_literal_non_ascii(self):
-        pass
-
-    def test_literal_quoting(self):
-        """
-        SPANNER OVERRIDE:
-
-        The original test string is : \"""some 'text' hey "hi there" that's text\"""
-
-        Spanner doesn't support string which contains `'s` in strings and throws a
-        syntax error, e.g.: `'''hey that's text'''`
-        Override the method and change the input data.
-        """
-        data = """some "text" hey "hi there" that is text"""
-        self._literal_round_trip(Text, [data], [data])
-
-    def test_literal_backslashes(self):
-        """
-        SPANNER OVERRIDE:
-        Spanner supports `\\` backslash to represent valid escape sequence, but
-        for `'\'` Spanner throws an error `400 Syntax error: Illegal escape sequence`.
-        See: https://cloud.google.com/spanner/docs/lexical#string_and_bytes_literals
-        """
-        input_data = r"backslash one \\ backslash \\\\ two end"
-        output_data = r"backslash one \ backslash \\ two end"
-
-        self._literal_round_trip(Text, [input_data], [output_data])
-
-    def test_text_roundtrip(self):
-        """
-        SPANNER OVERRIDE:
-
-        Cloud Spanner doesn't support the tables with an empty primary key
-        when column has defined NOT NULL - following insertions will fail with
-        `400 id must not be NULL in table date_table`.
-        Overriding the tests and adding a manual primary key value to avoid the same
-        failures and deleting the table at the end.
-        """
-        text_table = self.tables.text_table
-
-        config.db.execute(text_table.insert(), {"id": 1, "text_data": "some text"})
-        row = config.db.execute(select([text_table.c.text_data])).first()
-        eq_(row, ("some text",))
-
-
-@pytest.mark.skip("Spanner doesn't support CREATE SEQUENCE.")
-class SequenceCompilerTest(_SequenceCompilerTest):
-    pass
-
-
-@pytest.mark.skip("Spanner doesn't support CREATE SEQUENCE.")
-class HasSequenceTest(_HasSequenceTest):
-    pass
-
-
-@pytest.mark.skip("Spanner doesn't support CREATE SEQUENCE.")
-class SequenceTest(_SequenceTest):
-    pass
-
-
 class ComponentReflectionTest(_ComponentReflectionTest):
     @classmethod
     def define_temp_tables(cls, metadata):
@@ -693,7 +611,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             key=operator.itemgetter("name"),
         )
         orig_meta = self.metadata
-        table = Table(
+        Table(
             "testtbl",
             orig_meta,
             Column("a", sqlalchemy.String(20)),
@@ -702,12 +620,12 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             # reserved identifiers
             Column("asc", sqlalchemy.String(30)),
             Column("key", sqlalchemy.String(30)),
+            sqlalchemy.Index("unique_a", "a", unique=True),
+            sqlalchemy.Index("unique_a_b_c", "a", "b", "c", unique=True),
+            sqlalchemy.Index("unique_c_a_b", "c", "a", "b", unique=True),
+            sqlalchemy.Index("unique_asc_key", "asc", "key", unique=True),
             schema=schema,
         )
-        for uc in uniques:
-            table.append_constraint(
-                sqlalchemy.Index(uc["name"], *uc["column_names"], unique=True)
-            )
         orig_meta.create_all()
 
         inspector = inspect(orig_meta.bind)
@@ -835,6 +753,27 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             eq_(typ.scale, 9)
 
 
+class CompositeKeyReflectionTest(_CompositeKeyReflectionTest):
+    @testing.requires.foreign_key_constraint_reflection
+    @testing.provide_metadata
+    def test_fk_column_order(self):
+        """
+        SPANNER OVERRIDE:
+
+        Spanner column usage reflection doesn't support determenistic
+        ordering. Overriding the test to check that columns are
+        reflected correctly, without considering their order.
+        """
+        # test for issue #5661
+        meta = self.metadata
+        insp = inspect(meta.bind)
+        foreign_keys = insp.get_foreign_keys(self.tables.tb2.name)
+        eq_(len(foreign_keys), 1)
+        fkey1 = foreign_keys[0]
+        eq_(set(fkey1.get("referred_columns")), {"name", "id", "attr"})
+        eq_(set(fkey1.get("constrained_columns")), {"pname", "pid", "pattr"})
+
+
 class RowFetchTest(_RowFetchTest):
     def test_row_w_scalar_select(self):
         """
@@ -894,3 +833,77 @@ class BytesTest(_LiteralRoundTripFixture, fixtures.TestBase):
 
         foo.create(config.db)
         foo.drop(config.db)
+
+
+@pytest.mark.skip("Spanner doesn't support quotes in table names.")
+class QuotedNameArgumentTest(_QuotedNameArgumentTest):
+    pass
+
+
+class TextTest(_TextTest):
+    @pytest.mark.skip("Spanner throws an error")
+    def test_text_empty_strings(self, connection):
+        """
+        SPANNER OVERRIDE:
+
+        Spanner DBAPI throws an error when cleanup tried to
+        rollback the connection after the test executed successfully.
+        The error is `ValueError: Transaction is already rolled back`.
+        """
+        pass
+
+    @pytest.mark.skip("Spanner throws an error")
+    def test_text_null_strings(self, connection):
+        """
+        SPANNER OVERRIDE:
+
+        Spanner DBAPI throws an error when cleanup tried to
+        rollback the connection after the test executed successfully.
+        The error is `ValueError: Transaction is already rolled back`.
+        """
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support non-ascii characters")
+    def test_literal_non_ascii(self):
+        pass
+
+    def test_literal_quoting(self):
+        """
+        SPANNER OVERRIDE:
+
+        The original test string is : \"""some 'text' hey "hi there" that's text\"""
+
+        Spanner doesn't support string which contains `'s` in strings and throws a
+        syntax error, e.g.: `'''hey that's text'''`
+        Override the method and change the input data.
+        """
+        data = """some "text" hey "hi there" that is text"""
+        self._literal_round_trip(Text, [data], [data])
+
+    def test_literal_backslashes(self):
+        """
+        SPANNER OVERRIDE:
+        Spanner supports `\\` backslash to represent valid escape sequence, but
+        for `'\'` Spanner throws an error `400 Syntax error: Illegal escape sequence`.
+        See: https://cloud.google.com/spanner/docs/lexical#string_and_bytes_literals
+        """
+        input_data = r"backslash one \\ backslash \\\\ two end"
+        output_data = r"backslash one \ backslash \\ two end"
+
+        self._literal_round_trip(Text, [input_data], [output_data])
+
+    def test_text_roundtrip(self):
+        """
+        SPANNER OVERRIDE:
+
+        Cloud Spanner doesn't support the tables with an empty primary key
+        when column has defined NOT NULL - following insertions will fail with
+        `400 id must not be NULL in table date_table`.
+        Overriding the tests and adding a manual primary key value to avoid the same
+        failures and deleting the table at the end.
+        """
+        text_table = self.tables.text_table
+
+        config.db.execute(text_table.insert(), {"id": 1, "text_data": "some text"})
+        row = config.db.execute(select([text_table.c.text_data])).first()
+        eq_(row, ("some text",))
