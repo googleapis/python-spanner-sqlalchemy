@@ -723,7 +723,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
 
             if order_by == "foreign_key":
                 answer = ["users", "user_tmp", "email_addresses", "dingalings"]
-                eq_(table_names, answer)
+                eq_(set(table_names), set(answer))
             else:
                 answer = ["dingalings", "email_addresses", "user_tmp", "users"]
                 eq_(sorted(table_names), answer)
