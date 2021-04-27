@@ -817,6 +817,10 @@ class InsertBehaviorTest(_InsertBehaviorTest):
     def test_insert_from_select_with_defaults(self):
         pass
 
+    @pytest.mark.skip("Spanner doesn't support auto increment")
+    def test_autoclose_on_insert(self):
+        pass
+
 
 @pytest.mark.skip("Spanner doesn't support IS DISTINCT FROM clause")
 class IsOrIsNotDistinctFromTest(_IsOrIsNotDistinctFromTest):
