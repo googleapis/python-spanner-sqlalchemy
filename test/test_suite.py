@@ -840,26 +840,6 @@ class InsertBehaviorTest(_InsertBehaviorTest):
         assert r.is_insert
         assert not r.returns_rows
 
-    @config.requirements.returning
-    def test_autoclose_on_insert_implicit_returning(self):
-        """
-        SPANNER OVERRIDE:
-
-        Cloud Spanner doesn't support tables with an auto increment primary key,
-        following insertions will fail with `400 id must not be NULL in table
-        autoinc_pk`.
-
-        Overriding the tests and adding a manual primary key value to avoid the same
-        failures.
-        """
-        r = config.db.execute(
-            self.tables.autoinc_pk.insert(), dict(id=1, data="some data")
-        )
-        assert r._soft_closed
-        assert not r.closed
-        assert r.is_insert
-        assert not r.returns_rows
-
 
 @pytest.mark.skip("Spanner doesn't support IS DISTINCT FROM clause")
 class IsOrIsNotDistinctFromTest(_IsOrIsNotDistinctFromTest):
