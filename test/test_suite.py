@@ -878,3 +878,9 @@ class LikeFunctionsTest(_LikeFunctionsTest):
     @pytest.mark.skip("Spanner doesn't support LIKE ESCAPE clause")
     def test_startswith_autoescape_escape(self):
         pass
+
+    def test_escape_keyword_raises(self):
+        """Check that ESCAPE keyword causes an exception when used."""
+        with pytest.raises(NotImplementedError):
+            col = self.tables.some_table.c.data
+            self._test(col.contains("b##cde", escape="#"), {7})
