@@ -80,10 +80,11 @@ from sqlalchemy.testing.suite.test_reflection import (
 )
 from sqlalchemy.testing.suite.test_results import RowFetchTest as _RowFetchTest
 from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
+from sqlalchemy.testing.suite.test_select import LikeFunctionsTest as _LikeFunctionsTest
 from sqlalchemy.testing.suite.test_select import (
     IsOrIsNotDistinctFromTest as _IsOrIsNotDistinctFromTest,
 )
-from sqlalchemy.testing.suite.test_select import LikeFunctionsTest as _LikeFunctionsTest
+from sqlalchemy.testing.suite.test_select import OrderByLabelTest as _OrderByLabelTest
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
 from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
 from sqlalchemy.testing.suite.test_types import _LiteralRoundTripFixture
@@ -824,6 +825,27 @@ class IsOrIsNotDistinctFromTest(_IsOrIsNotDistinctFromTest):
     pass
 
 
+@pytest.mark.skip("Spanner doesn't support composed GROUP BY")
+class OrderByLabelTest(_OrderByLabelTest):
+    pass
+
+
+class BytesTest(_LiteralRoundTripFixture, fixtures.TestBase):
+    __backend__ = True
+
+    def test_nolength_binary(self):
+        metadata = MetaData()
+        foo = Table("foo", metadata, Column("one", LargeBinary))
+
+        foo.create(config.db)
+        foo.drop(config.db)
+
+
+@pytest.mark.skip("Spanner doesn't support quotes in table names.")
+class QuotedNameArgumentTest(_QuotedNameArgumentTest):
+    pass
+
+
 class LikeFunctionsTest(_LikeFunctionsTest):
     @pytest.mark.skip("Spanner doesn't support LIKE ESCAPE clause")
     def test_contains_autoescape(self):
@@ -856,19 +878,3 @@ class LikeFunctionsTest(_LikeFunctionsTest):
     @pytest.mark.skip("Spanner doesn't support LIKE ESCAPE clause")
     def test_startswith_autoescape_escape(self):
         pass
-
-
-class BytesTest(_LiteralRoundTripFixture, fixtures.TestBase):
-    __backend__ = True
-
-    def test_nolength_binary(self):
-        metadata = MetaData()
-        foo = Table("foo", metadata, Column("one", LargeBinary))
-
-        foo.create(config.db)
-        foo.drop(config.db)
-
-
-@pytest.mark.skip("Spanner doesn't support quotes in table names.")
-class QuotedNameArgumentTest(_QuotedNameArgumentTest):
-    pass
