@@ -33,22 +33,3 @@ def delete_row_with_where_condition(table):
     result = table.select().execute().fetchall()
     print("Total rows:", len(result))
     # [END sqlalchemy_spanner_delete_row_with_where_condition]
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-
-    parser.add_argument(
-        "--table",
-        help="Your sqlalchemy table object.",
-    )
-    subparsers = parser.add_subparsers(dest="command")
-    subparsers.add_parser("delete_row_with_where_condition", help=delete_row_with_where_condition.__doc__)
-    args = parser.parse_args()
-    if args.command == "delete_row_with_where_condition":
-        delete_row_with_where_condition(args.table)
-    else:
-        print(f"Command {args.command} did not match expected commands.")

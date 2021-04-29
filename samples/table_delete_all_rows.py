@@ -33,22 +33,3 @@ def delete_all_rows(table):
     result = table.select().execute().fetchall()
     print("Total rows:", len(result))
     # [END sqlalchemy_spanner_delete_all_rows]
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-
-    parser.add_argument(
-        "--table",
-        help="Your sqlalchemy table object.",
-    )
-    subparsers = parser.add_subparsers(dest="command")
-    subparsers.add_parser("delete_all_rows", help=delete_all_rows.__doc__)
-    args = parser.parse_args()
-    if args.command == "delete_all_rows":
-        delete_all_rows(args.table)
-    else:
-        print(f"Command {args.command} did not match expected commands.")

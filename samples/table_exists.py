@@ -23,22 +23,3 @@ def table_exists(table):
     result = table.exists()
     print("Table exists:", result)
     # [END sqlalchemy_spanner_table_exists]
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-
-    parser.add_argument(
-        "--table",
-        help="Your sqlalchemy table object.",
-    )
-    subparsers = parser.add_subparsers(dest="command")
-    subparsers.add_parser("table_exists", help=table_exists.__doc__)
-    args = parser.parse_args()
-    if args.command == "table_exists":
-        table_exists(args.table)
-    else:
-        print(f"Command {args.command} did not match expected commands.")

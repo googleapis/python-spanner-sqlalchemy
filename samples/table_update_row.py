@@ -33,22 +33,3 @@ def update_row(table):
     print("Updated row is :", result)
     # [END sqlalchemy_spanner_update_row]
     return result
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-
-    parser.add_argument(
-        "--table",
-        help="Your sqlalchemy table object.",
-    )
-    subparsers = parser.add_subparsers(dest="command")
-    subparsers.add_parser("update_row", help=update_row.__doc__)
-    args = parser.parse_args()
-    if args.command == "update_row":
-        update_row(args.table)
-    else:
-        print(f"Command {args.command} did not match expected commands.")

@@ -28,26 +28,6 @@ def fetch_rows_with_order_by(table):
 
     # [START sqlalchemy_spanner_fetch_rows_with_order_by]
     result = table.select().order_by(table.c.user_name).execute().fetchall()
-    import pdb;pdb.set_trace()
     print("The order by result is:", result)
     # [END sqlalchemy_spanner_fetch_rows_with_order_by]
     return result
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-
-    parser.add_argument(
-        "--table",
-        help="Your sqlalchemy table object.",
-    )
-    subparsers = parser.add_subparsers(dest="command")
-    subparsers.add_parser("fetch_rows_with_order_by", help=fetch_rows_with_order_by.__doc__)
-    args = parser.parse_args()
-    if args.command == "fetch_rows_with_order_by":
-        fetch_rows_with_order_by(args.table)
-    else:
-        print(f"Command {args.command} did not match expected commands.")

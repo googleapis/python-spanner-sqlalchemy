@@ -25,20 +25,3 @@ def enable_autocommit_mode(url):
 
     # [END sqlalchemy_spanner_autocmmit_on]
     return conn
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    parser.add_argument("url", help="Your Cloud Spanner url which contains "
-                                    "project-id, instance-id, databas-id.")
-
-    subparsers = parser.add_subparsers(dest="command")
-    subparsers.add_parser("enable_autocommit_mode", help=enable_autocommit_mode.__doc__)
-    args = parser.parse_args()
-    if args.command == "enable_autocommit_mode":
-        enable_autocommit_mode(args.url)
-    else:
-        print(f"Command {args.command} did not match expected commands.")
