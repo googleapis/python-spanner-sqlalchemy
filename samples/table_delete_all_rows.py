@@ -4,8 +4,6 @@
 # license that can be found in the LICENSE file or at
 # https://developers.google.com/open-source/licenses/bsd
 
-import argparse
-
 
 def delete_all_rows(table):
     """Delete all rows from the table"""

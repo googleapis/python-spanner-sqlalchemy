@@ -4,8 +4,6 @@
 # license that can be found in the LICENSE file or at
 # https://developers.google.com/open-source/licenses/bsd
 
-import argparse
-
 
 def fetch_row_with_where_condition(table):
     """Fetch row with where condition from the table"""

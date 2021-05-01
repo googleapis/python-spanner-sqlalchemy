@@ -4,8 +4,6 @@
 # license that can be found in the LICENSE file or at
 # https://developers.google.com/open-source/licenses/bsd
 
-import argparse
-
 
 def delete_row_with_where_condition(table):
     """Delete selected row from the table"""
