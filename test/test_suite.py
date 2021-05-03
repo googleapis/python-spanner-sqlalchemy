@@ -876,6 +876,10 @@ class LikeFunctionsTest(_LikeFunctionsTest):
         pass
 
     @pytest.mark.skip("Spanner doesn't support LIKE ESCAPE clause")
+    def test_startswith_escape(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support LIKE ESCAPE clause")
     def test_startswith_autoescape_escape(self):
         pass
 
