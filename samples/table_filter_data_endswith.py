@@ -5,8 +5,8 @@
 # https://developers.google.com/open-source/licenses/bsd
 
 
-def filter_data_with_like(table):
-    """filter data with like from the table"""
+def filter_data_endswith(table):
+    """filter data with endswith from the table"""
 
     # TODO(developer): Create the table
     # table = Table(
@@ -26,8 +26,8 @@ def filter_data_with_like(table):
         {"user_id": 6, "user_name": "abcde%fg"},
     ])
 
-    # [START sqlalchemy_spanner_filter_data_with_like]
-    result = list(table.select().where(table.c.user_name.like('abc%')).execute())
+    # [START sqlalchemy_spanner_filter_data_endswith]
+    result = list(table.select().where(table.c.user_name.endswith("%efg")).execute())
     print("Filtered data:", result)
-    # [END sqlalchemy_spanner_filter_data_with_like]
+    # [END sqlalchemy_spanner_filter_data_endswith]
     return result

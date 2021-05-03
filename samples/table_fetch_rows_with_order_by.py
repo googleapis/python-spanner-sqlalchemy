@@ -25,7 +25,6 @@ def fetch_rows_with_order_by(table):
     ])
 
     # [START sqlalchemy_spanner_fetch_rows_with_order_by]
-    result = table.select().order_by(table.c.user_name).execute().fetchall()
+    result = list(table.select().order_by(table.c.user_name).execute().fetchall())
     print("The order by result is:", result)
     # [END sqlalchemy_spanner_fetch_rows_with_order_by]
-    return result

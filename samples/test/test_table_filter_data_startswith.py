@@ -5,11 +5,11 @@
 # https://developers.google.com/open-source/licenses/bsd
 
 
-from .. import table_filter_data_with_like
+from .. import table_filter_data_startswith
 
 
-def test_table_filter_data_with_like(capsys, table_id):
-    rows = table_filter_data_with_like.filter_data_with_like(table_id)
+def test_table_filter_data_startswith(capsys, table_id):
+    rows = table_filter_data_startswith.filter_data_startswith(table_id)
 
     out, err = capsys.readouterr()
     assert "Filtered data:" in out

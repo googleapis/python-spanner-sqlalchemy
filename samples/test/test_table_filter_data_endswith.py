@@ -5,11 +5,12 @@
 # https://developers.google.com/open-source/licenses/bsd
 
 
-from .. import table_fetch_rows_with_order_by
+from .. import table_filter_data_endswith
 
 
-def test_table_delete_all_rows(capsys, table_id):
-    table_fetch_rows_with_order_by.fetch_rows_with_order_by(table_id)
+def test_table_filter_data_endswith(capsys, table_id):
+    rows = table_filter_data_endswith.filter_data_endswith(table_id)
 
     out, err = capsys.readouterr()
-    assert "The order by result is:" in out
+    assert "Filtered data:" in out
+    assert len(rows) is 4
