@@ -845,9 +845,11 @@ class StringTest(_StringTest):
         """
         SPANNER OVERRIDE:
 
-        Spanner supports `\\` backslash to represent valid escape sequence, but
-        for `'\'` Spanner throws an error `400 Syntax error: Illegal escape sequence`.
-        See: https://cloud.google.com/spanner/docs/lexical#string_and_bytes_literals
+        Cloud spanner supports prefixed backslash to escape non-alphanumeric characters
+        in string.
+        Override the method to add  additional escape before using it to generate a SQL
+        statement. See:
+        https://cloud.google.com/spanner/docs/lexical#string_and_bytes_literals
         """
         input_data = r"backslash one \\ backslash \\\\ two end"
         output_data = r"backslash one \ backslash \\ two end"
@@ -860,12 +862,13 @@ class StringTest(_StringTest):
 
         The original test string is : \"""some 'text' hey "hi there" that's text\"""
 
-        Spanner doesn't support string which contains `'s` in
-        strings and throws a syntax error, e.g.: `'''hey that's text'''`
-        Override the method and change the input data.
+        Spanner throws a syntax error for not representing non-alphanumeric characters
+        in string as a raw string.
+        Override the method to change input data into raw string.
         """
-        data = """some "text" hey "hi there" that is text"""
-        self._literal_round_trip(String(40), [data], [data])
+        input_data = r"""some 'text' hey \"hi there\" that's text"""
+        output_data = """some 'text' hey "hi there" that's text"""
+        self._literal_round_trip(String(40), [input_data], [output_data])
 
     @pytest.mark.skip("Spanner doesn't support non-ascii characters")
     def test_literal_non_ascii(self):
