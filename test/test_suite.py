@@ -90,12 +90,7 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     TimestampMicrosecondsTest,
     UnicodeVarcharTest as _UnicodeVarcharTest,
     UnicodeTextTest as _UnicodeTextTest,
-)
-
-from sqlalchemy.testing.suite.test_sequence import (
-    SequenceCompilerTest as _SequenceCompilerTest,
-    HasSequenceTest as _HasSequenceTest,
-    SequenceTest as _SequenceTest,
+    _UnicodeFixture as _UnicodeFixtureTest,
 )
 
 config.test_schema = ""
@@ -551,7 +546,7 @@ class IntegerTest(_IntegerTest):
                 assert value in output
 
 
-class UnicodeVarcharTest(_UnicodeVarcharTest):
+class UnicodeFixtureTest(_UnicodeFixtureTest):
     def test_round_trip(self):
         """
         SPANNER OVERRIDE:
@@ -593,25 +588,21 @@ class UnicodeVarcharTest(_UnicodeVarcharTest):
         for row in rows:
             assert isinstance(row[0], util.text_type)
 
-    @pytest.mark.skip("Spanner throws an error")
-    def test_empty_strings_varchar(self, connection):
-        """
-        SPANNER OVERRIDE:
-        Spanner DBAPI throws an error when cleanup tried to
-        rollback the connection after the test executed successfully.
-        The error is `ValueError: Transaction is already rolled back`.
-        """
-        pass
+    def _test_null_strings(self, connection):
+        unicode_table = self.tables.unicode_table
 
-    @pytest.mark.skip("Spanner throws an error")
-    def test_null_strings_varchar(self, connection):
-        """
-        SPANNER OVERRIDE:
-        Spanner DBAPI throws an error when cleanup tried to
-        rollback the connection after the test executed successfully.
-        The error is `ValueError: Transaction is already rolled back`.
-        """
-        pass
+        connection.execute(unicode_table.insert(), {"id": 1, "unicode_data": None})
+        row = connection.execute(select([unicode_table.c.unicode_data])).first()
+        eq_(row, (None,))
+
+    def _test_empty_strings(self, connection):
+        unicode_table = self.tables.unicode_table
+
+        connection.execute(
+            unicode_table.insert(), {"id": 1, "unicode_data": util.u("")}
+        )
+        row = connection.execute(select([unicode_table.c.unicode_data])).first()
+        eq_(row, (util.u(""),))
 
     @pytest.mark.skip("Spanner doesn't support non-ascii characters")
     def test_literal(self):
@@ -622,39 +613,27 @@ class UnicodeVarcharTest(_UnicodeVarcharTest):
         pass
 
 
-class UnicodeTextTest(_UnicodeTextTest, UnicodeVarcharTest):
-    @pytest.mark.skip("Spanner throws an error")
-    def test_empty_strings_text(self, connection):
-        """
-        SPANNER OVERRIDE:
-        Spanner DBAPI throws an error when cleanup tried to
-        rollback the connection after the test executed successfully.
-        The error is `ValueError: Transaction is already rolled back`.
-        """
-        pass
+class UnicodeVarcharTest(UnicodeFixtureTest, _UnicodeVarcharTest):
+    """
+    SPANNER OVERRIDE:
 
-    @pytest.mark.skip("Spanner throws an error")
-    def test_null_strings_text(self, connection):
-        """
-        SPANNER OVERRIDE:
-        Spanner DBAPI throws an error when cleanup tried to
-        rollback the connection after the test executed successfully.
-        The error is `ValueError: Transaction is already rolled back`.
-        """
+    UnicodeVarcharTest class inherits the _UnicodeFixtureTest class's tests,
+    so to avoid those failures and maintain DRY concept just inherit the class to run
+    tests successfully.
+    """
 
-
-@pytest.mark.skip("Spanner doesn't support CREATE SEQUENCE.")
-class SequenceCompilerTest(_SequenceCompilerTest):
     pass
 
 
-@pytest.mark.skip("Spanner doesn't support CREATE SEQUENCE.")
-class HasSequenceTest(_HasSequenceTest):
-    pass
+class UnicodeTextTest(UnicodeFixtureTest, _UnicodeTextTest):
+    """
+    SPANNER OVERRIDE:
 
+    UnicodeTextTest class inherits the _UnicodeFixtureTest class's tests,
+    so to avoid those failures and maintain DRY concept just inherit the class to run
+    tests successfully.
+    """
 
-@pytest.mark.skip("Spanner doesn't support CREATE SEQUENCE.")
-class SequenceTest(_SequenceTest):
     pass
 
 
