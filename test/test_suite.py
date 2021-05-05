@@ -43,7 +43,8 @@ from sqlalchemy import exists
 from sqlalchemy import LargeBinary
 from sqlalchemy import Boolean
 from sqlalchemy import String
-from sqlalchemy.types import Integer, Text
+from sqlalchemy.types import Integer
+from sqlalchemy.types import Text
 from sqlalchemy.types import Numeric
 from sqlalchemy.testing import requires
 
@@ -847,27 +848,37 @@ class QuotedNameArgumentTest(_QuotedNameArgumentTest):
 
 
 class TextTest(_TextTest):
-    @pytest.mark.skip("Spanner throws an error")
     def test_text_empty_strings(self, connection):
         """
         SPANNER OVERRIDE:
 
-        Spanner DBAPI throws an error when cleanup tried to
-        rollback the connection after the test executed successfully.
-        The error is `ValueError: Transaction is already rolled back`.
+        Cloud Spanner doesn't support the tables with an empty primary key
+        when column has defined NOT NULL - following insertions will fail with
+        `400 id must not be NULL in table date_table`.
+        Overriding the tests and adding a manual primary key value to avoid the same
+        failures.
         """
-        pass
+        text_table = self.tables.text_table
 
-    @pytest.mark.skip("Spanner throws an error")
+        connection.execute(text_table.insert(), {"id": 1, "text_data": None})
+        row = connection.execute(select([text_table.c.text_data])).first()
+        eq_(row, (None,))
+
     def test_text_null_strings(self, connection):
         """
         SPANNER OVERRIDE:
 
-        Spanner DBAPI throws an error when cleanup tried to
-        rollback the connection after the test executed successfully.
-        The error is `ValueError: Transaction is already rolled back`.
+        Cloud Spanner doesn't support the tables with an empty primary key
+        when column has defined NOT NULL - following insertions will fail with
+        `400 id must not be NULL in table date_table`.
+        Overriding the tests and adding a manual primary key value to avoid the same
+        failures.
         """
-        pass
+        text_table = self.tables.text_table
+
+        connection.execute(text_table.insert(), {"id": 1, "text_data": ""})
+        row = connection.execute(select([text_table.c.text_data])).first()
+        eq_(row, ("",))
 
     @pytest.mark.skip("Spanner doesn't support non-ascii characters")
     def test_literal_non_ascii(self):
@@ -879,19 +890,23 @@ class TextTest(_TextTest):
 
         The original test string is : \"""some 'text' hey "hi there" that's text\"""
 
-        Spanner doesn't support string which contains `'s` in strings and throws a
-        syntax error, e.g.: `'''hey that's text'''`
-        Override the method and change the input data.
+        Spanner throws a syntax error for not representing non-alphanumeric characters
+        in string as a raw string.
+        Override the method to change input data into raw string.
         """
-        data = """some "text" hey "hi there" that is text"""
-        self._literal_round_trip(Text, [data], [data])
+        input_data = r"""some 'text' hey \"hi there\" that's text"""
+        output_data = """some 'text' hey "hi there" that's text"""
+        self._literal_round_trip(Text, [input_data], [output_data])
 
     def test_literal_backslashes(self):
         """
         SPANNER OVERRIDE:
-        Spanner supports `\\` backslash to represent valid escape sequence, but
-        for `'\'` Spanner throws an error `400 Syntax error: Illegal escape sequence`.
-        See: https://cloud.google.com/spanner/docs/lexical#string_and_bytes_literals
+
+        Cloud spanner supports prefixed backslash to escape non-alphanumeric characters
+        in string.
+        Override the method to add  additional escape before using it to generate a SQL
+        statement. See:
+        https://cloud.google.com/spanner/docs/lexical#string_and_bytes_literals
         """
         input_data = r"backslash one \\ backslash \\\\ two end"
         output_data = r"backslash one \ backslash \\ two end"
@@ -906,7 +921,7 @@ class TextTest(_TextTest):
         when column has defined NOT NULL - following insertions will fail with
         `400 id must not be NULL in table date_table`.
         Overriding the tests and adding a manual primary key value to avoid the same
-        failures and deleting the table at the end.
+        failures.
         """
         text_table = self.tables.text_table
 
