@@ -860,9 +860,9 @@ class TextTest(_TextTest):
         """
         text_table = self.tables.text_table
 
-        connection.execute(text_table.insert(), {"id": 1, "text_data": None})
+        connection.execute(text_table.insert(), {"id": 1, "text_data": ""})
         row = connection.execute(select([text_table.c.text_data])).first()
-        eq_(row, (None,))
+        eq_(row, ("",))
 
     def test_text_null_strings(self, connection):
         """
@@ -876,9 +876,9 @@ class TextTest(_TextTest):
         """
         text_table = self.tables.text_table
 
-        connection.execute(text_table.insert(), {"id": 1, "text_data": ""})
+        connection.execute(text_table.insert(), {"id": 1, "text_data": None})
         row = connection.execute(select([text_table.c.text_data])).first()
-        eq_(row, ("",))
+        eq_(row, (None,))
 
     @pytest.mark.skip("Spanner doesn't support non-ascii characters")
     def test_literal_non_ascii(self):
