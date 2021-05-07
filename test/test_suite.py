@@ -1064,6 +1064,13 @@ class NumericTest(_NumericTest):
 
     @testing.requires.precision_numerics_retains_significant_digits
     def test_numeric_no_decimal(self):
+        """
+        SPANNER OVERRIDE:
+
+        Cloud Spanner ignores the `0`s after the decimal point if all
+        the digits are `0`.
+        Overriding the test to avoid the assertion failure.
+        """
         self._do_test(
             Numeric(precision=5, scale=3),
             [decimal.Decimal("1.000")],
