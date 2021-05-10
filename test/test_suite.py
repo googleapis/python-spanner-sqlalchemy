@@ -1036,54 +1036,6 @@ class NumericTest(_NumericTest):
             [decimal.Decimal("900.0")],
         )
 
-    @testing.requires.precision_numerics_many_significant_digits
-    def test_many_significant_digits(self):
-        """
-        SPANNER OVERRIDE:
-
-        Cloud Spanner supports tables with an empty primary key, but
-        only a single row can be inserted into such a table -
-        following insertions will fail with `Row [] already exists".
-        Overriding the test to avoid the same failure.
-
-        Remove extra digits after decimal point as cloud spanner is
-        capable of representing an exact numeric value with a precision
-        of 38 and scale of 9.
-        """
-        self._do_test(
-            Numeric(precision=38, scale=12),
-            [decimal.Decimal("31943874831932418390.01")],
-            [decimal.Decimal("31943874831932418390.01")],
-        )
-
-        self._do_test(
-            Numeric(precision=38, scale=12),
-            [decimal.Decimal("319438950232418390.273596")],
-            [decimal.Decimal("319438950232418390.273596")],
-        )
-
-        self._do_test(
-            Numeric(precision=38, scale=12),
-            [decimal.Decimal("87673.594069654")],
-            [decimal.Decimal("87673.594069654")],
-        )
-
-    @testing.requires.precision_numerics_retains_significant_digits
-    def test_numeric_no_decimal(self):
-        """
-        SPANNER OVERRIDE:
-
-        Cloud Spanner ignores the `0`s after the decimal point if all
-        the digits are `0`.
-        Overriding the test to avoid the assertion failure.
-        """
-        self._do_test(
-            Numeric(precision=5, scale=3),
-            [decimal.Decimal("1.000")],
-            [decimal.Decimal("1")],
-            check_scale=True,
-        )
-
     @testing.requires.precision_numerics_enotation_large
     def test_enotation_decimal_large(self):
         """test exceedingly large decimals.
