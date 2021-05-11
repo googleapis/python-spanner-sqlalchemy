@@ -87,6 +87,8 @@ from sqlalchemy.testing.suite.test_select import (
 from sqlalchemy.testing.suite.test_select import OrderByLabelTest as _OrderByLabelTest
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
 from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
+from sqlalchemy.testing.suite.test_types import StringTest as _StringTest
+
 from sqlalchemy.testing.suite.test_types import _LiteralRoundTripFixture
 
 from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
@@ -888,3 +890,9 @@ class LikeFunctionsTest(_LikeFunctionsTest):
         with pytest.raises(NotImplementedError):
             col = self.tables.some_table.c.data
             self._test(col.contains("b##cde", escape="#"), {7})
+
+
+class StringTest(_StringTest):
+    @pytest.mark.skip("Spanner doesn't support non-ascii characters")
+    def test_literal_non_ascii(self):
+        pass
