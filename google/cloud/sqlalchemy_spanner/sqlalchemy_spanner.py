@@ -17,11 +17,14 @@ import re
 from sqlalchemy import types, ForeignKeyConstraint
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.engine.default import DefaultDialect
+from sqlalchemy import util
 from sqlalchemy.sql.compiler import (
     selectable,
     DDLCompiler,
     GenericTypeCompiler,
+    IdentifierPreparer,
     SQLCompiler,
+    RESERVED_WORDS,
 )
 from google.cloud import spanner_dbapi
 
@@ -33,7 +36,7 @@ _type_map = {
     "DATETIME": types.DATETIME,
     "FLOAT64": types.Float,
     "INT64": types.BIGINT,
-    "NUMERIC": types.DECIMAL,
+    "NUMERIC": types.NUMERIC(precision=38, scale=9),
     "STRING": types.String,
     "TIME": types.TIME,
     "TIMESTAMP": types.TIMESTAMP,
@@ -51,6 +54,7 @@ _type_map_inv = {
     types.TIME: "TIME",
     types.TIMESTAMP: "TIMESTAMP",
     types.Integer: "INT64",
+    types.NullType: "INT64",
 }
 
 _compound_keywords = {
@@ -61,6 +65,57 @@ _compound_keywords = {
     selectable.CompoundSelect.INTERSECT: "INTERSECT DISTINCT",
     selectable.CompoundSelect.INTERSECT_ALL: "INTERSECT ALL",
 }
+
+
+def engine_to_connection(function):
+    """
+    Decorator to initiate a connection to a
+    database in case of an engine-related use.
+    """
+
+    def wrapper(self, connection, *args, **kwargs):
+        """
+        Args:
+            connection (Union[
+                sqlalchemy.engine.base.Connection,
+                sqlalchemy.engine.Engine
+            ]):
+                SQLAlchemy connection or engine object.
+        """
+        if isinstance(connection, Engine):
+            connection = connection.connect()
+
+        return function(self, connection, *args, **kwargs)
+
+    return wrapper
+
+
+class SpannerIdentifierPreparer(IdentifierPreparer):
+    """Identifiers compiler.
+
+    In Cloud Spanner backticks "`" are used for keywords escaping.
+    """
+
+    reserved_words = RESERVED_WORDS.copy()
+    reserved_words.update(spanner_dbapi.parse_utils.SPANNER_RESERVED_KEYWORDS)
+
+    def __init__(self, dialect):
+        super(SpannerIdentifierPreparer, self).__init__(
+            dialect, initial_quote="`", final_quote="`"
+        )
+
+    def _requires_quotes(self, value):
+        """Return True if the given identifier requires quoting."""
+        lc_value = value.lower()
+        if lc_value == '"unicode"':  # don't escape default Spanner colation
+            return False
+
+        return (
+            lc_value in self.reserved_words
+            or value[0] in self.illegal_initial_characters
+            or not self.legal_characters.match(util.text_type(value))
+            or (lc_value != value)
+        )
 
 
 class SpannerSQLCompiler(SQLCompiler):
@@ -81,6 +136,32 @@ class SpannerSQLCompiler(SQLCompiler):
         return "SELECT CAST(1 AS {}) FROM (SELECT 1) WHERE 1 != 1".format(
             _type_map_inv[type(type_[0])]
         )
+
+    def render_literal_value(self, value, type_):
+        """Render the value of a bind parameter as a quoted literal.
+
+        This is used for statement sections that do not accept bind parameters
+        on the target driver/database.
+
+        This should be implemented by subclasses using the quoting services
+        of the DBAPI.
+
+        Cloud spanner supports prefixed backslash to escape non-alphanumeric characters
+        in string. Override the method to add  additional escape before using it to
+        generate a SQL statement.
+        """
+        raw = ["\\", "'", '"', "\n", "\t", "\r"]
+        if type(value) == str and any(single in value for single in raw):
+            value = 'r"""{}"""'.format(value)
+            return value
+        else:
+            processor = type_._cached_literal_processor(self.dialect)
+            if processor:
+                return processor(value)
+            else:
+                raise NotImplementedError(
+                    "Don't know how to literal-quote value %r" % value
+                )
 
     def limit_clause(self, select, **kw):
         """Build LIMIT-OFFSET clause.
@@ -134,12 +215,13 @@ class SpannerDDLCompiler(DDLCompiler):
         for cons in drop_table.element.constraints:
             if isinstance(cons, ForeignKeyConstraint) and cons.name:
                 constrs += "ALTER TABLE {table} DROP CONSTRAINT {constr};".format(
-                    table=drop_table.element.name, constr=cons.name
+                    table=drop_table.element.name,
+                    constr=self.preparer.quote(cons.name),
                 )
 
         indexes = ""
         for index in drop_table.element.indexes:
-            indexes += "DROP INDEX {};".format(index.name)
+            indexes += "DROP INDEX {};".format(self.preparer.quote(index.name))
 
         return indexes + constrs + str(drop_table)
 
@@ -152,6 +234,18 @@ class SpannerDDLCompiler(DDLCompiler):
         The method returns None to omit primary key in a table columns definition.
         """
         return None
+
+    def visit_unique_constraint(self, constraint):
+        """Unique constraints in Spanner are defined with indexes:
+        https://cloud.google.com/spanner/docs/secondary-indexes#unique-indexes
+
+        The method throws an exception to notify user that in
+        Spanner unique constraints are done with unique indexes.
+        """
+        raise spanner_dbapi.exceptions.ProgrammingError(
+            "Spanner doesn't support direct UNIQUE constraints creation. "
+            "Create UNIQUE indexes instead."
+        )
 
     def post_create_table(self, table):
         """Build statements to be executed after CREATE TABLE.
@@ -180,22 +274,28 @@ class SpannerTypeCompiler(GenericTypeCompiler):
         return "FLOAT64"
 
     def visit_TEXT(self, type_, **kw):
-        return "STRING({})".format(type_.length)
+        return "STRING({})".format(type_.length or "MAX")
 
     def visit_ARRAY(self, type_, **kw):
         return "ARRAY<{}>".format(self.process(type_.item_type, **kw))
 
     def visit_BINARY(self, type_, **kw):
-        return "BYTES"
+        return "BYTES({})".format(type_.length or "MAX")
+
+    def visit_large_binary(self, type_, **kw):
+        return "BYTES({})".format(type_.length or "MAX")
 
     def visit_DECIMAL(self, type_, **kw):
         return "NUMERIC"
 
+    def visit_NUMERIC(self, type_, **kw):
+        return "NUMERIC"
+
     def visit_VARCHAR(self, type_, **kw):
-        return "STRING({})".format(type_.length)
+        return "STRING({})".format(type_.length or "MAX")
 
     def visit_CHAR(self, type_, **kw):
-        return "STRING({})".format(type_.length)
+        return "STRING({})".format(type_.length or "MAX")
 
     def visit_BOOLEAN(self, type_, **kw):
         return "BOOL"
@@ -231,6 +331,7 @@ class SpannerDialect(DefaultDialect):
     supports_native_boolean = True
 
     ddl_compiler = SpannerDDLCompiler
+    preparer = SpannerIdentifierPreparer
     statement_compiler = SpannerSQLCompiler
     type_compiler = SpannerTypeCompiler
 
@@ -288,16 +389,14 @@ class SpannerDialect(DefaultDialect):
             {},
         )
 
+    @engine_to_connection
     def get_columns(self, connection, table_name, schema=None, **kw):
         """Get the table columns description.
 
         The method is used by SQLAlchemy introspection systems.
 
         Args:
-            connection (Union[
-                sqlalchemy.engine.base.Connection,
-                sqlalchemy.engine.Engine
-            ]):
+            connection (sqlalchemy.engine.base.Connection):
                 SQLAlchemy connection or engine object.
             table_name (str): Name of the table to introspect.
             schema (str): Optional. Schema name
@@ -305,9 +404,6 @@ class SpannerDialect(DefaultDialect):
         Returns:
             list: The table every column dict-like description.
         """
-        if isinstance(connection, Engine):
-            connection = connection.connect()
-
         sql = """
 SELECT column_name, spanner_type, is_nullable
 FROM information_schema.columns
@@ -329,28 +425,31 @@ ORDER BY
             columns = snap.execute_sql(sql)
 
             for col in columns:
-                type_ = "STRING" if col[1].startswith("STRING") else col[1]
+                if col[1].startswith("STRING"):
+                    end = col[1].index(")")
+                    size = int(col[1][7:end])
+                    type_ = _type_map["STRING"](length=size)
+                else:
+                    type_ = _type_map[col[1]]
 
                 cols_desc.append(
                     {
                         "name": col[0],
-                        "type": _type_map[type_],
+                        "type": type_,
                         "nullable": col[2] == "YES",
                         "default": None,
                     }
                 )
         return cols_desc
 
+    @engine_to_connection
     def get_indexes(self, connection, table_name, schema=None, **kw):
         """Get the table indexes.
 
         The method is used by SQLAlchemy introspection systems.
 
         Args:
-            connection (Union[
-                sqlalchemy.engine.base.Connection,
-                sqlalchemy.engine.Engine
-            ]):
+            connection (sqlalchemy.engine.base.Connection):
                 SQLAlchemy connection or engine object.
             table_name (str): Name of the table to introspect.
             schema (str): Optional. Schema name
@@ -358,9 +457,6 @@ ORDER BY
         Returns:
             list: List with indexes description.
         """
-        if isinstance(connection, Engine):
-            connection = connection.connect()
-
         sql = """
 SELECT
     i.index_name,
@@ -395,16 +491,14 @@ GROUP BY i.index_name, i.is_unique
                 )
         return ind_desc
 
+    @engine_to_connection
     def get_pk_constraint(self, connection, table_name, schema=None, **kw):
         """Get the table primary key constraint.
 
         The method is used by SQLAlchemy introspection systems.
 
         Args:
-            connection (Union[
-                sqlalchemy.engine.base.Connection,
-                sqlalchemy.engine.Engine
-            ]):
+            connection (sqlalchemy.engine.base.Connection):
                 SQLAlchemy connection or engine object.
             table_name (str): Name of the table to introspect.
             schema (str): Optional. Schema name
@@ -412,9 +506,6 @@ GROUP BY i.index_name, i.is_unique
         Returns:
             dict: Dict with the primary key constraint description.
         """
-        if isinstance(connection, Engine):
-            connection = connection.connect()
-
         sql = """
 SELECT ccu.COLUMN_NAME
 FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc
@@ -434,22 +525,17 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "PRIMARY KEY"
 
         return {"constrained_columns": cols}
 
+    @engine_to_connection
     def get_schema_names(self, connection, **kw):
         """Get all the schemas in the database.
 
         Args:
-            connection (Union[
-                sqlalchemy.engine.base.Connection,
-                sqlalchemy.engine.Engine
-            ]):
+            connection (sqlalchemy.engine.base.Connection):
                 SQLAlchemy connection or engine object.
 
         Returns:
             list: Schema names.
         """
-        if isinstance(connection, Engine):
-            connection = connection.connect()
-
         schemas = []
         with connection.connection.database.snapshot() as snap:
             rows = snap.execute_sql(
@@ -461,16 +547,14 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "PRIMARY KEY"
 
         return schemas
 
+    @engine_to_connection
     def get_foreign_keys(self, connection, table_name, schema=None, **kw):
         """Get the table foreign key constraints.
 
         The method is used by SQLAlchemy introspection systems.
 
         Args:
-            connection (Union[
-                sqlalchemy.engine.base.Connection,
-                sqlalchemy.engine.Engine
-            ]):
+            connection (sqlalchemy.engine.base.Connection):
                 SQLAlchemy connection or engine object.
             table_name (str): Name of the table to introspect.
             schema (str): Optional. Schema name
@@ -478,16 +562,13 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "PRIMARY KEY"
         Returns:
             list: Dicts, each of which describes a foreign key constraint.
         """
-        if isinstance(connection, Engine):
-            connection = connection.connect()
-
         sql = """
 SELECT
     tc.constraint_name,
     ctu.table_name,
     ctu.table_schema,
-    ccu.column_name,
-    kcu.column_name
+    ARRAY_AGG(DISTINCT ccu.column_name),
+    ARRAY_AGG(kcu.column_name)
 FROM information_schema.table_constraints AS tc
 JOIN information_schema.constraint_column_usage AS ccu
     ON ccu.constraint_name = tc.constraint_name
@@ -498,6 +579,7 @@ JOIN information_schema.key_column_usage AS kcu
 WHERE
     tc.table_name="{table_name}"
     AND tc.constraint_type = "FOREIGN KEY"
+GROUP BY tc.constraint_name, ctu.table_name, ctu.table_schema
 """.format(
             table_name=table_name
         )
@@ -512,37 +594,32 @@ WHERE
                         "name": row[0],
                         "referred_table": row[1],
                         "referred_schema": row[2] or None,
-                        "referred_columns": [row[3]],
-                        "constrained_columns": [row[4]],
+                        "referred_columns": row[3],
+                        "constrained_columns": row[4],
                     }
                 )
         return keys
 
+    @engine_to_connection
     def get_table_names(self, connection, schema=None, **kw):
         """Get all the tables from the given schema.
 
         The method is used by SQLAlchemy introspection systems.
 
         Args:
-            connection (Union[
-                sqlalchemy.engine.base.Connection,
-                sqlalchemy.engine.Engine
-            ]):
+            connection (sqlalchemy.engine.base.Connection):
                 SQLAlchemy connection or engine object.
             schema (str): Optional. Schema name.
 
         Returns:
             list: Names of the tables within the given schema.
         """
-        if isinstance(connection, Engine):
-            connection = connection.connect()
-
         sql = """
 SELECT table_name
 FROM information_schema.tables
 WHERE table_schema = '{}'
 """.format(
-            schema
+            schema or ""
         )
 
         table_names = []
@@ -554,16 +631,14 @@ WHERE table_schema = '{}'
 
         return table_names
 
+    @engine_to_connection
     def get_unique_constraints(self, connection, table_name, schema=None, **kw):
         """Get the table unique constraints.
 
         The method is used by SQLAlchemy introspection systems.
 
         Args:
-            connection (Union[
-                sqlalchemy.engine.base.Connection,
-                sqlalchemy.engine.Engine
-            ]):
+            connection (sqlalchemy.engine.base.Connection):
                 SQLAlchemy connection or engine object.
             table_name (str): Name of the table to introspect.
             schema (str): Optional. Schema name
@@ -571,9 +646,6 @@ WHERE table_schema = '{}'
         Returns:
             dict: Dict with the unique constraints' descriptions.
         """
-        if isinstance(connection, Engine):
-            connection = connection.connect()
-
         sql = """
 SELECT ccu.CONSTRAINT_NAME, ccu.COLUMN_NAME
 FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc
@@ -593,16 +665,14 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "UNIQUE"
 
         return cols
 
+    @engine_to_connection
     def has_table(self, connection, table_name, schema=None):
         """Check if the given table exists.
 
         The method is used by SQLAlchemy introspection systems.
 
         Args:
-            connection (Union[
-                sqlalchemy.engine.base.Connection,
-                sqlalchemy.engine.Engine
-            ]):
+            connection (sqlalchemy.engine.base.Connection):
                 SQLAlchemy connection or engine object.
             table_name (str): Name of the table to introspect.
             schema (str): Optional. Schema name.
@@ -610,9 +680,6 @@ WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "UNIQUE"
         Returns:
             bool: True, if the given table exists, False otherwise.
         """
-        if isinstance(connection, Engine):
-            connection = connection.connect()
-
         with connection.connection.database.snapshot() as snap:
             rows = snap.execute_sql(
                 """
@@ -671,3 +738,15 @@ LIMIT 1
             conn = conn_proxy.connection
 
         return "AUTOCOMMIT" if conn.autocommit else "SERIALIZABLE"
+
+    def do_rollback(self, dbapi_connection):
+        """To prevent transaction rollback error, rollback is ignored if
+        DBAPI rollback is already executed."""
+        if (
+            not isinstance(dbapi_connection, spanner_dbapi.Connection)
+            and dbapi_connection.connection._transaction
+            and dbapi_connection.connection._transaction.rolled_back
+        ):
+            pass
+        else:
+            dbapi_connection.rollback()

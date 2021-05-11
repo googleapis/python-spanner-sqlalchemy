@@ -38,12 +38,20 @@ class Requirements(SuiteRequirements):
         return exclusions.open()
 
     @property
+    def implements_get_lastrowid(self):
+        return exclusions.closed()
+
+    @property
     def ctes(self):
         return exclusions.open()
 
     @property
     def isolation_level(self):
         return exclusions.open()
+
+    @property
+    def sequences(self):
+        return exclusions.closed()
 
     def get_order_by_collation(self, _):
         """Get the default collation name.
