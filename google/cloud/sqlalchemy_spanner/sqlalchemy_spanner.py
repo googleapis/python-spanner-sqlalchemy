@@ -152,7 +152,7 @@ class SpannerSQLCompiler(SQLCompiler):
         """
         raw = ["\\", "'", '"', "\n", "\t", "\r"]
         if type(value) == str and any(single in value for single in raw):
-            value = '"{}"'.format(value)
+            value = 'r"""{}"""'.format(value)
             return value
         else:
             processor = type_._cached_literal_processor(self.dialect)
