@@ -4,12 +4,12 @@
 # license that can be found in the LICENSE file or at
 # https://developers.google.com/open-source/licenses/bsd
 
-from .. import table_update_row
+from .. import get_table_names
 
 
-def test_table_update_row(capsys, table_id):
-    rows = table_update_row.update_row(table_id)
+def test_get_table_name(capsys, db_url, table_id):
 
+    tables = get_table_names.get_table_names(db_url)
     out, err = capsys.readouterr()
-    assert "Updated row is :" in out
-    assert "GEH" == rows[0][1]
+    assert "Table names are:" in out
+    assert table_id.name in tables
