@@ -44,7 +44,6 @@ from sqlalchemy import LargeBinary
 from sqlalchemy import Boolean
 from sqlalchemy import String
 from sqlalchemy.types import Integer
-from sqlalchemy.types import Text
 from sqlalchemy.types import Numeric
 from sqlalchemy.testing import requires
 
@@ -87,6 +86,7 @@ from sqlalchemy.testing.suite.test_select import (
 from sqlalchemy.testing.suite.test_select import OrderByLabelTest as _OrderByLabelTest
 from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
 from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
+from sqlalchemy.testing.suite.test_types import StringTest as _StringTest
 from sqlalchemy.testing.suite.test_types import TextTest as _TextTest
 from sqlalchemy.testing.suite.test_types import _LiteralRoundTripFixture
 
@@ -537,7 +537,6 @@ class IntegerTest(_IntegerTest):
                     )
                 )
                 conn.execute(ins)
-                conn.execute("SELECT 1")
 
             if self.supports_whereclause:
                 stmt = t.select().where(t.c.x == literal(value))
@@ -847,6 +846,12 @@ class QuotedNameArgumentTest(_QuotedNameArgumentTest):
     pass
 
 
+class StringTest(_StringTest):
+    @pytest.mark.skip("Spanner doesn't support non-ascii characters")
+    def test_literal_non_ascii(self):
+        pass
+
+
 class TextTest(_TextTest):
     def test_text_empty_strings(self, connection):
         """
@@ -883,35 +888,6 @@ class TextTest(_TextTest):
     @pytest.mark.skip("Spanner doesn't support non-ascii characters")
     def test_literal_non_ascii(self):
         pass
-
-    def test_literal_quoting(self):
-        """
-        SPANNER OVERRIDE:
-
-        The original test string is : \"""some 'text' hey "hi there" that's text\"""
-
-        Spanner throws a syntax error for not representing non-alphanumeric characters
-        in string as a raw string.
-        Override the method to change input data into raw string.
-        """
-        input_data = r"""some 'text' hey \"hi there\" that's text"""
-        output_data = """some 'text' hey "hi there" that's text"""
-        self._literal_round_trip(Text, [input_data], [output_data])
-
-    def test_literal_backslashes(self):
-        """
-        SPANNER OVERRIDE:
-
-        Cloud spanner supports prefixed backslash to escape non-alphanumeric characters
-        in string.
-        Override the method to add  additional escape before using it to generate a SQL
-        statement. See:
-        https://cloud.google.com/spanner/docs/lexical#string_and_bytes_literals
-        """
-        input_data = r"backslash one \\ backslash \\\\ two end"
-        output_data = r"backslash one \ backslash \\ two end"
-
-        self._literal_round_trip(Text, [input_data], [output_data])
 
     def test_text_roundtrip(self):
         """
