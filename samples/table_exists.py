@@ -11,7 +11,7 @@ def table_exists(table):
 
     # TODO(developer): Create the table
     # table = Table(
-    #    table_id,
+    #    table_name,
     #    metadata,
     #    Column("user_id", Integer, primary_key=True),
     #    Column("user_name", String(16), nullable=False),

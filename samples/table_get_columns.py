@@ -12,7 +12,7 @@ def get_table_columns(url, table_id):
 
     # TODO(developer): Create the table
     # table = Table(
-    #    table_id,
+    #    table_name,
     #    metadata,
     #    Column("user_id", Integer, primary_key=True),
     #    Column("user_name", String(16), nullable=False),

@@ -24,6 +24,7 @@ from sqlalchemy import (
         String,
         Table,
         create_engine,
+        ForeignKey,
 )
 
 
@@ -57,3 +58,23 @@ def table_id(db_url, random_table_id):
     yield table
     table.drop()
 
+
+@pytest.fixture
+def table_id_w_foreign_key(db_url, table_id):
+    engine = create_engine(db_url)
+    metadata = MetaData(bind=engine)
+
+    table = Table(
+        "table_fk",
+        metadata,
+        Column("id", Integer, primary_key=True),
+        Column("name", String(16), nullable=False),
+        Column(
+            table_id.name+"_user_id",
+            Integer,
+            ForeignKey(table_id.c.user_id, name=table_id.name+"user_id")
+        ),
+    )
+    table.create()
+    yield table
+    table.drop()
