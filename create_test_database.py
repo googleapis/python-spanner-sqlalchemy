@@ -21,28 +21,28 @@ from google.cloud.spanner_v1 import Client
 from google.cloud.spanner_v1.instance import Instance
 
 
-use_emulator = os.getenv("SPANNER_EMULATOR_HOST") is not None
+USE_EMULATOR = os.getenv("SPANNER_EMULATOR_HOST") is not None
 
-project = os.getenv(
+PROJECT = os.getenv(
     "GOOGLE_CLOUD_PROJECT", os.getenv("PROJECT_ID", "emulator-test-project"),
 )
-client = None
+CLIENT = None
 
-if use_emulator:
+if USE_EMULATOR:
     from google.auth.credentials import AnonymousCredentials
-    client = Client(
-        project=project, credentials=AnonymousCredentials()
+    CLIENT = Client(
+        project=PROJECT, credentials=AnonymousCredentials()
     )
 else:
-    client = Client(project=project)
+    CLIENT = Client(project=PROJECT)
 
 
 def reap_old_instances():
     # Delete test instances that are older than four hours.
     cutoff = int(time.time()) - 4 * 60 * 60
-    instances_pbs = client.list_instances("labels.python-spanner-sqlalchemy-systest:true")
+    instances_pbs = CLIENT.list_instances("labels.python-spanner-sqlalchemy-systest:true")
     for instance_pb in instances_pbs:
-        instance = Instance.from_pb(instance_pb, client)
+        instance = Instance.from_pb(instance_pb, CLIENT)
         if "created" not in instance.labels:
             continue
         create_time = int(instance.labels["created"])
@@ -53,7 +53,7 @@ def reap_old_instances():
 
 
 def prep_instance():
-    configs = list(client.list_instance_configs())
+    configs = list(CLIENT.list_instance_configs())
     # Filter out non "us" locations
     configs = [config for config in configs if "-us-" in config.name]
 
@@ -63,7 +63,7 @@ def prep_instance():
     instance_id = "sqlalchemy-test" + unique_resource_id
     labels = {"python-spanner-sqlalchemy-systest": "true", "created": create_time}
 
-    instance = client.instance(instance_id, instance_config, labels=labels)
+    instance = CLIENT.instance(instance_id, instance_config, labels=labels)
 
     created_op = instance.create()
     created_op.result(120)  # block until completion
