@@ -91,7 +91,6 @@ from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
 from sqlalchemy.testing.suite.test_types import StringTest as _StringTest
 from sqlalchemy.testing.suite.test_types import TextTest as _TextTest
 from sqlalchemy.testing.suite.test_types import _LiteralRoundTripFixture
-from sqlalchemy.testing.suite.test_types import TextTest as _TextTest
 from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     DateTest as _DateTest,
     DateTimeHistoricTest,
