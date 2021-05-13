@@ -17,6 +17,7 @@ import re
 from sqlalchemy import types, ForeignKeyConstraint
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.engine.default import DefaultDialect
+from sqlalchemy import util
 from sqlalchemy.sql.compiler import (
     selectable,
     DDLCompiler,
@@ -103,6 +104,19 @@ class SpannerIdentifierPreparer(IdentifierPreparer):
             dialect, initial_quote="`", final_quote="`"
         )
 
+    def _requires_quotes(self, value):
+        """Return True if the given identifier requires quoting."""
+        lc_value = value.lower()
+        if lc_value == '"unicode"':  # don't escape default Spanner colation
+            return False
+
+        return (
+            lc_value in self.reserved_words
+            or value[0] in self.illegal_initial_characters
+            or not self.legal_characters.match(util.text_type(value))
+            or (lc_value != value)
+        )
+
 
 class SpannerSQLCompiler(SQLCompiler):
     """Spanner SQL statements compiler."""
@@ -122,6 +136,59 @@ class SpannerSQLCompiler(SQLCompiler):
         return "SELECT CAST(1 AS {}) FROM (SELECT 1) WHERE 1 != 1".format(
             _type_map_inv[type(type_[0])]
         )
+
+    def render_literal_value(self, value, type_):
+        """Render the value of a bind parameter as a quoted literal.
+
+        This is used for statement sections that do not accept bind parameters
+        on the target driver/database.
+
+        This should be implemented by subclasses using the quoting services
+        of the DBAPI.
+
+        Cloud spanner supports prefixed backslash to escape non-alphanumeric characters
+        in string. Override the method to add  additional escape before using it to
+        generate a SQL statement.
+        """
+        raw = ["\\", "'", '"', "\n", "\t", "\r"]
+        if type(value) == str and any(single in value for single in raw):
+            value = 'r"""{}"""'.format(value)
+            return value
+        else:
+            processor = type_._cached_literal_processor(self.dialect)
+            if processor:
+                return processor(value)
+            else:
+                raise NotImplementedError(
+                    "Don't know how to literal-quote value %r" % value
+                )
+
+    def limit_clause(self, select, **kw):
+        """Build LIMIT-OFFSET clause.
+
+        Spanner doesn't support using OFFSET without a LIMIT
+        clause. It also doesn't support negative LIMITs, while
+        SQLAlchemy support both.
+
+        The method builds LIMIT-OFFSET clauses as usual, with
+        only difference: when OFFSET is used without an explicit
+        LIMIT, the dialect compiles a statement with a LIMIT
+        set to the biggest integer value.
+
+        Args:
+            (sqlalchemy.sql.selectable.Select): Select clause object.
+
+        Returns:
+            str: LIMIT-OFFSET clause.
+        """
+        text = ""
+        if select._limit_clause is not None:
+            text += "\n LIMIT " + self.process(select._limit_clause, **kw)
+        if select._offset_clause is not None:
+            if select._limit_clause is None:
+                text += "\n LIMIT 9223372036854775805"
+            text += " OFFSET " + self.process(select._offset_clause, **kw)
+        return text
 
 
 class SpannerDDLCompiler(DDLCompiler):
@@ -169,7 +236,7 @@ class SpannerDDLCompiler(DDLCompiler):
         return None
 
     def visit_unique_constraint(self, constraint):
-        """Unique contraints in Spanner are defined with indexes:
+        """Unique constraints in Spanner are defined with indexes:
         https://cloud.google.com/spanner/docs/secondary-indexes#unique-indexes
 
         The method throws an exception to notify user that in
@@ -221,9 +288,6 @@ class SpannerTypeCompiler(GenericTypeCompiler):
     def visit_DECIMAL(self, type_, **kw):
         return "NUMERIC"
 
-    def visit_NUMERIC(self, type_, **kw):
-        return "NUMERIC"
-
     def visit_VARCHAR(self, type_, **kw):
         return "STRING({})".format(type_.length or "MAX")
 
@@ -235,6 +299,9 @@ class SpannerTypeCompiler(GenericTypeCompiler):
 
     def visit_DATETIME(self, type_, **kw):
         return "TIMESTAMP"
+
+    def visit_NUMERIC(self, type_, **kw):
+        return "NUMERIC"
 
     def visit_BIGINT(self, type_, **kw):
         return "INT64"
@@ -262,6 +329,7 @@ class SpannerDialect(DefaultDialect):
     supports_sequences = True
     supports_native_enum = True
     supports_native_boolean = True
+    supports_native_decimal = True
 
     ddl_compiler = SpannerDDLCompiler
     preparer = SpannerIdentifierPreparer
@@ -671,3 +739,15 @@ LIMIT 1
             conn = conn_proxy.connection
 
         return "AUTOCOMMIT" if conn.autocommit else "SERIALIZABLE"
+
+    def do_rollback(self, dbapi_connection):
+        """To prevent transaction rollback error, rollback is ignored if
+        DBAPI rollback is already executed."""
+        if (
+            not isinstance(dbapi_connection, spanner_dbapi.Connection)
+            and dbapi_connection.connection._transaction
+            and dbapi_connection.connection._transaction.rolled_back
+        ):
+            pass
+        else:
+            dbapi_connection.rollback()
