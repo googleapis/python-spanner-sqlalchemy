@@ -148,6 +148,9 @@ def migration_test(session):
     with open(files[0], "w") as f:
         f.write(script_code)
 
+    os.remove("test_migration/env.py")
+    shutil.copyfile("test_migration_env.py", "test_migration/env.py")
+
     # running the test migration
     session.run("alembic", "upgrade", "head")
 
