@@ -124,6 +124,7 @@ def migration_test(session):
     import glob
     import os
     import shutil
+    from google.cloud.spanner_v1 import Client
 
     session.install("pytest")
     session.install("sqlalchemy")
@@ -157,3 +158,12 @@ def migration_test(session):
     # clearing the migration data
     os.remove("alembic.ini")
     shutil.rmtree("test_migration")
+
+    client = Client()
+
+    instance = client.instance("sqlalchemy-dialect-test")
+    database = instance.database("compliance-test")
+
+    database.update_ddl(["DROP TABLE account", "DROP TABLE alembic_version"]).result(
+        120
+    )
