@@ -174,6 +174,33 @@ class SpannerSQLCompiler(SQLCompiler):
                     "Don't know how to literal-quote value %r" % value
                 )
 
+    def limit_clause(self, select, **kw):
+        """Build LIMIT-OFFSET clause.
+
+        Spanner doesn't support using OFFSET without a LIMIT
+        clause. It also doesn't support negative LIMITs, while
+        SQLAlchemy support both.
+
+        The method builds LIMIT-OFFSET clauses as usual, with
+        only difference: when OFFSET is used without an explicit
+        LIMIT, the dialect compiles a statement with a LIMIT
+        set to the biggest integer value.
+
+        Args:
+            (sqlalchemy.sql.selectable.Select): Select clause object.
+
+        Returns:
+            str: LIMIT-OFFSET clause.
+        """
+        text = ""
+        if select._limit_clause is not None:
+            text += "\n LIMIT " + self.process(select._limit_clause, **kw)
+        if select._offset_clause is not None:
+            if select._limit_clause is None:
+                text += "\n LIMIT 9223372036854775805"
+            text += " OFFSET " + self.process(select._offset_clause, **kw)
+        return text
+
 
 class SpannerDDLCompiler(DDLCompiler):
     """Spanner DDL statements compiler."""
@@ -272,9 +299,6 @@ class SpannerTypeCompiler(GenericTypeCompiler):
     def visit_DECIMAL(self, type_, **kw):
         return "NUMERIC"
 
-    def visit_NUMERIC(self, type_, **kw):
-        return "NUMERIC"
-
     def visit_VARCHAR(self, type_, **kw):
         return "STRING({})".format(type_.length or "MAX")
 
@@ -286,6 +310,9 @@ class SpannerTypeCompiler(GenericTypeCompiler):
 
     def visit_DATETIME(self, type_, **kw):
         return "TIMESTAMP"
+
+    def visit_NUMERIC(self, type_, **kw):
+        return "NUMERIC"
 
     def visit_BIGINT(self, type_, **kw):
         return "INT64"
@@ -313,6 +340,7 @@ class SpannerDialect(DefaultDialect):
     supports_sequences = True
     supports_native_enum = True
     supports_native_boolean = True
+    supports_native_decimal = True
 
     ddl_compiler = SpannerDDLCompiler
     preparer = SpannerIdentifierPreparer
