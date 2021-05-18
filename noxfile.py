@@ -132,8 +132,6 @@ def migration_test(session):
     session.install("alembic")
     session.run("alembic", "init", "test_migration")
 
-    from google.cloud import spanner
-
     # setting testing configurations
     os.remove("alembic.ini")
     with open("alembic.ini", "w") as f:
@@ -159,12 +157,4 @@ def migration_test(session):
     # clearing the migration data
     os.remove("alembic.ini")
     shutil.rmtree("test_migration")
-
-    client = spanner.Client()
-
-    instance = client.instance("sqlalchemy-dialect-test")
-    database = instance.database("compliance-test")
-
-    database.update_ddl(["DROP TABLE account", "DROP TABLE alembic_version"]).result(
-        120
-    )
+    session.run("python", "migration_test_cleanup.py")
