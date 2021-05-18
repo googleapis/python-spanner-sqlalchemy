@@ -61,6 +61,7 @@ from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_insert import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_reflection import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_results import *  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_select import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_sequence import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 
@@ -73,26 +74,19 @@ from sqlalchemy.testing.suite.test_dialect import EscapingTest as _EscapingTest
 from sqlalchemy.testing.suite.test_insert import (
     InsertBehaviorTest as _InsertBehaviorTest,
 )
-from sqlalchemy.testing.suite.test_reflection import (
-    ComponentReflectionTest as _ComponentReflectionTest,
+from sqlalchemy.testing.suite.test_select import (  # noqa: F401, F403
+    CompoundSelectTest as _CompoundSelectTest,
+    ExistsTest as _ExistsTest,
+    IsOrIsNotDistinctFromTest as _IsOrIsNotDistinctFromTest,
+    LikeFunctionsTest as _LikeFunctionsTest,
+    OrderByLabelTest as _OrderByLabelTest,
 )
 from sqlalchemy.testing.suite.test_reflection import (
     QuotedNameArgumentTest as _QuotedNameArgumentTest,
-)
-from sqlalchemy.testing.suite.test_reflection import (
+    ComponentReflectionTest as _ComponentReflectionTest,
     CompositeKeyReflectionTest as _CompositeKeyReflectionTest,
 )
 from sqlalchemy.testing.suite.test_results import RowFetchTest as _RowFetchTest
-from sqlalchemy.testing.suite.test_select import ExistsTest as _ExistsTest
-from sqlalchemy.testing.suite.test_select import (
-    IsOrIsNotDistinctFromTest as _IsOrIsNotDistinctFromTest,
-)
-from sqlalchemy.testing.suite.test_select import OrderByLabelTest as _OrderByLabelTest
-from sqlalchemy.testing.suite.test_types import BooleanTest as _BooleanTest
-from sqlalchemy.testing.suite.test_types import IntegerTest as _IntegerTest
-from sqlalchemy.testing.suite.test_types import StringTest as _StringTest
-from sqlalchemy.testing.suite.test_types import TextTest as _TextTest
-from sqlalchemy.testing.suite.test_types import _LiteralRoundTripFixture
 from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     BooleanTest as _BooleanTest,
     DateTest as _DateTest,
@@ -944,16 +938,6 @@ class InsertBehaviorTest(_InsertBehaviorTest):
         assert not r.returns_rows
 
 
-@pytest.mark.skip("Spanner doesn't support IS DISTINCT FROM clause")
-class IsOrIsNotDistinctFromTest(_IsOrIsNotDistinctFromTest):
-    pass
-
-
-@pytest.mark.skip("Spanner doesn't support composed GROUP BY")
-class OrderByLabelTest(_OrderByLabelTest):
-    pass
-
-
 class BytesTest(_LiteralRoundTripFixture, fixtures.TestBase):
     __backend__ = True
 
@@ -991,10 +975,6 @@ class TextTest(_TextTest):
     @pytest.mark.skip("Spanner doesn't support non-ascii characters")
     def test_literal_non_ascii(self):
         pass
-
-        config.db.execute(text_table.insert(), {"id": 1, "text_data": "some text"})
-        row = config.db.execute(select([text_table.c.text_data])).first()
-        eq_(row, ("some text",))
 
 
 class NumericTest(_NumericTest):
@@ -1317,4 +1297,74 @@ class NumericTest(_NumericTest):
 class StringTest(_StringTest):
     @pytest.mark.skip("Spanner doesn't support non-ascii characters")
     def test_literal_non_ascii(self):
+        pass
+
+
+class LikeFunctionsTest(_LikeFunctionsTest):
+    @pytest.mark.skip("Spanner does not support ESCAPE")
+    def test_contains_autoescape(self):
+        pass
+
+    @pytest.mark.skip("Spanner does not support ESCAPE")
+    def test_contains_autoescape_escape(self):
+        pass
+
+    @pytest.mark.skip("Spanner does not support ESCAPE")
+    def test_contains_escape(self):
+        pass
+
+    @pytest.mark.skip("Spanner does not support ESCAPE")
+    def test_endswith_autoescape(self):
+        pass
+
+    @pytest.mark.skip("Spanner does not support ESCAPE")
+    def test_endswith_escape(self):
+        pass
+
+    @pytest.mark.skip("Spanner does not support ESCAPE")
+    def test_endswith_autoescape_escape(self):
+        pass
+
+    @pytest.mark.skip("Spanner does not support ESCAPE")
+    def test_startswith_autoescape(self):
+        pass
+
+    @pytest.mark.skip("Spanner does not support ESCAPE")
+    def test_startswith_escape(self):
+        pass
+
+    @pytest.mark.skip("Spanner does not support ESCAPE")
+    def test_startswith_autoescape_escape(self):
+        pass
+
+
+@pytest.mark.skip("Spanner doesn't support IS DISTINCT FROM clause")
+class IsOrIsNotDistinctFromTest(_IsOrIsNotDistinctFromTest):
+    pass
+
+
+class OrderByLabelTest(_OrderByLabelTest):
+    @pytest.mark.skip(
+        "Spanner requires an alias for the GROUP BY list when specifying derived "
+        "columns also used in SELECT"
+    )
+    def test_group_by_composed(self):
+        pass
+
+
+class CompoundSelectTest(_CompoundSelectTest):
+    """
+    See: https://github.com/googleapis/python-spanner/issues/347
+    """
+
+    @pytest.mark.skip(
+        "Spanner DBAPI incorrectly classify the statement starting with brackets."
+    )
+    def test_limit_offset_selectable_in_unions(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner DBAPI incorrectly classify the statement starting with brackets."
+    )
+    def test_order_by_selectable_in_unions(self):
         pass
