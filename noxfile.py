@@ -124,7 +124,6 @@ def migration_test(session):
     import glob
     import os
     import shutil
-    from google.cloud import spanner
 
     session.install("pytest")
     session.install("sqlalchemy")
@@ -132,6 +131,8 @@ def migration_test(session):
     session.install("-e", ".")
     session.install("alembic")
     session.run("alembic", "init", "test_migration")
+
+    from google.cloud import spanner
 
     # setting testing configurations
     os.remove("alembic.ini")
