@@ -543,7 +543,6 @@ class IntegerTest(_IntegerTest):
                     )
                 )
                 conn.execute(ins)
-                conn.execute("SELECT 1")
 
             if self.supports_whereclause:
                 stmt = t.select().where(t.c.x == literal(value))
