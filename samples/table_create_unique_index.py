@@ -4,9 +4,11 @@
 # license that can be found in the LICENSE file or at
 # https://developers.google.com/open-source/licenses/bsd
 
+from sqlalchemy import Index
 
-def fetch_rows(table):
-    """Fetch all rows from the table"""
+
+def create_unique_indexes(table_id):
+    """Create unique index"""
 
     # TODO(developer): Create the table
     # table = Table(
@@ -17,13 +19,8 @@ def fetch_rows(table):
     # )
     # table.create()
 
-    table.insert().execute([
-        {"user_id": 1, "user_name": 'ABC'},
-        {"user_id": 2, "user_name": 'DEF'}
-    ])
-
-    # [START sqlalchemy_spanner_fetch_rows]
-    result = table.select().execute().fetchall()
-    print("Total rows:", result)
-    # [END sqlalchemy_spanner_fetch_rows]
-    return result
+    # [START sqlalchemy_spanner_create_unique_indexes]
+    index = Index("some_index", table_id.c.user_name, unique=True)
+    index.create()
+    print("Index created successfully")
+    # [END sqlalchemy_spanner_create_unique_indexes]

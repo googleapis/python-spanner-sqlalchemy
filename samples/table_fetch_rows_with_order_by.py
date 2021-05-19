@@ -6,7 +6,7 @@
 
 
 def fetch_rows_with_order_by(table):
-    """fetch all rows from the table in order"""
+    """Fetch all rows from the table in order"""
 
     # TODO(developer): Create the table
     # table = Table(

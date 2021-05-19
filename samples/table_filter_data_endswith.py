@@ -6,7 +6,7 @@
 
 
 def filter_data_endswith(table):
-    """filter data with endswith from the table"""
+    """Filter data with endswith from the table"""
 
     # TODO(developer): Create the table
     # table = Table(

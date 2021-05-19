@@ -6,7 +6,7 @@
 
 
 def filter_data_with_like(table):
-    """filter data with like from the table"""
+    """Filter data with like from the table"""
 
     # TODO(developer): Create the table
     # table = Table(

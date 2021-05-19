@@ -6,7 +6,7 @@
 
 
 def filter_data_with_contains(table):
-    """filter data with contains from the table"""
+    """Filter data with contains from the table"""
 
     # TODO(developer): Create the table
     # table = Table(

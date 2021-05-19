@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 
 def enable_autocommit_mode(url):
     """Enables autocommit mode."""
-    # [START sqlalchemy_spanner_autocmmit_on]
+    # [START sqlalchemy_spanner_autocommit_on]
 
     conn = create_engine(url).connect()
     level = conn.get_isolation_level()
@@ -21,5 +21,5 @@ def enable_autocommit_mode(url):
     print("Connection autocommit mode is {}".format(level))
     print("Spanner DBAPI autocommit mode is {}".format(conn.connection.connection.autocommit))
 
-    # [END sqlalchemy_spanner_autocmmit_on]
+    # [END sqlalchemy_spanner_autocommit_on]
     return conn

@@ -6,7 +6,7 @@
 
 
 def filter_data_startswith(table):
-    """filter data with startswith from the table"""
+    """Filter data with startswith from the table"""
 
     # TODO(developer): Create the table
     # table = Table(
