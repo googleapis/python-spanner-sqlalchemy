@@ -7,7 +7,7 @@
 from .. import table_fetch_rows_with_order_by
 
 
-def test_table_delete_all_rows(capsys, table_id):
+def test_table_fetch_rows_with_order_by(capsys, table_id):
     table_fetch_rows_with_order_by.fetch_rows_with_order_by(table_id)
 
     out, err = capsys.readouterr()
