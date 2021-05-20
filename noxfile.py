@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 
 import nox
+import os
 
 ALEMBIC_CONF = """
 [alembic]
@@ -62,7 +63,7 @@ UPGRADE_CODE = """def upgrade():
 
 
 BLACK_VERSION = "black==19.10b0"
-BLACK_PATHS = ["google", "test", "noxfile.py", "setup.py"]
+BLACK_PATHS = ["google", "test", "noxfile.py", "setup.py", "samples"]
 DEFAULT_PYTHON_VERSION = "3.8"
 
 
@@ -158,3 +159,26 @@ def migration_test(session):
     os.remove("alembic.ini")
     shutil.rmtree("test_migration")
     session.run("python", "migration_test_cleanup.py")
+
+
+@nox.session(python=DEFAULT_PYTHON_VERSION)
+def snippets(session):
+    """Run the documentation example snippets."""
+    # Sanity check: Only run snippets system tests if the environment variable
+    # is set.
+    if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", ""):
+        session.skip("Credentials must be set via environment variable.")
+
+    session.install("pytest")
+    session.install("sqlalchemy")
+    session.install(
+        "git+https://github.com/googleapis/python-spanner.git#egg=google-cloud-spanner"
+    )
+    session.install("-e", ".")
+    session.run("python", "create_test_database.py")
+    session.run(
+        "py.test",
+        "--quiet",
+        os.path.join("samples", "snippets_test.py"),
+        *session.posargs,
+    )

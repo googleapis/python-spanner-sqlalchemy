@@ -18,20 +18,22 @@ import uuid
 import pytest
 
 from sqlalchemy import (
-        Column,
-        Integer,
-        MetaData,
-        String,
-        Table,
-        create_engine,
-        ForeignKey,
+    Column,
+    Integer,
+    MetaData,
+    String,
+    Table,
+    create_engine,
+    ForeignKey,
 )
 
 
 @pytest.fixture
 def db_url():
-    return "spanner:///projects/appdev-soda-spanner-staging/instances/" \
-           "sqlalchemy-dialect-test/databases/compliance-test"
+    return (
+        "spanner:///projects/appdev-soda-spanner-staging/instances/"
+        "sqlalchemy-dialect-test/databases/compliance-test"
+    )
 
 
 @pytest.fixture
@@ -70,11 +72,15 @@ def table_id_w_foreign_key(db_url, table_id):
         Column("id", Integer, primary_key=True),
         Column("name", String(16), nullable=False),
         Column(
-            table_id.name+"_user_id",
+            table_id.name + "_user_id",
             Integer,
-            ForeignKey(table_id.c.user_id, name=table_id.name+"user_id")
+            ForeignKey(table_id.c.user_id, name=table_id.name + "user_id"),
         ),
     )
     table.create()
     yield table
     table.drop()
+
+
+def insert_data(table, data):
+    table.insert().execute(data)
