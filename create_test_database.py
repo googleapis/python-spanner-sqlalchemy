@@ -57,10 +57,10 @@ def prep_instance():
     # Filter out non "us" locations
     configs = [config for config in configs if "-us-" in config.name]
 
-    instance_config = configs[0].name
+    instance_config = 'us-central1' if USE_EMULATOR else configs[0].name
     create_time = str(int(time.time()))
     unique_resource_id = '%s%d' % ('-', 1000 * time.time())
-    instance_id = "sqlalchemy-test" + unique_resource_id
+    instance_id = 'sqlalchemy-dialect-test' if USE_EMULATOR else "sqlalchemy-test" + unique_resource_id
     labels = {"python-spanner-sqlalchemy-systest": "true", "created": create_time}
 
     instance = CLIENT.instance(instance_id, instance_config, labels=labels)
