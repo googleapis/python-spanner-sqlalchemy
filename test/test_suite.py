@@ -14,9 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import operator
-import pytest
 import decimal
+import operator
+import os
+import pytest
 import pytz
 
 import sqlalchemy
@@ -1008,6 +1009,10 @@ class TextTest(_TextTest):
         eq_(row, ("some text",))
 
 
+@pytest.mark.skipif(
+    os.getenv("SPANNER_EMULATOR_HOST"),
+    reason="Numeric type isn't supported by emulator yet",
+)
 class NumericTest(_NumericTest):
     @emits_warning(r".*does \*not\* support Decimal objects natively")
     def test_render_literal_numeric(self):
