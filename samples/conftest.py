@@ -46,7 +46,7 @@ def random_table_id():
 
 
 @pytest.fixture
-def table_id(db_url, random_table_id):
+def table(db_url, random_table_id):
     engine = create_engine(db_url)
     metadata = MetaData(bind=engine)
 
@@ -62,24 +62,24 @@ def table_id(db_url, random_table_id):
 
 
 @pytest.fixture
-def table_id_w_foreign_key(db_url, table_id):
+def table_w_foreign_key(db_url, table):
     engine = create_engine(db_url)
     metadata = MetaData(bind=engine)
 
-    table = Table(
+    table_fk = Table(
         "table_fk",
         metadata,
         Column("id", Integer, primary_key=True),
         Column("name", String(16), nullable=False),
         Column(
-            table_id.name + "_user_id",
+            table.name + "_user_id",
             Integer,
-            ForeignKey(table_id.c.user_id, name=table_id.name + "user_id"),
+            ForeignKey(table.c.user_id, name=table.name + "user_id"),
         ),
     )
-    table.create()
-    yield table
-    table.drop()
+    table_fk.create()
+    yield table_fk
+    table_fk.drop()
 
 
 def insert_data(table, data):

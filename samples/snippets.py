@@ -19,23 +19,6 @@ from sqlalchemy import (
     String,
     Table,
 )
-from samples.conftest import insert_data
-
-DATA_1 = [
-    {"user_id": 1, "user_name": "GEH"},
-    {"user_id": 2, "user_name": "DEF"},
-    {"user_id": 3, "user_name": "HIJ"},
-    {"user_id": 4, "user_name": "ABC"},
-]
-
-DATA_2 = [
-    {"user_id": 1, "user_name": "abcdefg"},
-    {"user_id": 2, "user_name": "ab/cdefg"},
-    {"user_id": 3, "user_name": "ab%cdefg"},
-    {"user_id": 4, "user_name": "ab_cdefg"},
-    {"user_id": 5, "user_name": "abcde/fg"},
-    {"user_id": 6, "user_name": "abcde%fg"},
-]
 
 
 # [START sqlalchemy_spanner_autocommit_on]
@@ -86,23 +69,11 @@ def create_table(url, random_table_id):
 
 
 # [START sqlalchemy_spanner_drop_table]
-def drop_table(url, random_table_id):
+def drop_table(table):
     """Drop the table."""
-    engine = create_engine(url)
-    metadata = MetaData(bind=engine)
-
-    table = Table(
-        random_table_id,
-        metadata,
-        Column("user_id", Integer, primary_key=True),
-        Column("user_name", String(16), nullable=False),
-    )
-
-    table.create()
-
     table.drop()
+
     print("Table {} is dropped successfully".format(table.name))
-    return table
 
 
 # [END sqlalchemy_spanner_drop_table]
@@ -127,13 +98,13 @@ def get_table_names(url):
 
 
 # [START sqlalchemy_spanner_create_unique_indexes]
-def create_unique_indexes(table_id):
+def create_unique_indexes(table):
     """Create unique index.
 
     The table must already exist and can be created using
     `create_table.`
     """
-    index = Index("some_index", table_id.c.user_name, unique=True)
+    index = Index("some_index", table.c.user_name, unique=True)
     index.create()
     print("Index created successfully")
 
@@ -148,8 +119,6 @@ def delete_all_rows(table):
     The table must already exist and can be created using
     `create_table.`
     """
-    insert_data(table, DATA_2)
-
     result = table.select().execute().fetchall()
     print("Total inserted rows:", len(result))
 
@@ -169,8 +138,6 @@ def delete_row_with_where_condition(table):
     The table must already exist and can be created using
     `create_table.`
     """
-    insert_data(table, DATA_2)
-
     result = table.select().execute().fetchall()
     print("Total inserted rows:", len(result))
 
@@ -204,8 +171,6 @@ def fetch_row_with_where_condition(table):
     The table must already exist and can be created using
     `create_table.`
     """
-    insert_data(table, DATA_2)
-
     result = list(table.select().where(table.c.user_id == 1).execute())
 
     print("Output is :", result)
@@ -222,8 +187,6 @@ def fetch_rows(table):
     The table must already exist and can be created using
     `create_table.`
     """
-    insert_data(table, DATA_2)
-
     result = table.select().execute().fetchall()
     print("Total rows:", result)
     return result
@@ -239,8 +202,6 @@ def fetch_rows_with_limit(table):
     The table must already exist and can be created using
     `create_table.`
     """
-    insert_data(table, DATA_2)
-
     result = list(table.select().limit(2).execute())
     print("The rows are:", result)
     return result
@@ -256,8 +217,6 @@ def fetch_rows_with_limit_offset(table):
     The table must already exist and can be created using
     `create_table.`
     """
-    insert_data(table, DATA_2)
-
     result = list(table.select().limit(2).offset(1).execute())
     print("The rows are:", result)
     return result
@@ -273,8 +232,6 @@ def fetch_rows_with_offset(table):
     The table must already exist and can be created using
     `create_table.`
     """
-    insert_data(table, DATA_2)
-
     result = list(table.select().offset(2).execute())
     print("The rows are:", result)
     return result
@@ -290,8 +247,6 @@ def fetch_rows_with_order_by(table):
     The table must already exist and can be created using
     `create_table.`
     """
-    insert_data(table, DATA_2)
-
     result = list(table.select().order_by(table.c.user_name).execute().fetchall())
     print("The order by result is:", result)
 
@@ -306,8 +261,6 @@ def filter_data_endswith(table):
     The table must already exist and can be created using
     `create_table.`
     """
-    insert_data(table, DATA_2)
-
     result = list(table.select().where(table.c.user_name.endswith("%efg")).execute())
     print("Filtered data:", result)
     return result
@@ -323,8 +276,6 @@ def filter_data_startswith(table):
     The table must already exist and can be created using
     `create_table.`
     """
-    insert_data(table, DATA_2)
-
     result = list(table.select().where(table.c.user_name.startswith("abcd%")).execute())
     print("Filtered data:", result)
     return result
@@ -340,8 +291,6 @@ def filter_data_with_contains(table):
     The table must already exist and can be created using
     `create_table.`
     """
-    insert_data(table, DATA_2)
-
     result = list(table.select().where(table.c.user_name.contains("defg")).execute())
     print("Filtered data:", result)
     return result
@@ -357,8 +306,6 @@ def filter_data_with_like(table):
     The table must already exist and can be created using
     `create_table.`
     """
-    insert_data(table, DATA_2)
-
     result = list(table.select().where(table.c.user_name.like("abc%")).execute())
     print("Filtered data:", result)
     return result
@@ -368,7 +315,7 @@ def filter_data_with_like(table):
 
 
 # [START sqlalchemy_spanner_get_table_columns]
-def get_table_columns(url, table_id):
+def get_table_columns(url, table):
     """Retrieve the columns list of the table.
 
     The table must already exist and can be created using
@@ -376,7 +323,7 @@ def get_table_columns(url, table_id):
     """
     engine = create_engine(url)
     insp = inspect(engine)
-    columns = insp.get_columns(table_id.name)
+    columns = insp.get_columns(table.name)
 
     print("Columns are:", columns)
     return columns
@@ -386,7 +333,7 @@ def get_table_columns(url, table_id):
 
 
 # [START sqlalchemy_spanner_get_foreign_key]
-def get_table_foreign_key(url, table_id):
+def get_table_foreign_key(url, table):
     """Retrieve the Foreign key of the table.
 
     The table must already exist and can be created using
@@ -394,7 +341,7 @@ def get_table_foreign_key(url, table_id):
     """
     engine = create_engine(url)
     insp = inspect(engine)
-    f_key = insp.get_foreign_keys(table_id.name)
+    f_key = insp.get_foreign_keys(table.name)
 
     print("Foreign key is:", f_key)
     return f_key
@@ -404,19 +351,19 @@ def get_table_foreign_key(url, table_id):
 
 
 # [START sqlalchemy_spanner_get_indexes]
-def get_table_indexes(url, table_id):
+def get_table_indexes(url, table):
     """Retrieve the Indexes of the table.
 
     The table must already exist and can be created using
     `create_table.`
     """
     # Create Index
-    index = Index("some_index", table_id.c.user_name)
+    index = Index("some_index", table.c.user_name)
     index.create()
 
     engine = create_engine(url)
     insp = inspect(engine)
-    indexes = insp.get_indexes(table_id.name)
+    indexes = insp.get_indexes(table.name)
 
     print("Indexes are:", indexes)
     return indexes
@@ -426,7 +373,7 @@ def get_table_indexes(url, table_id):
 
 
 # [START sqlalchemy_spanner_get_primary_key]
-def get_table_primary_key(url, table_id):
+def get_table_primary_key(url, table):
     """Retrieve the Primary key of the table.
 
     The table must already exist and can be created using
@@ -434,7 +381,7 @@ def get_table_primary_key(url, table_id):
     """
     engine = create_engine(url)
     insp = inspect(engine)
-    p_key = insp.get_pk_constraint(table_id.name)
+    p_key = insp.get_pk_constraint(table.name)
 
     print("Primary key is:", p_key)
     return p_key
@@ -468,7 +415,6 @@ def update_row(table):
     The table must already exist and can be created using
     `create_table.`
     """
-    insert_data(table, DATA_2)
     table.update().where(table.c.user_id == 2).values(user_name="GEH").execute()
     result = list(table.select().where(table.c.user_id == 2).execute())
 
