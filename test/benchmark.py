@@ -17,7 +17,7 @@ import pprint
 import time
 
 from google.cloud import spanner_dbapi
-from google.cloud.spanner_v1 import Client
+from google.cloud.spanner_v1 import Client, KeySet
 from sqlalchemy import (
     create_engine,
     insert,
@@ -76,8 +76,8 @@ CREATE TABLE Singers (
         measures = {}
         for method in (
             self.insert_one_row_with_fetch_after,
+            self.read_one_row,
             # self.insert_multiple_rows,
-            # self.read_one_row,
             # self.select_multiple_singers,
             # self.select_multiple_singers_in_ReadOnly_transaction,
             # self.select_multiple_singers_in_ReadWrite_transaction,
@@ -105,7 +105,15 @@ class SpannerBenchmarkTest(BenchmarkTestBase):
 
     @measure_execution_time
     def read_one_row(self):
-        pass
+        with self._database.snapshot() as snapshot:
+            keyset = KeySet(keys=([1],))
+            row = snapshot.read(
+                table="Singers",
+                columns=("id", "first_name", "last_name", "birth_date", "picture"),
+                keyset=keyset,
+            ).one()
+            if not row:
+                raise ValueError("No rows read")
 
     @measure_execution_time
     def select_multiple_singers(self):
@@ -145,7 +153,9 @@ class SQLAlchemyBenchmarkTest(BenchmarkTestBase):
 
     @measure_execution_time
     def read_one_row(self):
-        pass
+        row = select(["*"], from_obj=self._table).execute().fetchone()
+        if not row:
+            raise ValueError("No rows read")
 
     @measure_execution_time
     def select_multiple_singers(self):
@@ -178,8 +188,8 @@ def compare_measurements(spanner, alchemy):
         comparison[key] = {
             "Spanner, sec": spanner[key],
             "SQLAlchemy, sec": alchemy[key],
-            "SQLAlchemy deviation": alchemy[key] - spanner[key],
-            "deviation, %": round(alchemy[key] / spanner[key] * 100),
+            "SQLAlchemy deviation": round(alchemy[key] - spanner[key], 2),
+            "SQLAlchemy to Spanner, %": round(alchemy[key] / spanner[key] * 100),
         }
     return comparison
 
