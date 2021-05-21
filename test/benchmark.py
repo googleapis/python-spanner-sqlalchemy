@@ -77,7 +77,7 @@ CREATE TABLE Singers (
         for method in (
             self.insert_one_row_with_fetch_after,
             self.read_one_row,
-            # self.insert_multiple_rows,
+            self.insert_many_rows,
             # self.select_multiple_singers,
             # self.select_multiple_singers_in_ReadOnly_transaction,
             # self.select_multiple_singers_in_ReadWrite_transaction,
@@ -95,13 +95,20 @@ class SpannerBenchmarkTest(BenchmarkTestBase):
         self._instance = self._client.instance("sqlalchemy-dialect-test")
         self._database = self._instance.database("compliance-test")
 
+        self._many_rows = []
+        num = 1
+        birth_date = datetime.datetime(1998, 10, 6).strftime("%Y-%m-%d")
+        for i in range(99):
+            num += 1
+            self._many_rows.append((num, "Pete", "Allison", birth_date, b"123"))
+
     @measure_execution_time
     def insert_one_row_with_fetch_after(self):
         self._database.run_in_transaction(insert_one_row, self._one_row)
 
     @measure_execution_time
-    def insert_multiple_rows(self):
-        pass
+    def insert_many_rows(self):
+        self._database.run_in_transaction(insert_many_rows, self._many_rows)
 
     @measure_execution_time
     def read_one_row(self):
@@ -131,12 +138,27 @@ class SpannerBenchmarkTest(BenchmarkTestBase):
 class SQLAlchemyBenchmarkTest(BenchmarkTestBase):
     def __init__(self):
         super().__init__()
-        engine = create_engine(
+        self._engine = create_engine(
             "spanner:///projects/appdev-soda-spanner-staging/instances/"
             "sqlalchemy-dialect-test/databases/compliance-test"
         )
-        metadata = MetaData(bind=engine)
+        metadata = MetaData(bind=self._engine)
         self._table = Table("Singers", metadata, autoload=True)
+
+        self._many_rows = []
+        num = 1
+        birth_date = datetime.datetime(1998, 10, 6).strftime("%Y-%m-%d")
+        for i in range(99):
+            num += 1
+            self._many_rows.append(
+                {
+                    "id": num,
+                    "first_name": "Pete",
+                    "last_name": "Allison",
+                    "birth_date": birth_date,
+                    "picture": b"123",
+                }
+            )
 
     @measure_execution_time
     def insert_one_row_with_fetch_after(self):
@@ -148,8 +170,11 @@ class SQLAlchemyBenchmarkTest(BenchmarkTestBase):
             raise ValueError("Received invalid last name: " + last_name)
 
     @measure_execution_time
-    def insert_multiple_rows(self):
-        pass
+    def insert_many_rows(self):
+        with self._engine.begin() as conn:
+            conn.execute(
+                self._table.insert(), self._many_rows,
+            )
 
     @measure_execution_time
     def read_one_row(self):
@@ -180,6 +205,19 @@ def insert_one_row(transaction, one_row):
     ).one()[0]
     if last_name != "Allison":
         raise ValueError("Received invalid last name: " + last_name)
+
+
+def insert_many_rows(transaction, many_rows):
+    total_count = 0
+    for row in many_rows:
+        count = transaction.execute_update(
+            "INSERT Singers (id, first_name, last_name, birth_date, picture) "
+            " VALUES {}".format(str(row))
+        )
+        total_count += count
+
+    if total_count != 99:
+        raise ValueError("Wrong number of inserts: " + str(total_count))
 
 
 def compare_measurements(spanner, alchemy):
