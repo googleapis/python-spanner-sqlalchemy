@@ -78,9 +78,7 @@ CREATE TABLE Singers (
             self.insert_one_row_with_fetch_after,
             self.read_one_row,
             self.insert_many_rows,
-            # self.select_multiple_singers,
-            # self.select_multiple_singers_in_ReadOnly_transaction,
-            # self.select_multiple_singers_in_ReadWrite_transaction,
+            self.select_many_rows,
         ):
             method(measures)
 
@@ -123,16 +121,13 @@ class SpannerBenchmarkTest(BenchmarkTestBase):
                 raise ValueError("No rows read")
 
     @measure_execution_time
-    def select_multiple_singers(self):
-        pass
-
-    @measure_execution_time
-    def select_multiple_singers_in_ReadOnly_transaction(self):
-        pass
-
-    @measure_execution_time
-    def select_multiple_singers_in_ReadWrite_transaction(self):
-        pass
+    def select_many_rows(self):
+        with self._database.snapshot() as snapshot:
+            rows = list(
+                snapshot.execute_sql("SELECT * FROM Singers ORDER BY last_name")
+            )
+            if len(rows) != 100:
+                raise ValueError("Wrong number of rows read")
 
 
 class SQLAlchemyBenchmarkTest(BenchmarkTestBase):
@@ -183,16 +178,14 @@ class SQLAlchemyBenchmarkTest(BenchmarkTestBase):
             raise ValueError("No rows read")
 
     @measure_execution_time
-    def select_multiple_singers(self):
-        pass
-
-    @measure_execution_time
-    def select_multiple_singers_in_ReadOnly_transaction(self):
-        pass
-
-    @measure_execution_time
-    def select_multiple_singers_in_ReadWrite_transaction(self):
-        pass
+    def select_many_rows(self):
+        rows = (
+            select(["*"], from_obj=self._table, order_by=("last_name",))
+            .execute()
+            .fetchall()
+        )
+        if len(rows) != 100:
+            raise ValueError("Wrong number of rows read")
 
 
 def insert_one_row(transaction, one_row):
