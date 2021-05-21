@@ -762,17 +762,17 @@ LIMIT 1
         ):
             pass
         else:
-            trace_attributes = {"db.connection": dbapi_connection}
+            trace_attributes = {"db.instance": dbapi_connection.database.name}
             with trace_call("SpannerSqlAlchemy.Rollback", trace_attributes):
                 dbapi_connection.rollback()
 
     def do_commit(self, dbapi_connection):
-        trace_attributes = {"db.connection": dbapi_connection}
+        trace_attributes = {"db.instance": dbapi_connection.database.name}
         with trace_call("SpannerSqlAlchemy.Commit", trace_attributes):
             dbapi_connection.commit()
 
     def do_close(self, dbapi_connection):
-        trace_attributes = {"db.connection": dbapi_connection}
+        trace_attributes = {"db.instance": dbapi_connection.database.name}
         with trace_call("SpannerSqlAlchemy.Close", trace_attributes):
             dbapi_connection.close()
 
