@@ -159,10 +159,10 @@ class SQLAlchemyBenchmarkTest(BenchmarkTestBase):
 
     @measure_execution_time
     def insert_one_row_with_fetch_after(self):
-        insert(self._table).values(self._one_row).execute()
-        last_name = (
-            select([text("last_name")], from_obj=self._table).execute().fetchone()
-        )[0]
+        self._conn.execute(insert(self._table).values(self._one_row))
+        last_name = self._conn.execute(
+            select([text("last_name")], from_obj=self._table)
+        ).fetchone()[0]
         if last_name != "Allison":
             raise ValueError("Received invalid last name: " + last_name)
 
@@ -174,7 +174,7 @@ class SQLAlchemyBenchmarkTest(BenchmarkTestBase):
 
     @measure_execution_time
     def read_one_row(self):
-        row = select(["*"], from_obj=self._table).execute().fetchone()
+        row = self._conn.execute(select(["*"], from_obj=self._table)).fetchone()
         if not row:
             raise ValueError("No rows read")
 
