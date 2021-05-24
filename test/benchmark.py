@@ -140,6 +140,8 @@ class SQLAlchemyBenchmarkTest(BenchmarkTestBase):
         metadata = MetaData(bind=self._engine)
         self._table = Table("Singers", metadata, autoload=True)
 
+        self._conn = self._engine.connect()
+
         self._many_rows = []
         num = 1
         birth_date = datetime.datetime(1998, 10, 6).strftime("%Y-%m-%d")
@@ -166,10 +168,9 @@ class SQLAlchemyBenchmarkTest(BenchmarkTestBase):
 
     @measure_execution_time
     def insert_many_rows(self):
-        with self._engine.begin() as conn:
-            conn.execute(
-                self._table.insert(), self._many_rows,
-            )
+        self._conn.execute(
+            self._table.insert(), self._many_rows,
+        )
 
     @measure_execution_time
     def read_one_row(self):
@@ -179,11 +180,7 @@ class SQLAlchemyBenchmarkTest(BenchmarkTestBase):
 
     @measure_execution_time
     def select_many_rows(self):
-        rows = (
-            select(["*"], from_obj=self._table, order_by=("last_name",))
-            .execute()
-            .fetchall()
-        )
+        rows = self._conn.execute(select(["*"], from_obj=self._table)).fetchall()
         if len(rows) != 100:
             raise ValueError("Wrong number of rows read")
 
