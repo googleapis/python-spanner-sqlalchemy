@@ -775,9 +775,10 @@ class BytesTest(_LiteralRoundTripFixture, fixtures.TestBase):
         foo.drop(config.db)
 
 
-@pytest.mark.skip("Spanner doesn't support quotes in table names.")
-class QuotedNameArgumentTest(_QuotedNameArgumentTest):
-    pass
+class StringTest(_StringTest):
+    @pytest.mark.skip("Spanner doesn't support non-ascii characters")
+    def test_literal_non_ascii(self):
+        pass
 
 
 class TextTest(_TextTest):
@@ -1120,12 +1121,6 @@ class NumericTest(_NumericTest):
         )
 
 
-class StringTest(_StringTest):
-    @pytest.mark.skip("Spanner doesn't support non-ascii characters")
-    def test_literal_non_ascii(self):
-        pass
-
-
 class LikeFunctionsTest(_LikeFunctionsTest):
     @pytest.mark.skip("Spanner doesn't support LIKE ESCAPE clause")
     def test_contains_autoescape(self):
@@ -1168,6 +1163,11 @@ class LikeFunctionsTest(_LikeFunctionsTest):
         with pytest.raises(NotImplementedError):
             col = self.tables.some_table.c.data
             self._test(col.contains("b##cde", escape="#"), {7})
+
+
+@pytest.mark.skip("Spanner doesn't support quotes in table names.")
+class QuotedNameArgumentTest(_QuotedNameArgumentTest):
+    pass
 
 
 @pytest.mark.skip("Spanner doesn't support IS DISTINCT FROM clause")
