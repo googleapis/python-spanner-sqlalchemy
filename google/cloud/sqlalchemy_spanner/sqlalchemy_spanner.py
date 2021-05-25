@@ -782,7 +782,7 @@ LIMIT 1
             "db.params": parameters,
             "db.instance": cursor.connection.database.name,
         }
-        with trace_call("SpannerSqlAlchemy.Executemany", trace_attributes):
+        with trace_call("SpannerSqlAlchemy.ExecuteMany", trace_attributes):
             cursor.executemany(statement, parameters)
 
     def do_execute(self, cursor, statement, parameters, context=None):
