@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+A test suite to check Spanner dialect for SQLAlchemy performance
+in comparison with the original Spanner client.
+"""
 import datetime
 import pprint
 import time
@@ -29,7 +33,14 @@ from sqlalchemy import (
 
 
 def measure_execution_time(function):
+    """Decorator to measure a wrapped method execution time."""
+
     def wrapper(self, measures):
+        """Execute the wrapped method and measure its execution time.
+
+        Args:
+            measures (dict): Test cases and their execution time.
+        """
         t_start = time.time()
         function(self)
         measures[function.__name__] = round(time.time() - t_start, 2)
@@ -38,6 +49,11 @@ def measure_execution_time(function):
 
 
 class BenchmarkTestBase:
+    """Base class for performance testing.
+
+    Organizes testing data preparation and cleanup.
+    """
+
     def __init__(self):
         self._create_table()
 
@@ -50,11 +66,13 @@ class BenchmarkTestBase:
         )
 
     def _cleanup(self):
+        """Drop the test table."""
         conn = spanner_dbapi.connect("sqlalchemy-dialect-test", "compliance-test")
         conn.database.update_ddl(["DROP TABLE Singers"])
         conn.close()
 
     def _create_table(self):
+        """Create a table for performace testing."""
         conn = spanner_dbapi.connect("sqlalchemy-dialect-test", "compliance-test")
         conn.database.update_ddl(
             [
@@ -73,6 +91,7 @@ CREATE TABLE Singers (
         conn.close()
 
     def run(self):
+        """Execute every test case."""
         measures = {}
         for method in (
             self.insert_one_row_with_fetch_after,
@@ -87,6 +106,8 @@ CREATE TABLE Singers (
 
 
 class SpannerBenchmarkTest(BenchmarkTestBase):
+    """The original Spanner performace testing class."""
+
     def __init__(self):
         super().__init__()
         self._client = Client()
@@ -131,6 +152,8 @@ class SpannerBenchmarkTest(BenchmarkTestBase):
 
 
 class SQLAlchemyBenchmarkTest(BenchmarkTestBase):
+    """Spanner dialect for SQLAlchemy performance testing class."""
+
     def __init__(self):
         super().__init__()
         self._engine = create_engine(
@@ -186,6 +209,10 @@ class SQLAlchemyBenchmarkTest(BenchmarkTestBase):
 
 
 def insert_one_row(transaction, one_row):
+    """A transaction-function for the original Spanner client.
+
+    Inserts a single row into a database and then fetches it back.
+    """
     transaction.execute_update(
         "INSERT Singers (id, first_name, last_name, birth_date, picture) "
         " VALUES {}".format(str(one_row))
@@ -198,6 +225,10 @@ def insert_one_row(transaction, one_row):
 
 
 def insert_many_rows(transaction, many_rows):
+    """A transaction-function for the original Spanner client.
+
+    Insert 100 rows into a database.
+    """
     total_count = 0
     for row in many_rows:
         count = transaction.execute_update(
@@ -211,6 +242,10 @@ def insert_many_rows(transaction, many_rows):
 
 
 def compare_measurements(spanner, alchemy):
+    """
+    Compare the original Spanner client performance measures
+    with Spanner dialect for SQLAlchemy ones.
+    """
     comparison = {}
     for key in spanner.keys():
         comparison[key] = {
