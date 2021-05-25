@@ -777,16 +777,27 @@ LIMIT 1
             dbapi_connection.close()
 
     def do_executemany(self, cursor, statement, parameters, context=None):
-        trace_attributes = {"db.statement": statement, "db.params": parameters}
+        trace_attributes = {
+            "db.statement": statement,
+            "db.params": parameters,
+            "db.instance": cursor.connection.database.name,
+        }
         with trace_call("SpannerSqlAlchemy.Executemany", trace_attributes):
             cursor.executemany(statement, parameters)
 
     def do_execute(self, cursor, statement, parameters, context=None):
-        trace_attributes = {"db.statement": statement, "db.params": parameters}
+        trace_attributes = {
+            "db.statement": statement,
+            "db.params": parameters,
+            "db.instance": cursor.connection.database.name,
+        }
         with trace_call("SpannerSqlAlchemy.Execute", trace_attributes):
             cursor.execute(statement, parameters)
 
     def do_execute_no_params(self, cursor, statement, context=None):
-        trace_attributes = {"db.statement": statement}
+        trace_attributes = {
+            "db.statement": statement,
+            "db.instance": cursor.connection.database.name,
+        }
         with trace_call("SpannerSqlAlchemy.ExecuteNoParams", trace_attributes):
             cursor.execute(statement)
