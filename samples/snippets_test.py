@@ -90,18 +90,18 @@ def test_table_create_unique_index(capsys, db_url, table):
     assert indexes[0]["unique"] is True
 
 
-def test_table_delete_all_rows(capsys, table):
-    insert_data(table, DATA)
-    snippets.delete_all_rows(table)
+def test_table_delete_all_rows(capsys, connection, table):
+    insert_data(connection, table, DATA)
+    snippets.delete_all_rows(connection, table)
 
     out, err = capsys.readouterr()
     assert "Total inserted rows: 6" in out
     assert "Total rows: 0" in out
 
 
-def test_table_delete_row_with_where_condition(capsys, table):
-    insert_data(table, DATA)
-    snippets.delete_row_with_where_condition(table)
+def test_table_delete_row_with_where_condition(capsys, connection, table):
+    insert_data(connection, table, DATA)
+    snippets.delete_row_with_where_condition(connection, table)
 
     out, err = capsys.readouterr()
     assert "Total inserted rows: 6" in out
@@ -115,89 +115,89 @@ def test_exists_table(capsys, table):
     assert "Table exists" in out
 
 
-def test_table_fetch_rows(capsys, table):
-    insert_data(table, DATA)
-    rows = snippets.fetch_rows(table)
+def test_table_fetch_rows(capsys, connection, table):
+    insert_data(connection, table, DATA)
+    rows = snippets.fetch_rows(connection, table)
 
     out, err = capsys.readouterr()
     assert "Total rows:" in out
     assert len(rows) is 6
 
 
-def test_table_fetch_rows_with_limit(capsys, table):
-    insert_data(table, DATA)
-    rows = snippets.fetch_rows_with_limit(table)
+def test_table_fetch_rows_with_limit(capsys, connection, table):
+    insert_data(connection, table, DATA)
+    rows = snippets.fetch_rows_with_limit(connection, table)
 
     out, err = capsys.readouterr()
     assert "The rows are:" in out
     assert len(rows) is 2
 
 
-def test_table_fetch_rows_with_limit_offset(capsys, table):
-    insert_data(table, DATA)
-    rows = snippets.fetch_rows_with_limit_offset(table)
+def test_table_fetch_rows_with_limit_offset(capsys, connection, table):
+    insert_data(connection, table, DATA)
+    rows = snippets.fetch_rows_with_limit_offset(connection, table)
 
     out, err = capsys.readouterr()
     assert "The rows are:" in out
     assert len(rows) is 2
 
 
-def test_table_fetch_rows_with_offset(capsys, table):
-    insert_data(table, DATA)
-    rows = snippets.fetch_rows_with_offset(table)
+def test_table_fetch_rows_with_offset(capsys, connection, table):
+    insert_data(connection, table, DATA)
+    rows = snippets.fetch_rows_with_offset(connection, table)
 
     out, err = capsys.readouterr()
     assert "The rows are:" in out
     assert len(rows) is 4
 
 
-def test_table_fetch_rows_with_order_by(capsys, table):
-    insert_data(table, DATA)
-    snippets.fetch_rows_with_order_by(table)
+def test_table_fetch_rows_with_order_by(capsys, connection, table):
+    insert_data(connection, table, DATA)
+    snippets.fetch_rows_with_order_by(connection, table)
 
     out, err = capsys.readouterr()
     assert "The order by result is:" in out
 
 
-def test_table_fetch_row_with_where_condition(capsys, table):
-    insert_data(table, DATA)
-    rows = snippets.fetch_row_with_where_condition(table)
+def test_table_fetch_row_with_where_condition(capsys, connection, table):
+    insert_data(connection, table, DATA)
+    rows = snippets.fetch_row_with_where_condition(connection, table)
 
     out, err = capsys.readouterr()
     assert "Output is :" in out
     assert len(rows) is 1
 
 
-def test_table_filter_data_endswith(capsys, table):
-    insert_data(table, DATA)
-    rows = snippets.filter_data_endswith(table)
+def test_table_filter_data_endswith(capsys, connection, table):
+    insert_data(connection, table, DATA)
+    rows = snippets.filter_data_endswith(connection, table)
 
     out, err = capsys.readouterr()
     assert "Filtered data:" in out
     assert len(rows) is 4
 
 
-def test_table_filter_data_startswith(capsys, table):
-    insert_data(table, DATA)
-    rows = snippets.filter_data_startswith(table)
+def test_table_filter_data_startswith(capsys, connection, table):
+    insert_data(connection, table, DATA)
+    rows = snippets.filter_data_startswith(connection, table)
 
     out, err = capsys.readouterr()
     assert "Filtered data:" in out
     assert len(rows) is 3
 
 
-def test_table_filter_data_with_contains(capsys, table):
-    insert_data(table, DATA)
-    rows = snippets.filter_data_with_contains(table)
+def test_table_filter_data_with_contains(capsys, connection, table):
+    insert_data(connection, table, DATA)
+    rows = snippets.filter_data_with_contains(connection, table)
 
     out, err = capsys.readouterr()
     assert "Filtered data:" in out
     assert len(rows) is 4
 
 
-def test_table_filter_data_with_like(capsys, table):
-    insert_data(table, DATA)
-    rows = snippets.filter_data_with_like(table)
+def test_table_filter_data_with_like(capsys, connection, table):
+    insert_data(connection, table, DATA)
+    rows = snippets.filter_data_with_like(connection, table)
 
     out, err = capsys.readouterr()
     assert "Filtered data:" in out
@@ -240,17 +240,17 @@ def test_table_get_primary_key(capsys, db_url, table):
     assert p_key.get("constrained_columns")[0] in table.primary_key.columns
 
 
-def test_table_insert_row(capsys, table):
-    rows = snippets.insert_row(table)
+def test_table_insert_row(capsys, connection, table):
+    rows = snippets.insert_row(connection, table)
 
     out, err = capsys.readouterr()
     assert "Total rows:" in out
     assert len(rows) is 1
 
 
-def test_table_update_row(capsys, table):
-    insert_data(table, DATA)
-    rows = snippets.update_row(table)
+def test_table_update_row(capsys, connection, table):
+    insert_data(connection, table, DATA)
+    rows = snippets.update_row(connection, table)
 
     out, err = capsys.readouterr()
     assert "Updated row is :" in out

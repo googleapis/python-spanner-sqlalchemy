@@ -82,5 +82,11 @@ def table_w_foreign_key(db_url, table):
     table_fk.drop()
 
 
-def insert_data(table, data):
-    table.insert().execute(data)
+@pytest.fixture
+def connection(db_url):
+    engine = create_engine(db_url)
+    return engine.connect()
+
+
+def insert_data(conn, table, data):
+    conn.execute(table.insert(), data)
