@@ -79,7 +79,7 @@ with engine.begin() as connection:
 from sqlalchemy import MetaData, Table, create_engine, select
 
 engine = create_engine(
-    "spanner:///projects/appdev-soda-spanner-staging/instances/sqlalchemy-dialect-test/databases/compliance-test"
+    "spanner:///projects/project-id/instances/instance-id/databases/database-id"
 )
 table = Table("users", MetaData(bind=engine), autoload=True)
 
