@@ -27,11 +27,12 @@ from sqlalchemy.sql.compiler import (
     RESERVED_WORDS,
 )
 from google.cloud import spanner_dbapi
+from google.cloud.sqlalchemy_spanner._opentelemetry_tracing import trace_call
 
 # Spanner-to-SQLAlchemy types map
 _type_map = {
     "BOOL": types.Boolean,
-    "BYTES(MAX)": types.BINARY,
+    "BYTES": types.LargeBinary,
     "DATE": types.DATE,
     "DATETIME": types.DATETIME,
     "FLOAT64": types.Float,
@@ -45,6 +46,7 @@ _type_map = {
 _type_map_inv = {
     types.Boolean: "BOOL",
     types.BINARY: "BYTES(MAX)",
+    types.LargeBinary: "BYTES(MAX)",
     types.DATE: "DATE",
     types.DATETIME: "DATETIME",
     types.Float: "FLOAT64",
@@ -441,6 +443,11 @@ ORDER BY
                     end = col[1].index(")")
                     size = int(col[1][7:end])
                     type_ = _type_map["STRING"](length=size)
+                # add test creating a table with bytes
+                elif col[1].startswith("BYTES"):
+                    end = col[1].index(")")
+                    size = int(col[1][6:end])
+                    type_ = _type_map["BYTES"](length=size)
                 else:
                     type_ = _type_map[col[1]]
 
@@ -761,4 +768,42 @@ LIMIT 1
         ):
             pass
         else:
-            dbapi_connection.rollback()
+            trace_attributes = {"db.instance": dbapi_connection.database.name}
+            with trace_call("SpannerSqlAlchemy.Rollback", trace_attributes):
+                dbapi_connection.rollback()
+
+    def do_commit(self, dbapi_connection):
+        trace_attributes = {"db.instance": dbapi_connection.database.name}
+        with trace_call("SpannerSqlAlchemy.Commit", trace_attributes):
+            dbapi_connection.commit()
+
+    def do_close(self, dbapi_connection):
+        trace_attributes = {"db.instance": dbapi_connection.database.name}
+        with trace_call("SpannerSqlAlchemy.Close", trace_attributes):
+            dbapi_connection.close()
+
+    def do_executemany(self, cursor, statement, parameters, context=None):
+        trace_attributes = {
+            "db.statement": statement,
+            "db.params": parameters,
+            "db.instance": cursor.connection.database.name,
+        }
+        with trace_call("SpannerSqlAlchemy.ExecuteMany", trace_attributes):
+            cursor.executemany(statement, parameters)
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+        trace_attributes = {
+            "db.statement": statement,
+            "db.params": parameters,
+            "db.instance": cursor.connection.database.name,
+        }
+        with trace_call("SpannerSqlAlchemy.Execute", trace_attributes):
+            cursor.execute(statement, parameters)
+
+    def do_execute_no_params(self, cursor, statement, context=None):
+        trace_attributes = {
+            "db.statement": statement,
+            "db.instance": cursor.connection.database.name,
+        }
+        with trace_call("SpannerSqlAlchemy.ExecuteNoParams", trace_attributes):
+            cursor.execute(statement)
