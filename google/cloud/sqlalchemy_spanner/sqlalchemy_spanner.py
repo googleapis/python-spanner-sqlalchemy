@@ -764,7 +764,10 @@ LIMIT 1
         if (
             not isinstance(dbapi_connection, spanner_dbapi.Connection)
             and dbapi_connection.connection._transaction
-            and dbapi_connection.connection._transaction.rolled_back
+            and (
+                dbapi_connection.connection._transaction.rolled_back
+                or dbapi_connection.connection._transaction.committed
+            )
         ):
             pass
         else:
