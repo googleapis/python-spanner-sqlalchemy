@@ -16,6 +16,7 @@
 
 import os
 import time
+import configparser
 
 from google.cloud.spanner_v1 import Client
 from google.cloud.spanner_v1.instance import Instance
@@ -30,9 +31,8 @@ CLIENT = None
 
 if USE_EMULATOR:
     from google.auth.credentials import AnonymousCredentials
-    CLIENT = Client(
-        project=PROJECT, credentials=AnonymousCredentials()
-    )
+
+    CLIENT = Client(project=PROJECT, credentials=AnonymousCredentials())
 else:
     CLIENT = Client(project=PROJECT)
 
@@ -40,7 +40,9 @@ else:
 def reap_old_instances():
     # Delete test instances that are older than four hours.
     cutoff = int(time.time()) - 4 * 60 * 60
-    instances_pbs = CLIENT.list_instances("labels.python-spanner-sqlalchemy-systest:true")
+    instances_pbs = CLIENT.list_instances(
+        "labels.python-spanner-sqlalchemy-systest:true"
+    )
     for instance_pb in instances_pbs:
         instance = Instance.from_pb(instance_pb, CLIENT)
         if "created" not in instance.labels:
@@ -59,7 +61,7 @@ def prep_instance():
 
     instance_config = configs[0].name
     create_time = str(int(time.time()))
-    unique_resource_id = '%s%d' % ('-', 1000 * time.time())
+    unique_resource_id = "%s%d" % ("-", 1000 * time.time())
     instance_id = "sqlalchemy-test" + unique_resource_id
     labels = {"python-spanner-sqlalchemy-systest": "true", "created": create_time}
 
@@ -71,6 +73,18 @@ def prep_instance():
     database = instance.database("compliance-test")
     created_op = database.create()
     created_op.result(120)
+
+    config = configparser.ConfigParser()
+
+    config.read("setup.cfg")
+    url = "spanner:///projects/{project}/instances/{instance_id}/databases/compliance-test".format(
+        project=PROJECT, instance_id=instance_id
+    )
+    config.set("db", "default", url)
+
+    with open("setup.cfg", "w") as configfile:
+        config.write(configfile)
+
 
 reap_old_instances()
 prep_instance()
