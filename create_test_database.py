@@ -14,9 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import configparser
 import os
 import time
-import configparser
 
 from google.cloud.spanner_v1 import Client
 from google.cloud.spanner_v1.instance import Instance
@@ -75,14 +75,13 @@ def prep_instance():
     created_op.result(120)
 
     config = configparser.ConfigParser()
-
-    config.read("setup.cfg")
     url = "spanner:///projects/{project}/instances/{instance_id}/databases/compliance-test".format(
         project=PROJECT, instance_id=instance_id
     )
-    config.set("db", "default", url)
+    config.add_section("db")
+    config["db"]["default"] = url
 
-    with open("setup.cfg", "w") as configfile:
+    with open("test.cfg", "w") as configfile:
         config.write(configfile)
 
 
