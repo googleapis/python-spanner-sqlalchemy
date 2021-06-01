@@ -118,7 +118,7 @@ class SpannerBenchmarkTest(BenchmarkTestBase):
         num = 1
         birth_date = datetime.datetime(1998, 10, 6).strftime("%Y-%m-%d")
         for i in range(99):
-            num += 1
+            num = round(random.random() * 10000)
             self._many_rows.append((num, "Pete", "Allison", birth_date, b"123"))
 
     @measure_execution_time
