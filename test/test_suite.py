@@ -1210,3 +1210,110 @@ class CompoundSelectTest(_CompoundSelectTest):
     )
     def test_order_by_selectable_in_unions(self):
         pass
+
+
+class JoinTest(fixtures.TablesTest):
+    __backend__ = True
+
+    @classmethod
+    def define_tables(cls, metadata):
+        Table(
+            "students",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("name", String),
+            Column("lastname", String),
+        )
+
+        Table(
+            "addresses",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("st_id", Integer, ForeignKey("students.id")),
+            Column("postal_add", String),
+            Column("email_add", String),
+        )
+
+    @classmethod
+    def insert_data(cls, connection):
+        connection.execute(
+            cls.tables.students.insert(),
+            [
+                {"id": 1, "name": "Ravi", "lastname": "Kapoor"},
+                {"id": 2, "name": "Rajiv", "lastname": "Khanna"},
+                {"id": 3, "name": "Komal", "lastname": "Bhandari"},
+                {"id": 4, "name": "Abdul", "lastname": "Sattar"},
+                {"id": 5, "name": "Priya", "lastname": "Rajhans"},
+            ],
+        )
+
+        connection.execute(
+            cls.tables.addresses.insert(),
+            [
+                {
+                    "id": 1,
+                    "st_id": 1,
+                    "postal_add": "Shivajinagar Pune",
+                    "email_add": "ravi@gmail.com",
+                },
+                {
+                    "id": 2,
+                    "st_id": 1,
+                    "postal_add": "ChurchGate Mumbai",
+                    "email_add": "kapoor@gmail.com",
+                },
+                {
+                    "id": 3,
+                    "st_id": 3,
+                    "postal_add": "Jubilee Hills Hyderabad",
+                    "email_add": " komal@gmail.com",
+                },
+                {
+                    "id": 4,
+                    "st_id": 5,
+                    "postal_add": "MG Road Bangaluru",
+                    "email_add": "as@yahoo.com",
+                },
+                {
+                    "id": 5,
+                    "st_id": 2,
+                    "postal_add": "Cannought Place new Delhi",
+                    "email_add": "admin@khanna.com",
+                },
+            ],
+        )
+
+    def test_inner_join(self):
+        students = self.tables.students
+        addresses = self.tables.addresses
+        stmt = select([students]).select_from(
+            students.join(addresses, students.c.id == addresses.c.st_id)
+        )
+
+        output = [
+            (1, "Ravi", "Kapoor"),
+            (1, "Ravi", "Kapoor"),
+            (2, "Rajiv", "Khanna"),
+            (3, "Komal", "Bhandari"),
+            (5, "Priya", "Rajhans"),
+        ]
+
+        eq_(config.db.execute(stmt).fetchall(), output)
+
+    def test_left_outer_join(self):
+        students = self.tables.students
+        addresses = self.tables.addresses
+
+        j = students.outerjoin(addresses)
+        stmt = select([students]).select_from(j)
+
+        output = [
+            (1, "Ravi", "Kapoor"),
+            (1, "Ravi", "Kapoor"),
+            (3, "Komal", "Bhandari"),
+            (5, "Priya", "Rajhans"),
+            (2, "Rajiv", "Khanna"),
+            (4, "Abdul", "Sattar"),
+        ]
+
+        eq_(config.db.execute(stmt).fetchall(), output)
