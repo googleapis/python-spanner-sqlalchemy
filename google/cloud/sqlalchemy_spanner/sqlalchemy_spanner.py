@@ -270,8 +270,13 @@ class SpannerDDLCompiler(DDLCompiler):
             str: primary key difinition to add to the table CREATE request.
         """
         cols = [col.name for col in table.primary_key.columns]
+        post_cmds = " PRIMARY KEY ({})".format(", ".join(cols))
 
-        return " PRIMARY KEY ({})".format(", ".join(cols))
+        if table.kwargs.get("spanner_interleave_in"):
+            post_cmds += ",\nINTERLEAVE IN PARENT {} ON DELETE CASCADE".format(
+                table.kwargs["spanner_interleave_in"]
+            )
+        return post_cmds
 
 
 class SpannerTypeCompiler(GenericTypeCompiler):
