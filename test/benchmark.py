@@ -19,6 +19,8 @@ in comparison with the original Spanner client.
 import datetime
 import pprint
 import random
+from scipy.stats import sem
+import statistics
 import time
 
 from google.cloud import spanner_dbapi
@@ -43,8 +45,11 @@ def measure_execution_time(function):
             measures (dict): Test cases and their execution time.
         """
         t_start = time.time()
-        function(self)
-        measures[function.__name__] = round(time.time() - t_start, 2)
+        try:
+            function(self)
+            measures[function.__name__] = round(time.time() - t_start, 2)
+        except Exception:
+            measures[function.__name__] = 0
 
     return wrapper
 
@@ -284,7 +289,36 @@ def compare_measurements(spanner, alchemy):
     return comparison
 
 
-spanner_measures = SpannerBenchmarkTest().run()
-alchemy_measures = SQLAlchemyBenchmarkTest().run()
+measures = []
+for _ in range(50):
+    spanner_measures = SpannerBenchmarkTest().run()
+    alchemy_measures = SQLAlchemyBenchmarkTest().run()
+    measures.append((spanner_measures, alchemy_measures))
 
-pprint.pprint(compare_measurements(spanner_measures, alchemy_measures))
+agg = {"spanner": {}, "alchemy": {}}
+
+for span, alch in measures:
+    for key, value in span.items():
+        agg["spanner"].setdefault(key, []).append(value)
+        agg["alchemy"].setdefault(key, []).append(alch[key])
+
+spanner_stats = {}
+for key, value in agg["spanner"].items():
+    while 0 in value:
+        value.remove(0)
+    spanner_stats[key + "_aver"] = round(statistics.mean(value), 2)
+    spanner_stats[key + "_error"] = round(sem(value), 2)
+    spanner_stats[key + "_std_dev"] = round(statistics.pstdev(value), 2)
+
+alchemy_stats = {}
+for key, value in agg["alchemy"].items():
+    while 0 in value:
+        value.remove(0)
+    alchemy_stats[key + "_aver"] = round(statistics.mean(value), 2)
+    alchemy_stats[key + "_error"] = round(sem(value), 2)
+    alchemy_stats[key + "_std_dev"] = round(statistics.pstdev(value), 2)
+
+for key in spanner_stats:
+    print(key + ":")
+    print("spanner: ", spanner_stats[key])
+    print("alchemy: ", alchemy_stats[key])
