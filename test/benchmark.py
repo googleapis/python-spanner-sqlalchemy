@@ -18,6 +18,7 @@ in comparison with the original Spanner client.
 """
 import datetime
 import pprint
+import random
 import time
 
 from google.cloud import spanner_dbapi
@@ -98,6 +99,7 @@ CREATE TABLE Singers (
             self.read_one_row,
             self.insert_many_rows,
             self.select_many_rows,
+            self.insert_many_rows_with_mutations,
         ):
             method(measures)
 
@@ -112,14 +114,16 @@ class SpannerBenchmarkTest(BenchmarkTestBase):
         super().__init__()
         self._client = Client()
         self._instance = self._client.instance("sqlalchemy-dialect-test")
-        self._database = self._instance.database("compliance-test")
+        self._database = self._instance.database("compliance-test2")
 
         self._many_rows = []
-        num = 1
+        self._many_rows2 = []
         birth_date = datetime.datetime(1998, 10, 6).strftime("%Y-%m-%d")
         for i in range(99):
-            num += 1
+            num = round(random.random() * 1000000)
             self._many_rows.append((num, "Pete", "Allison", birth_date, b"123"))
+            num2 = round(random.random() * 1000000)
+            self._many_rows2.append((num2, "Pete", "Allison", birth_date, b"123"))
 
     @measure_execution_time
     def insert_one_row_with_fetch_after(self):
@@ -130,16 +134,23 @@ class SpannerBenchmarkTest(BenchmarkTestBase):
         self._database.run_in_transaction(insert_many_rows, self._many_rows)
 
     @measure_execution_time
+    def insert_many_rows_with_mutations(self):
+        with self._database.batch() as batch:
+            batch.insert(
+                table="Singers",
+                columns=("id", "first_name", "last_name", "birth_date", "picture"),
+                values=self._many_rows2,
+            )
+
+    @measure_execution_time
     def read_one_row(self):
         with self._database.snapshot() as snapshot:
             keyset = KeySet(keys=([1],))
-            row = snapshot.read(
+            snapshot.read(
                 table="Singers",
                 columns=("id", "first_name", "last_name", "birth_date", "picture"),
                 keyset=keyset,
             ).one()
-            if not row:
-                raise ValueError("No rows read")
 
     @measure_execution_time
     def select_many_rows(self):
@@ -166,13 +177,23 @@ class SQLAlchemyBenchmarkTest(BenchmarkTestBase):
         self._conn = self._engine.connect()
 
         self._many_rows = []
-        num = 1
+        self._many_rows2 = []
         birth_date = datetime.datetime(1998, 10, 6).strftime("%Y-%m-%d")
         for i in range(99):
-            num += 1
+            num = round(random.random() * 1000000)
             self._many_rows.append(
                 {
                     "id": num,
+                    "first_name": "Pete",
+                    "last_name": "Allison",
+                    "birth_date": birth_date,
+                    "picture": b"123",
+                }
+            )
+            num2 = round(random.random() * 1000000)
+            self._many_rows2.append(
+                {
+                    "id": num2,
                     "first_name": "Pete",
                     "last_name": "Allison",
                     "birth_date": birth_date,
@@ -193,6 +214,12 @@ class SQLAlchemyBenchmarkTest(BenchmarkTestBase):
     def insert_many_rows(self):
         self._conn.execute(
             self._table.insert(), self._many_rows,
+        )
+
+    @measure_execution_time
+    def insert_many_rows_with_mutations(self):
+        self._conn.execute(
+            self._table.insert(), self._many_rows2,
         )
 
     @measure_execution_time
