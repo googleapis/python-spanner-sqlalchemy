@@ -110,10 +110,6 @@ def lint_setup_py(session):
 def compliance_test(session):
     """Run SQLAlchemy dialect compliance test suite."""
     session.install("pytest")
-    session.install("sqlalchemy")
-    session.install(
-        "git+https://github.com/googleapis/python-spanner.git#egg=google-cloud-spanner"
-    )
     session.install("-e", ".")
     session.run("python", "create_test_database.py")
     session.run("pytest", "-v")
@@ -127,8 +123,6 @@ def migration_test(session):
     import shutil
 
     session.install("pytest")
-    session.install("sqlalchemy")
-    session.install("google-cloud-spanner")
     session.install("-e", ".")
     session.install("alembic")
 
