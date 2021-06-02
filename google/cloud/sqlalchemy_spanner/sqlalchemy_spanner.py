@@ -263,6 +263,9 @@ class SpannerDDLCompiler(DDLCompiler):
     def post_create_table(self, table):
         """Build statements to be executed after CREATE TABLE.
 
+        Includes "primary key" and "interleaved
+        table" statements generation.
+
         Args:
             table (sqlalchemy.schema.Table): Table to create.
 
@@ -273,9 +276,13 @@ class SpannerDDLCompiler(DDLCompiler):
         post_cmds = " PRIMARY KEY ({})".format(", ".join(cols))
 
         if table.kwargs.get("spanner_interleave_in"):
-            post_cmds += ",\nINTERLEAVE IN PARENT {} ON DELETE CASCADE".format(
+            post_cmds += ",\nINTERLEAVE IN PARENT {}".format(
                 table.kwargs["spanner_interleave_in"]
             )
+
+            if table.kwargs.get("spanner_inverleave_on_delete_cascade"):
+                post_cmds += " ON DELETE CASCADE"
+
         return post_cmds
 
 
