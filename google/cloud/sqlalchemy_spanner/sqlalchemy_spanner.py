@@ -125,6 +125,16 @@ class SpannerSQLCompiler(SQLCompiler):
 
     compound_keywords = _compound_keywords
 
+    def get_from_hint_text(self, _, text):
+        """Return a hint text.
+
+        Overriden to avoid adding square brackets to the hint text.
+
+        Args:
+            text (str): The hint text.
+        """
+        return text
+
     def visit_empty_set_expr(self, type_):
         """Return an empty set expression of the given type.
 
@@ -771,12 +781,17 @@ LIMIT 1
         return "AUTOCOMMIT" if conn.autocommit else "SERIALIZABLE"
 
     def do_rollback(self, dbapi_connection):
-        """To prevent transaction rollback error, rollback is ignored if
-        DBAPI rollback is already executed."""
+        """
+        To prevent rollback exception, don't rollback
+        committed/rolled back transactions.
+        """
         if (
             not isinstance(dbapi_connection, spanner_dbapi.Connection)
             and dbapi_connection.connection._transaction
-            and dbapi_connection.connection._transaction.rolled_back
+            and (
+                dbapi_connection.connection._transaction.rolled_back
+                or dbapi_connection.connection._transaction.committed
+            )
         ):
             pass
         else:
