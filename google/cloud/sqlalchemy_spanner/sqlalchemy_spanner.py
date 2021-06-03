@@ -760,8 +760,8 @@ LIMIT 1
 
     def do_rollback(self, dbapi_connection):
         """
-        To prevent rollback exception raise, don't
-        rollback committed/rollbacked transactions.
+        To prevent rollback exception, don't rollback
+        committed/rolled back transactions.
         """
         if (
             not isinstance(dbapi_connection, spanner_dbapi.Connection)
