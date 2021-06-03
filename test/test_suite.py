@@ -1189,6 +1189,25 @@ class IsOrIsNotDistinctFromTest(_IsOrIsNotDistinctFromTest):
     pass
 
 
+class CompoundSelectTest(_CompoundSelectTest):
+    """
+    See: https://github.com/googleapis/python-spanner/issues/347
+
+    """
+
+    @pytest.mark.skip(
+        "Spanner DBAPI incorrectly classify the statement starting with brackets."
+    )
+    def test_limit_offset_selectable_in_unions(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner DBAPI incorrectly classify the statement starting with brackets."
+    )
+    def test_order_by_selectable_in_unions(self):
+        pass
+
+
 class OrderByLabelTest(_OrderByLabelTest):
     @pytest.mark.skip(
         "Spanner requires an alias for the GROUP BY list when specifying derived "
