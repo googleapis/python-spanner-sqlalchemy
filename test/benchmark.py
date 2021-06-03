@@ -17,7 +17,6 @@ A test suite to check Spanner dialect for SQLAlchemy performance
 in comparison with the original Spanner client.
 """
 import datetime
-import pprint
 import random
 from scipy.stats import sem
 import statistics
