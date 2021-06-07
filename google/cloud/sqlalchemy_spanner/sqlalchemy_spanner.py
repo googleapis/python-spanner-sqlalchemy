@@ -68,6 +68,8 @@ _compound_keywords = {
     selectable.CompoundSelect.INTERSECT_ALL: "INTERSECT ALL",
 }
 
+_string_size_max = 2621440
+
 
 def engine_to_connection(function):
     """
@@ -451,8 +453,9 @@ ORDER BY
             for col in columns:
                 if col[1].startswith("STRING"):
                     end = col[1].index(")")
-                    size = int(col[1][7:end])
-                    type_ = _type_map["STRING"](length=size)
+                    size_str = col[1][7:end]
+                    size_int = _string_size_max if size_str == "MAX" else int(size_int)
+                    type_ = _type_map["STRING"](length=size_int)
                 # add test creating a table with bytes
                 elif col[1].startswith("BYTES"):
                     end = col[1].index(")")
