@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 
+import configparser
 import nox
 import os
 
@@ -23,7 +24,7 @@ ALEMBIC_CONF = """
 [alembic]
 script_location = test_migration
 prepend_sys_path = .
-sqlalchemy.url = spanner:///projects/appdev-soda-spanner-staging/instances/sqlalchemy-dialect-test/databases/compliance-test
+sqlalchemy.url = {}
 [post_write_hooks]
 [loggers]
 keys = root,sqlalchemy,alembic
@@ -110,10 +111,6 @@ def lint_setup_py(session):
 def compliance_test(session):
     """Run SQLAlchemy dialect compliance test suite."""
     session.install("pytest")
-    session.install("sqlalchemy")
-    session.install(
-        "git+https://github.com/googleapis/python-spanner.git#egg=google-cloud-spanner"
-    )
     session.install("-e", ".")
     session.run("python", "create_test_database.py")
     session.run("pytest", "-v")
@@ -127,16 +124,22 @@ def migration_test(session):
     import shutil
 
     session.install("pytest")
-    session.install("sqlalchemy")
-    session.install("google-cloud-spanner")
     session.install("-e", ".")
     session.install("alembic")
+
+    config = configparser.ConfigParser()
+    if os.path.exists("test.cfg"):
+        config.read("test.cfg")
+    else:
+        config.read("setup.cfg")
+    db_url = config.get("db", "default")
+
     session.run("alembic", "init", "test_migration")
 
     # setting testing configurations
     os.remove("alembic.ini")
     with open("alembic.ini", "w") as f:
-        f.write(ALEMBIC_CONF)
+        f.write(ALEMBIC_CONF.format(db_url))
 
     session.run("alembic", "revision", "-m", "migration_for_test")
     files = glob.glob("test_migration/versions/*.py")
@@ -159,6 +162,8 @@ def migration_test(session):
     os.remove("alembic.ini")
     shutil.rmtree("test_migration")
     session.run("python", "migration_test_cleanup.py")
+    if os.path.exists("test.cfg"):
+        os.remove("test.cfg")
 
 
 @nox.session(python=DEFAULT_PYTHON_VERSION)
