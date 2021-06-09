@@ -129,6 +129,10 @@ class SpannerBenchmarkTest(BenchmarkTestBase):
             num2 = round(random.random() * 1000000)
             self._many_rows2.append((num2, "Pete", "Allison", birth_date, b"123"))
 
+        # initiate a session
+        with self._database.snapshot():
+            pass
+
     @measure_execution_time
     def insert_one_row_with_fetch_after(self):
         self._database.run_in_transaction(insert_one_row, self._one_row)
