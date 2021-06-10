@@ -111,6 +111,17 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
 config.test_schema = ""
 
 
+class MaxLengthStringHasTableTest(HasTableTest):
+    @classmethod
+    def define_tables(cls, metadata):
+        Table(
+            "test_table",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("data", Text),
+        )
+
+
 class EscapingTest(_EscapingTest):
     @provide_metadata
     def test_percent_sign_round_trip(self):
@@ -573,7 +584,10 @@ class ComponentReflectionTest(_ComponentReflectionTest):
 
         reflected_metadata = MetaData()
         reflected = Table(
-            "testtbl", reflected_metadata, autoload_with=orig_meta.bind, schema=schema,
+            "testtbl",
+            reflected_metadata,
+            autoload_with=orig_meta.bind,
+            schema=schema,
         )
 
         # test "deduplicates for index" logic.   MySQL and Oracle
@@ -830,7 +844,9 @@ class NumericTest(_NumericTest):
         Overriding the test to avoid the same failure.
         """
         self._literal_round_trip(
-            Numeric(precision=8, scale=4), [15.7563], [decimal.Decimal("15.7563")],
+            Numeric(precision=8, scale=4),
+            [15.7563],
+            [decimal.Decimal("15.7563")],
         )
         self._literal_round_trip(
             Numeric(precision=8, scale=4),
@@ -849,7 +865,9 @@ class NumericTest(_NumericTest):
         Overriding the test to avoid the same failure.
         """
         self._literal_round_trip(
-            Numeric(precision=8, scale=4, asdecimal=False), [15.7563], [15.7563],
+            Numeric(precision=8, scale=4, asdecimal=False),
+            [15.7563],
+            [15.7563],
         )
         self._literal_round_trip(
             Numeric(precision=8, scale=4, asdecimal=False),
@@ -944,7 +962,9 @@ class NumericTest(_NumericTest):
         Overriding the test to avoid the same failure.
         """
         self._do_test(
-            Float(precision=8, asdecimal=True), [15.7563], [decimal.Decimal("15.7563")],
+            Float(precision=8, asdecimal=True),
+            [15.7563],
+            [decimal.Decimal("15.7563")],
         )
 
         self._do_test(
