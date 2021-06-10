@@ -454,7 +454,7 @@ ORDER BY
                 if col[1].startswith("STRING"):
                     end = col[1].index(")")
                     size_str = col[1][7:end]
-                    size_int = _string_size_max if size_str == "MAX" else int(size_int)
+                    size_int = _string_size_max if size_str == "MAX" else int(size_str)
                     type_ = _type_map["STRING"](length=size_int)
                 # add test creating a table with bytes
                 elif col[1].startswith("BYTES"):
