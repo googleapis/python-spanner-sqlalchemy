@@ -68,7 +68,7 @@ _compound_keywords = {
     selectable.CompoundSelect.INTERSECT_ALL: "INTERSECT ALL",
 }
 
-_string_size_max = 2621440
+_max_size = 2621440
 
 
 def engine_to_connection(function):
@@ -450,16 +450,18 @@ ORDER BY
         with connection.connection.database.snapshot() as snap:
             columns = snap.execute_sql(sql)
 
+            def int_from_size(size_str):
+                return _max_size if size_str == "MAX" else int(size_str)
+
             for col in columns:
                 if col[1].startswith("STRING"):
                     end = col[1].index(")")
-                    size_str = col[1][7:end]
-                    size_int = _string_size_max if size_str == "MAX" else int(size_str)
-                    type_ = _type_map["STRING"](length=size_int)
+                    size = int_from_size(col[1][7:end])
+                    type_ = _type_map["STRING"](length=size)
                 # add test creating a table with bytes
                 elif col[1].startswith("BYTES"):
                     end = col[1].index(")")
-                    size = int(col[1][6:end])
+                    size = int_from_size(col[1][6:end])
                     type_ = _type_map["BYTES"](length=size)
                 else:
                     type_ = _type_map[col[1]]
