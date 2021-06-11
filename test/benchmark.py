@@ -264,16 +264,15 @@ def insert_many_rows(transaction, many_rows):
 
     Insert 100 rows into a database.
     """
-    total_count = 0
+    statements = []
     for row in many_rows:
-        count = transaction.execute_update(
+        statements.append(
             "INSERT Singers (id, first_name, last_name, birth_date, picture) "
             " VALUES {}".format(str(row))
         )
-        total_count += count
-
-    if total_count != 99:
-        raise ValueError("Wrong number of inserts: " + str(total_count))
+    _, count = transaction.batch_update(statements)
+    if sum(count) != 99:
+        raise ValueError("Wrong number of inserts: " + str(sum(count)))
 
 
 def compare_measurements(spanner, alchemy):
