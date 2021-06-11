@@ -110,6 +110,7 @@ def lint_setup_py(session):
 def compliance_test(session):
     """Run SQLAlchemy dialect compliance test suite."""
     session.install("pytest")
+    session.install("mock")
     session.install("-e", ".")
     session.run("python", "create_test_database.py")
     session.run("pytest", "-v")
