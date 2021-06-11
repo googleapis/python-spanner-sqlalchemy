@@ -5,7 +5,6 @@
 # https://developers.google.com/open-source/licenses/bsd
 
 
-import unittest
 import mock
 from sqlalchemy.testing import fixtures
 

@@ -6,7 +6,6 @@
 
 import importlib
 import mock
-import os
 import pytest
 import sys
 
@@ -19,7 +18,6 @@ except ImportError:
 from google.api_core.exceptions import GoogleAPICallError
 from google.cloud.spanner_v1 import SpannerClient
 from google.cloud.sqlalchemy_spanner import _opentelemetry_tracing
-from sqlalchemy.testing import fixtures
 from test._helpers import OpenTelemetryBase, HAS_OPENTELEMETRY_INSTALLED
 
 
@@ -47,7 +45,7 @@ if HAS_OPENTELEMETRY_INSTALLED:
 
         def test_no_trace_call(self):
             with _opentelemetry_tracing.trace_call("Test") as no_span:
-                assert no_span == None
+                assert no_span is None
 
     class TestTracing(OpenTelemetryBase):
         def test_trace_call(self):
