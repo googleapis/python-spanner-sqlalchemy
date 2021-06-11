@@ -111,17 +111,6 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
 config.test_schema = ""
 
 
-class MaxLengthStringHasTableTest(HasTableTest):
-    @classmethod
-    def define_tables(cls, metadata):
-        Table(
-            "test_table",
-            metadata,
-            Column("id", Integer, primary_key=True),
-            Column("data", Text),
-        )
-
-
 class EscapingTest(_EscapingTest):
     @provide_metadata
     def test_percent_sign_round_trip(self):
@@ -521,6 +510,38 @@ class ComponentReflectionTest(_ComponentReflectionTest):
                 DDL("create temporary view user_tmp_v as " "select * from user_tmp"),
             )
             event.listen(user_tmp, "before_drop", DDL("drop view user_tmp_v"))
+    
+     @testing.provide_metadata
+    def test_reflect_string_column_max_len(self):
+        """
+        SPANNER SPECIFIC TEST:
+
+        In Spanner column of the STRING type can be
+        created with size defined as MAX. The test
+        checks that such a column is correctly reflected.
+        """
+        Table("text_table", self.metadata, Column("TestColumn", Text, nullable=False))
+        self.metadata.create_all()
+
+        Table("text_table", MetaData(bind=self.bind), autoload=True)
+
+    @testing.provide_metadata
+    def test_reflect_bytes_column_max_len(self):
+        """
+        SPANNER SPECIFIC TEST:
+
+        In Spanner column of the BYTES type can be
+        created with size defined as MAX. The test
+        checks that such a column is correctly reflected.
+        """
+        Table(
+            "bytes_table",
+            self.metadata,
+            Column("TestColumn", LargeBinary, nullable=False),
+        )
+        self.metadata.create_all()
+
+        Table("bytes_table", MetaData(bind=self.bind), autoload=True)
 
     @testing.provide_metadata
     def _test_get_unique_constraints(self, schema=None):
