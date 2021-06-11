@@ -22,6 +22,7 @@ from scipy.stats import sem
 import statistics
 import time
 
+from google.api_core.exceptions import Aborted
 from google.cloud import spanner_dbapi
 from google.cloud.spanner_v1 import Client, KeySet
 from sqlalchemy import (
@@ -47,7 +48,7 @@ def measure_execution_time(function):
         try:
             function(self)
             measures[function.__name__] = round(time.time() - t_start, 2)
-        except Exception:
+        except Aborted:
             measures[function.__name__] = 0
 
     return wrapper
