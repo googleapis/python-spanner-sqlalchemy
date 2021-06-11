@@ -70,6 +70,17 @@ _compound_keywords = {
 
 _max_size = 2621440
 
+def int_from_size(size_str):
+    """Convert a string column length to an integer value.
+    
+    Args:
+        size_str (str): The column length or the 'MAX' keyword.
+       
+    Returns:
+        int: The column length value.
+    """
+    return _max_size if size_str == "MAX" else int(size_str)
+
 
 def engine_to_connection(function):
     """
@@ -449,9 +460,6 @@ ORDER BY
         cols_desc = []
         with connection.connection.database.snapshot() as snap:
             columns = snap.execute_sql(sql)
-
-            def int_from_size(size_str):
-                return _max_size if size_str == "MAX" else int(size_str)
 
             for col in columns:
                 if col[1].startswith("STRING"):
