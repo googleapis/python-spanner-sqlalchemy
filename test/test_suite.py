@@ -685,6 +685,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         Table(
             "testtbl",
             orig_meta,
+            Column("id", sqlalchemy.Integer, primary_key=True),
             Column("a", sqlalchemy.String(20)),
             Column("b", sqlalchemy.String(30)),
             Column("c", sqlalchemy.Integer),
