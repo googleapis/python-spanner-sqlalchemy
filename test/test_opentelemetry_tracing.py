@@ -94,7 +94,6 @@ if HAS_OPENTELEMETRY_INSTALLED:
             }
             expected_attributes.update(extra_attributes)
 
-            # with self.assertRaises(GoogleAPICallError):
             with pytest.raises(GoogleAPICallError):
                 with _opentelemetry_tracing.trace_call(
                     "CloudSpannerSqlAlchemy.Test", extra_attributes,
