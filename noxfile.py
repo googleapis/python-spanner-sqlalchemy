@@ -115,6 +115,12 @@ def compliance_test(session):
     session.run("python", "create_test_database.py")
     session.run("pytest", "-v")
 
+    # Run SQLAlchemy dialect compliance test suite with OpenTelemetry.
+    session.install("opentelemetry-api==1.1.0")
+    session.install("opentelemetry-sdk==1.1.0")
+    session.install("opentelemetry-instrumentation==0.20b0")
+    session.run("pytest", "-v")
+
 
 @nox.session(python=DEFAULT_PYTHON_VERSION)
 def migration_test(session):
