@@ -70,6 +70,7 @@ _compound_keywords = {
 
 _max_size = 2621440
 
+
 def int_from_size(size_str):
     """Convert a string column length to an integer value.
     
