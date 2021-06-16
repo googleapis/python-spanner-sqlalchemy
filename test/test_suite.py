@@ -510,8 +510,8 @@ class ComponentReflectionTest(_ComponentReflectionTest):
                 DDL("create temporary view user_tmp_v as " "select * from user_tmp"),
             )
             event.listen(user_tmp, "before_drop", DDL("drop view user_tmp_v"))
-    
-     @testing.provide_metadata
+
+    @testing.provide_metadata
     def test_reflect_string_column_max_len(self):
         """
         SPANNER SPECIFIC TEST:
