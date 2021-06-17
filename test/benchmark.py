@@ -154,7 +154,7 @@ class SpannerBenchmarkTest(BenchmarkTestBase):
     @measure_execution_time
     def read_one_row(self):
         with self._database.snapshot() as snapshot:
-            keyset = KeySet(keys=([1],))
+            keyset = KeySet(all_=True)
             snapshot.read(
                 table="Singers",
                 columns=("id", "first_name", "last_name", "birth_date", "picture"),
