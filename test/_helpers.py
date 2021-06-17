@@ -6,7 +6,7 @@
 
 
 import mock
-import unittest
+from sqlalchemy.testing import fixtures
 
 try:
     from opentelemetry import trace
@@ -50,7 +50,7 @@ def use_test_ot_exporter():
     _TEST_OT_PROVIDER_INITIALIZED = True
 
 
-class OpenTelemetryBase(unittest.TestCase):
+class OpenTelemetryBase(fixtures.TestBase):
     @classmethod
     def setup_class(cls):
         if HAS_OPENTELEMETRY_INSTALLED:

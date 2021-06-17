@@ -127,7 +127,7 @@ def unit(session):
     session.install("opentelemetry-api==1.1.0")
     session.install("opentelemetry-sdk==1.1.0")
     session.install("opentelemetry-instrumentation==0.20b0")
-    session.run("py.test", "--quiet", os.path.join("test"), *session.posargs)
+    session.run("py.test", "--quiet", os.path.join("test/unit"), *session.posargs)
 
 
 @nox.session(python=DEFAULT_PYTHON_VERSION)
