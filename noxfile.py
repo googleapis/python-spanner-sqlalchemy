@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import configparser
 import nox
+import os
 
 ALEMBIC_CONF = """
 [alembic]
@@ -115,11 +116,18 @@ def compliance_test(session):
     session.run("python", "create_test_database.py")
     session.run("pytest", "-v")
 
+
+@nox.session(python=DEFAULT_PYTHON_VERSION)
+def unit(session):
+    """Run unit tests."""
     # Run SQLAlchemy dialect compliance test suite with OpenTelemetry.
+    session.install("pytest")
+    session.install("mock")
+    session.install("-e", ".")
     session.install("opentelemetry-api==1.1.0")
     session.install("opentelemetry-sdk==1.1.0")
     session.install("opentelemetry-instrumentation==0.20b0")
-    session.run("pytest", "-v")
+    session.run("py.test", "--quiet", os.path.join("test"), *session.posargs)
 
 
 @nox.session(python=DEFAULT_PYTHON_VERSION)
