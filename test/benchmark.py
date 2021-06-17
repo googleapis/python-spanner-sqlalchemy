@@ -119,7 +119,7 @@ class SpannerBenchmarkTest(BenchmarkTestBase):
         super().__init__()
         self._client = Client()
         self._instance = self._client.instance("sqlalchemy-dialect-test")
-        self._database = self._instance.database("compliance-test2")
+        self._database = self._instance.database("compliance-test")
 
         self._many_rows = []
         self._many_rows2 = []
