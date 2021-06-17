@@ -68,6 +68,20 @@ _compound_keywords = {
     selectable.CompoundSelect.INTERSECT_ALL: "INTERSECT ALL",
 }
 
+_max_size = 2621440
+
+
+def int_from_size(size_str):
+    """Convert a string column length to an integer value.
+
+    Args:
+        size_str (str): The column length or the 'MAX' keyword.
+
+    Returns:
+        int: The column length value.
+    """
+    return _max_size if size_str == "MAX" else int(size_str)
+
 
 def engine_to_connection(function):
     """
@@ -124,6 +138,16 @@ class SpannerSQLCompiler(SQLCompiler):
     """Spanner SQL statements compiler."""
 
     compound_keywords = _compound_keywords
+
+    def get_from_hint_text(self, _, text):
+        """Return a hint text.
+
+        Overriden to avoid adding square brackets to the hint text.
+
+        Args:
+            text (str): The hint text.
+        """
+        return text
 
     def visit_empty_set_expr(self, type_):
         """Return an empty set expression of the given type.
@@ -441,12 +465,12 @@ ORDER BY
             for col in columns:
                 if col[1].startswith("STRING"):
                     end = col[1].index(")")
-                    size = int(col[1][7:end])
+                    size = int_from_size(col[1][7:end])
                     type_ = _type_map["STRING"](length=size)
                 # add test creating a table with bytes
                 elif col[1].startswith("BYTES"):
                     end = col[1].index(")")
-                    size = int(col[1][6:end])
+                    size = int_from_size(col[1][6:end])
                     type_ = _type_map["BYTES"](length=size)
                 else:
                     type_ = _type_map[col[1]]
@@ -759,12 +783,17 @@ LIMIT 1
         return "AUTOCOMMIT" if conn.autocommit else "SERIALIZABLE"
 
     def do_rollback(self, dbapi_connection):
-        """To prevent transaction rollback error, rollback is ignored if
-        DBAPI rollback is already executed."""
+        """
+        To prevent rollback exception, don't rollback
+        committed/rolled back transactions.
+        """
         if (
             not isinstance(dbapi_connection, spanner_dbapi.Connection)
             and dbapi_connection.connection._transaction
-            and dbapi_connection.connection._transaction.rolled_back
+            and (
+                dbapi_connection.connection._transaction.rolled_back
+                or dbapi_connection.connection._transaction.committed
+            )
         ):
             pass
         else:
