@@ -19,7 +19,7 @@ import setuptools
 
 name = "sqlalchemy-spanner"
 description = "SQLAlchemy dialect integrated into Cloud Spanner database"
-dependencies = ["sqlalchemy>=1.1.13, <=1.3.23", "google-cloud-spanner>=3.3.0"]
+dependencies = ["sqlalchemy>=1.1.13, <=1.3.23"]
 extras = {
     "tracing": [
         "opentelemetry-api >= 1.1.0",
@@ -51,6 +51,9 @@ setuptools.setup(
             "spanner = google.cloud.sqlalchemy_spanner:SpannerDialect"
         ]
     },
+    dependency_links=[
+        "google-cloud-spanner @ git+ssh://git@github.com/q-logic/python-spanner@infer_types_for_emulator#egg=google-cloud-spanner",
+    ],
     install_requires=dependencies,
     extras_require=extras,
     name=name,
