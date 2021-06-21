@@ -21,7 +21,7 @@ name = "sqlalchemy-spanner"
 description = "SQLAlchemy dialect integrated into Cloud Spanner database"
 dependencies = [
     "sqlalchemy>=1.1.13, <=1.3.23",
-    "google-cloud-spanner @ git+ssh://git@github.com/q-logic/python-spanner@infer_types_for_emulator#egg=google-cloud-spanner",
+    "google-cloud-spanner @ https://github.com/q-logic/python-spanner@infer_types_for_emulator#egg=google-cloud-spanner",
 ]
 extras = {
     "tracing": [
