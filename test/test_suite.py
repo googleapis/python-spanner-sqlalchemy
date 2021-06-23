@@ -330,13 +330,13 @@ class DateTest(DateFixtureTest, _DateTest):
     """
 
     @pytest.mark.skipif(
-        os.environ.get("SPANNER_EMULATOR_HOST"), reason="Skipped on emulator"
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
     )
     def test_null_bound_comparison(self):
         super().test_null_bound_comparison()
 
     @pytest.mark.skipif(
-        os.environ.get("SPANNER_EMULATOR_HOST"), reason="Skipped on emulator"
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
     )
     def test_null(self):
         super().test_null()
@@ -360,13 +360,13 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest, DateTest):
         assert isinstance(row[0], DatetimeWithNanoseconds)
 
     @pytest.mark.skipif(
-        os.environ.get("SPANNER_EMULATOR_HOST"), reason="Skipped on emulator"
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
     )
     def test_null_bound_comparison(self):
         super().test_null_bound_comparison()
 
     @pytest.mark.skipif(
-        os.environ.get("SPANNER_EMULATOR_HOST"), reason="Skipped on emulator"
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
     )
     def test_null(self):
         super().test_null()
@@ -382,13 +382,13 @@ class DateTimeTest(_DateTimeTest, DateTimeMicrosecondsTest):
     """
 
     @pytest.mark.skipif(
-        os.environ.get("SPANNER_EMULATOR_HOST"), reason="Skipped on emulator"
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
     )
     def test_null_bound_comparison(self):
         super().test_null_bound_comparison()
 
     @pytest.mark.skipif(
-        os.environ.get("SPANNER_EMULATOR_HOST"), reason="Skipped on emulator"
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
     )
     def test_null(self):
         super().test_null()
@@ -1144,7 +1144,7 @@ class NumericTest(_NumericTest):
         )
 
     @pytest.mark.skipif(
-        os.environ.get("SPANNER_EMULATOR_HOST"), reason="Skipped on emulator"
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
     )
     @requires.floats_to_four_decimals
     def test_float_as_decimal(self):
@@ -1167,7 +1167,7 @@ class NumericTest(_NumericTest):
         )
 
     @pytest.mark.skipif(
-        os.environ.get("SPANNER_EMULATOR_HOST"), reason="Skipped on emulator"
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
     )
     def test_float_as_float(self):
         """
