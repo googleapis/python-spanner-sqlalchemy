@@ -335,6 +335,12 @@ class DateTest(DateFixtureTest, _DateTest):
     def test_null_bound_comparison(self):
         super().test_null_bound_comparison()
 
+    @pytest.mark.skipif(
+        os.environ.get("SPANNER_EMULATOR_HOST"), reason="Skipped on emulator"
+    )
+    def test_null(self):
+        super().test_null()
+
 
 class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest, DateTest):
     def test_round_trip(self):
@@ -359,6 +365,12 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest, DateTest):
     def test_null_bound_comparison(self):
         super().test_null_bound_comparison()
 
+    @pytest.mark.skipif(
+        os.environ.get("SPANNER_EMULATOR_HOST"), reason="Skipped on emulator"
+    )
+    def test_null(self):
+        super().test_null()
+
 
 class DateTimeTest(_DateTimeTest, DateTimeMicrosecondsTest):
     """
@@ -374,6 +386,12 @@ class DateTimeTest(_DateTimeTest, DateTimeMicrosecondsTest):
     )
     def test_null_bound_comparison(self):
         super().test_null_bound_comparison()
+
+    @pytest.mark.skipif(
+        os.environ.get("SPANNER_EMULATOR_HOST"), reason="Skipped on emulator"
+    )
+    def test_null(self):
+        super().test_null()
 
 
 @pytest.mark.skip("Spanner doesn't support Time data type.")
