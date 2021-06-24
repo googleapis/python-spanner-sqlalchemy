@@ -1143,9 +1143,6 @@ class NumericTest(_NumericTest):
             [15.7563],
         )
 
-    @pytest.mark.skipif(
-        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
-    )
     @requires.floats_to_four_decimals
     def test_float_as_decimal(self):
         """
@@ -1166,9 +1163,6 @@ class NumericTest(_NumericTest):
             [decimal.Decimal("15.7563")],
         )
 
-    @pytest.mark.skipif(
-        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
-    )
     def test_float_as_float(self):
         """
         SPANNER OVERRIDE:
