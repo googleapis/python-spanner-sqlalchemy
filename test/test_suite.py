@@ -1441,8 +1441,8 @@ class TestQueryHints(fixtures.TablesTest):
 
 class InterleavedTablesTest(fixtures.TestBase):
     """
-    Check that CREATE TABLE statements for
-    interleaved tables are correctly generated.
+    Check that CREATE TABLE statements for interleaved tables are correctly
+    generated.
     """
 
     def setUp(self):

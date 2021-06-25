@@ -287,8 +287,7 @@ class SpannerDDLCompiler(DDLCompiler):
     def post_create_table(self, table):
         """Build statements to be executed after CREATE TABLE.
 
-        Includes "primary key" and "interleaved
-        table" statements generation.
+        Includes "primary key" and "interleaved table" statements generation.
 
         Args:
             table (sqlalchemy.schema.Table): Table to create.
