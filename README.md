@@ -222,7 +222,7 @@ The dialect test suite can be runned on [Spanner emulator](https://cloud.google.
 Contributing
 ------------
 
-Contributions to this library are welcome and encouraged.
+Contributions to this library are welcome and encouraged. Please report issues, file feature requests, and send pull requests (see contributions). **Note that this project is not officially supported by Google as part of the Cloud Spanner product.**
 
 See [CONTRIBUTING](https://github.com/cloudspannerecosystem/python-spanner-sqlalchemy/blob/main/contributing.md) for more information on how to get
 started.
