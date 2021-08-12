@@ -10,7 +10,7 @@ Use `PROJECT`, `INSTANCE` and `DATABASE` module constants to set a project to ex
 
 # 07-11-2021
 
-|Test|mean|error|std_dev|
+|Test|mean, sec|error|std_dev|
 |----|-------|-----|--------|
 |SPANNER insert_one_row_with_fetch_after| 0.91|0.01|0.09|
 |ALCHEMY insert_one_row_with_fetch_after|  1.07| 0.0|0.03|
