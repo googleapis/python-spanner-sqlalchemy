@@ -1,3 +1,13 @@
+# Benchmarks
+
+The performance test suite is located in [test/benchmark.py](https://github.com/cloudspannerecosystem/python-spanner-sqlalchemy/blob/main/test/benchmark.py) and intended to compare execution time difference between SQLAlchemy dialect for Spanner and pure Spanner client.
+
+The test suite requirements:
+- `scipy` Python package installed
+- the original dialect requirements
+
+Use `PROJECT`, `INSTANCE` and `DATABASE` module constants to set a project to execute tests on.
+
 # 07-11-2021
 
 |Test|mean|error|std_dev|
