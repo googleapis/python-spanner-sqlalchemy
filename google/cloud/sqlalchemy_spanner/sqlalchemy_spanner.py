@@ -798,9 +798,7 @@ LIMIT 1
         To prevent rollback exception, don't rollback
         committed/rolled back transactions.
         """
-        if isinstance(dbapi_connection, spanner_dbapi.Connection):
-            dbapi_connection = dbapi_connection
-        else:
+        if not isinstance(dbapi_connection, spanner_dbapi.Connection):
             dbapi_connection = dbapi_connection.connection
 
         if dbapi_connection._transaction and (
