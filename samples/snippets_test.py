@@ -26,59 +26,60 @@ DATA = [
 ]
 
 
-def test_enable_autocommit_mode(capsys, db_url):
-    conn = snippets.enable_autocommit_mode(db_url)
-
-    out, err = capsys.readouterr()
-    assert "Connection autocommit default mode is " in out
-    assert "Spanner DBAPI default autocommit mode is False" in out
-
-    assert conn.connection.connection.autocommit is True
-    assert "Connection autocommit mode is " in out
-    assert "Spanner DBAPI autocommit mode is True" in out
-
-
-def test_create_table(capsys, db_url, random_table_id):
-    table = snippets.create_table(db_url, random_table_id)
-
-    out, err = capsys.readouterr()
-    assert "created successfully" in out
-    assert table.name == random_table_id
-    assert table.exists() is True
-
-    table.drop()
-
-
-def test_drop_table(capsys, db_url, random_table_id):
-    engine = create_engine(db_url)
+def table_obj(database_url, tab_id):
+    """Helper to produce a `Table` object for the given table id."""
+    engine = create_engine(database_url)
     metadata = MetaData(bind=engine)
 
     table = Table(
-        random_table_id,
+        tab_id,
         metadata,
         Column("user_id", Integer, primary_key=True),
         Column("user_name", String(16), nullable=False),
     )
+    return table
 
+
+def test_enable_autocommit_mode(capsys, db_url):
+    snippets.enable_autocommit_mode(db_url)
+
+    out, err = capsys.readouterr()
+    assert "Connection default mode is SERIALIZABLE" in out
+    assert "Connection mode is now AUTOCOMMIT" in out
+
+
+def test_create_table(capsys, db_url, table_id):
+    snippets.create_table(db_url, table_id)
+
+    out, err = capsys.readouterr()
+    assert "Table {} successfully created".format(table_id) in out
+
+    table = table_obj(db_url, table_id)
+    assert table.exists() is True
+    table.drop()
+
+
+def test_drop_table(capsys, db_url, table_id):
+    table = table_obj(db_url, table_id)
     table.create()
 
     snippets.drop_table(table)
 
     out, err = capsys.readouterr()
-    assert "dropped successfully" in out
+    assert "Table {} successfully dropped".format(table_id) in out
     assert table.exists() is False
 
 
-def test_get_table_name(capsys, db_url, table):
-    tables = snippets.get_table_names(db_url)
+def test_get_table_names(capsys, db_url, table):
+    snippets.get_table_names(db_url)
 
     out, err = capsys.readouterr()
-    assert "Table names are:" in out
-    assert table.name in tables
+    assert "Retrieved table names:" in out
+    assert table.name in out
 
 
 def test_table_create_unique_index(capsys, db_url, table):
-    snippets.create_unique_indexes(table)
+    snippets.create_unique_index(table)
 
     engine = create_engine(db_url)
     insp = inspect(engine)
@@ -86,7 +87,7 @@ def test_table_create_unique_index(capsys, db_url, table):
 
     out, err = capsys.readouterr()
 
-    assert "Index created successfully" in out
+    assert "Index created" in out
     assert indexes[0]["unique"] is True
 
 
@@ -95,8 +96,8 @@ def test_table_delete_all_rows(capsys, connection, table):
     snippets.delete_all_rows(connection, table)
 
     out, err = capsys.readouterr()
-    assert "Total inserted rows: 6" in out
-    assert "Total rows: 0" in out
+    assert "Rows exist: 6" in out
+    assert "Rows exist after deletion: 0" in out
 
 
 def test_table_delete_row_with_where_condition(capsys, connection, table):
@@ -104,8 +105,8 @@ def test_table_delete_row_with_where_condition(capsys, connection, table):
     snippets.delete_row_with_where_condition(connection, table)
 
     out, err = capsys.readouterr()
-    assert "Total inserted rows: 6" in out
-    assert "Total rows: 5" in out
+    assert "Rows exist: 6" in out
+    assert "Rows exist after deletion: 5" in out
 
 
 def test_exists_table(capsys, table):
@@ -117,38 +118,18 @@ def test_exists_table(capsys, table):
 
 def test_table_fetch_rows(capsys, connection, table):
     insert_data(connection, table, DATA)
-    rows = snippets.fetch_rows(connection, table)
+    snippets.fetch_rows(connection, table)
 
     out, err = capsys.readouterr()
-    assert "Total rows:" in out
-    assert len(rows) is 6
-
-
-def test_table_fetch_rows_with_limit(capsys, connection, table):
-    insert_data(connection, table, DATA)
-    rows = snippets.fetch_rows_with_limit(connection, table)
-
-    out, err = capsys.readouterr()
-    assert "The rows are:" in out
-    assert len(rows) is 2
+    assert "Fetched rows:" in out
 
 
 def test_table_fetch_rows_with_limit_offset(capsys, connection, table):
     insert_data(connection, table, DATA)
-    rows = snippets.fetch_rows_with_limit_offset(connection, table)
+    snippets.fetch_rows_with_limit_offset(connection, table)
 
     out, err = capsys.readouterr()
-    assert "The rows are:" in out
-    assert len(rows) is 2
-
-
-def test_table_fetch_rows_with_offset(capsys, connection, table):
-    insert_data(connection, table, DATA)
-    rows = snippets.fetch_rows_with_offset(connection, table)
-
-    out, err = capsys.readouterr()
-    assert "The rows are:" in out
-    assert len(rows) is 4
+    assert "Fetched row:" in out
 
 
 def test_table_fetch_rows_with_order_by(capsys, connection, table):
@@ -156,43 +137,34 @@ def test_table_fetch_rows_with_order_by(capsys, connection, table):
     snippets.fetch_rows_with_order_by(connection, table)
 
     out, err = capsys.readouterr()
-    assert "The order by result is:" in out
+    assert "Ordered rows:" in out
 
 
 def test_table_fetch_row_with_where_condition(capsys, connection, table):
     insert_data(connection, table, DATA)
-    rows = snippets.fetch_row_with_where_condition(connection, table)
+    snippets.fetch_row_with_where_condition(connection, table)
 
     out, err = capsys.readouterr()
-    assert "Output is :" in out
-    assert len(rows) is 1
-
-
-def test_table_filter_data_endswith(capsys, connection, table):
-    insert_data(connection, table, DATA)
-    rows = snippets.filter_data_endswith(connection, table)
-
-    out, err = capsys.readouterr()
-    assert "Filtered data:" in out
-    assert len(rows) is 4
+    assert "Fetched row:" in out
+    assert len(rows) == 1
 
 
 def test_table_filter_data_startswith(capsys, connection, table):
     insert_data(connection, table, DATA)
-    rows = snippets.filter_data_startswith(connection, table)
+    snippets.filter_data_startswith(connection, table)
 
     out, err = capsys.readouterr()
-    assert "Filtered data:" in out
-    assert len(rows) is 3
+    assert "Fetched rows:" in out
+    assert len(rows) == 3
 
 
 def test_table_filter_data_with_contains(capsys, connection, table):
     insert_data(connection, table, DATA)
-    rows = snippets.filter_data_with_contains(connection, table)
+    snippets.filter_data_with_contains(connection, table)
 
     out, err = capsys.readouterr()
-    assert "Filtered data:" in out
-    assert len(rows) is 4
+    assert "Fetched rows:" in out
+    assert len(rows) == 4
 
 
 def test_table_filter_data_with_like(capsys, connection, table):
@@ -200,58 +172,57 @@ def test_table_filter_data_with_like(capsys, connection, table):
     rows = snippets.filter_data_with_like(connection, table)
 
     out, err = capsys.readouterr()
-    assert "Filtered data:" in out
-    assert len(rows) is 3
+    assert "Fetched rows:" in out
+    assert len(rows) == 3
 
 
 def test_table_get_columns(capsys, db_url, table):
-    columns = snippets.get_table_columns(db_url, table)
+    snippets.get_table_columns(db_url, table)
     out, err = capsys.readouterr()
-    assert "Columns are:" in out
-    assert len(columns) is 2
+    assert "Fetched columns:" in out
+    assert len(columns) == 2
 
     for single in columns:
         assert single["name"] in table.columns
 
 
 def test_table_get_foreign_key(capsys, db_url, table_w_foreign_key):
-    f_key = snippets.get_table_foreign_key(db_url, table_w_foreign_key)
+    snippets.get_table_foreign_key(db_url, table_w_foreign_key)
     table_fk = list(table_w_foreign_key.foreign_keys)[0]
     out, err = capsys.readouterr()
 
-    assert "Foreign key is:" in out
+    assert "Fetched foreign key:" in out
     assert f_key[0].get("name") == table_fk.name
 
 
 def test_table_get_indexes(capsys, db_url, table):
-    indexes = snippets.get_table_indexes(db_url, table)
+    snippets.get_table_indexes(db_url, table)
     out, err = capsys.readouterr()
     table_index = list(table.indexes)[0].name
 
-    assert "Indexes are:" in out
+    assert "Fetched indexes:" in out
     assert indexes[0]["name"] == table_index
 
 
 def test_table_get_primary_key(capsys, db_url, table):
-
-    p_key = snippets.get_table_primary_key(db_url, table)
+    snippets.get_table_primary_key(db_url, table)
     out, err = capsys.readouterr()
-    assert "Primary key is:" in out
+    assert "Fetched primary key:" in out
     assert p_key.get("constrained_columns")[0] in table.primary_key.columns
 
 
 def test_table_insert_row(capsys, connection, table):
-    rows = snippets.insert_row(connection, table)
+    snippets.insert_row(connection, table)
 
     out, err = capsys.readouterr()
-    assert "Total rows:" in out
-    assert len(rows) is 1
+    assert "Inserted row:" in out
+    assert len(rows) == 1
 
 
 def test_table_update_row(capsys, connection, table):
     insert_data(connection, table, DATA)
-    rows = snippets.update_row(connection, table)
+    snippets.update_row(connection, table)
 
     out, err = capsys.readouterr()
-    assert "Updated row is :" in out
+    assert "Updated row:" in out
     assert "GEH" == rows[0][1]

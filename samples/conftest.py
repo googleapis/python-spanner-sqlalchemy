@@ -37,21 +37,21 @@ def db_url():
 
 
 @pytest.fixture
-def random_table_id():
+def table_id():
     now = datetime.datetime.now()
-    random_table_id = "example_table_{}_{}".format(
+    table_id = "example_table_{}_{}".format(
         now.strftime("%Y%m%d%H%M%S"), uuid.uuid4().hex[:8]
     )
-    return random_table_id
+    return table_id
 
 
 @pytest.fixture
-def table(db_url, random_table_id):
+def table(db_url, table_id):
     engine = create_engine(db_url)
     metadata = MetaData(bind=engine)
 
     table = Table(
-        random_table_id,
+        table_id,
         metadata,
         Column("user_id", Integer, primary_key=True),
         Column("user_name", String(16), nullable=False),

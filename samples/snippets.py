@@ -4,7 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://developers.google.com/open-source/licenses/bs
 
-"""This application demonstrates how to do basic operations with Cloud
+"""
+This application demonstrates how to do basic operations with Cloud
 Spanner database.
 For more information, see the README.md under /python-spanner-sqlalchemy.
 """
@@ -23,46 +24,35 @@ from sqlalchemy import (
 
 # [START sqlalchemy_spanner_autocommit_on]
 def enable_autocommit_mode(url):
-    """Enables autocommit mode."""
+    """Enable AUTOCOMMIT mode."""
     conn = create_engine(url).connect()
     level = conn.get_isolation_level()
 
-    print("Connection autocommit default mode is {}".format(level))
-    print(
-        "Spanner DBAPI default autocommit mode is {}".format(
-            conn.connection.connection.autocommit
-        )
-    )
+    print("Connection default mode is {}".format(level))
 
     conn.execution_options(isolation_level="AUTOCOMMIT")
-    print("Connection autocommit mode is {}".format(level))
-    print(
-        "Spanner DBAPI autocommit mode is {}".format(
-            conn.connection.connection.autocommit
-        )
-    )
-    return conn
+    level = conn.get_isolation_level()
+    print("Connection mode is now {}".format(level))
 
 
 # [END sqlalchemy_spanner_autocommit_on]
 
 
 # [START sqlalchemy_spanner_create_table]
-def create_table(url, random_table_id):
-    """Create the table."""
+def create_table(url, table_id):
+    """Create a table."""
     engine = create_engine(url)
     metadata = MetaData(bind=engine)
 
     table = Table(
-        random_table_id,
+        table_id,
         metadata,
         Column("user_id", Integer, primary_key=True),
         Column("user_name", String(16), nullable=False),
     )
     table.create()
 
-    print("Table {} is created successfully".format(table.name))
-    return table
+    print("Table {} successfully created".format(table.name))
 
 
 # [END sqlalchemy_spanner_create_table]
@@ -73,7 +63,7 @@ def drop_table(table):
     """Drop the table."""
     table.drop()
 
-    print("Table {} is dropped successfully".format(table.name))
+    print("Table {} successfully dropped".format(table.name))
 
 
 # [END sqlalchemy_spanner_drop_table]
@@ -81,24 +71,25 @@ def drop_table(table):
 
 # [START sqlalchemy_spanner_get_table_names]
 def get_table_names(url):
-    """Retrieve the list of the table names.
+    """Retrieve the list of the table names in the database.
 
     The table must already exist and can be created using
     `create_table.`
     """
     engine = create_engine(url)
     insp = inspect(engine)
-    tables = insp.get_table_names()
+    names = insp.get_table_names()
 
-    print("Table names are:", tables)
-    return tables
+    print("Retrieved table names:")
+    for name in names:
+        print(name)
 
 
 # [END sqlalchemy_spanner_get_table_names]
 
 
-# [START sqlalchemy_spanner_create_unique_indexes]
-def create_unique_indexes(table):
+# [START sqlalchemy_spanner_create_unique_index]
+def create_unique_index(table):
     """Create unique index.
 
     The table must already exist and can be created using
@@ -106,10 +97,10 @@ def create_unique_indexes(table):
     """
     index = Index("some_index", table.c.user_name, unique=True)
     index.create()
-    print("Index created successfully")
+    print("Index created")
 
 
-# [END sqlalchemy_spanner_create_unique_indexes]
+# [END sqlalchemy_spanner_create_unique_index]
 
 
 # [START sqlalchemy_spanner_delete_all_rows]
@@ -119,38 +110,37 @@ def delete_all_rows(connection, table):
     The table must already exist and can be created using
     `create_table.`
     """
-
-    result = connection.execute(table.select()).fetchall()
-    print("Total inserted rows:", len(result))
+    rows = connection.execute(table.select()).fetchall()
+    print("Rows exist:", len(rows))
 
     connection.execute(table.delete())
 
     with connection:
-        result = connection.execute(table.select()).fetchall()
-    print("Total rows:", len(result))
+        rows = connection.execute(table.select()).fetchall()
+    print("Rows exist after deletion:", len(rows))
 
 
 # [END sqlalchemy_spanner_delete_all_rows]
 
 
-# [START sqlalchemy_spanner_delete_row_with_where_condition]
+# [START sqlalchemy_spanner_delete_row]
 def delete_row_with_where_condition(connection, table):
-    """Delete selected row from the table.
+    """Delete a row.
 
     The table must already exist and can be created using
     `create_table.`
     """
-    result = connection.execute(table.select()).fetchall()
-    print("Total inserted rows:", len(result))
+    rows = connection.execute(table.select()).fetchall()
+    print("Rows exist:", len(rows))
 
     connection.execute(table.delete().where(table.c.user_id == 1))
 
     with connection:
-        result = connection.execute(table.select()).fetchall()
-    print("Total rows:", len(result))
+        rows = connection.execute(table.select()).fetchall()
+    print("Rows exist after deletion:", len(rows))
 
 
-# [END sqlalchemy_spanner_delete_row_with_where_condition]
+# [END sqlalchemy_spanner_delete_row]
 
 
 # [START sqlalchemy_spanner_table_exists]
@@ -161,27 +151,27 @@ def table_exists(table):
     `create_table.`
     """
     result = table.exists()
-    print("Table exists:", result)
+    if result is True:
+        print("Table exists")
 
 
 # [END sqlalchemy_spanner_table_exists]
 
 
-# [START sqlalchemy_spanner_fetch_row_with_where_condition]
+# [START sqlalchemy_spanner_fetch_row]
 def fetch_row_with_where_condition(connection, table):
-    """Fetch row with where condition from the table.
+    """Fetch row with a WHERE clause.
 
     The table must already exist and can be created using
     `create_table.`
     """
     with connection:
-        result = list(connection.execute(table.select().where(table.c.user_id == 1)))
+        row = list(connection.execute(table.select().where(table.c.user_id == 1)))
 
-    print("Output is :", result)
-    return result
+    print("Fetched row:", row)
 
 
-# [END sqlalchemy_spanner_fetch_row_with_where_condition]
+# [END sqlalchemy_spanner_fetch_row]
 
 
 # [START sqlalchemy_spanner_fetch_rows]
@@ -192,112 +182,61 @@ def fetch_rows(connection, table):
     `create_table.`
     """
     with connection:
-        result = connection.execute(table.select()).fetchall()
-    print("Total rows:", result)
-    return result
+        rows = connection.execute(table.select()).fetchall()
+
+    print("Fetched rows:", rows)
 
 
 # [END sqlalchemy_spanner_fetch_rows]
 
 
-# [START sqlalchemy_spanner_fetch_rows_with_limit]
-def fetch_rows_with_limit(connection, table):
-    """Fetch rows from the table with limit.
-
-    The table must already exist and can be created using
-    `create_table.`
-    """
-    with connection:
-        result = list(connection.execute(table.select().limit(2)))
-    print("The rows are:", result)
-    return result
-
-
-# [END sqlalchemy_spanner_fetch_rows_with_limit]
-
-
 # [START sqlalchemy_spanner_fetch_rows_with_limit_offset]
 def fetch_rows_with_limit_offset(connection, table):
-    """Fetch rows from the table with limit and offset.
+    """Fetch rows from the table with LIMIT and OFFSET clauses.
 
     The table must already exist and can be created using
     `create_table.`
     """
     with connection:
-        result = list(connection.execute(table.select().limit(2).offset(1)))
-    print("The rows are:", result)
-    return result
+        rows = list(connection.execute(table.select().limit(2).offset(1)))
+
+    print("Fetched rows:", rows)
 
 
 # [END sqlalchemy_spanner_fetch_rows_with_limit_offset]
 
 
-# [START sqlalchemy_spanner_fetch_rows_with_offset]
-def fetch_rows_with_offset(connection, table):
-    """Fetch rows from the table with offset.
-
-    The table must already exist and can be created using
-    `create_table.`
-    """
-    with connection:
-        result = list(connection.execute(table.select().offset(2)))
-    print("The rows are:", result)
-    return result
-
-
-# [END sqlalchemy_spanner_fetch_rows_with_offset]
-
-
 # [START sqlalchemy_spanner_fetch_rows_with_order_by]
 def fetch_rows_with_order_by(connection, table):
-    """Fetch all rows from the table in order.
+    """Fetch all rows ordered.
 
     The table must already exist and can be created using
     `create_table.`
     """
     with connection:
-        result = list(
+        rows = list(
             connection.execute(table.select().order_by(table.c.user_name)).fetchall()
         )
-    print("The order by result is:", result)
+    print("Ordered rows:", rows)
 
 
 # [END sqlalchemy_spanner_fetch_rows_with_order_by]
 
 
-# [START sqlalchemy_spanner_filter_data_endswith]
-def filter_data_endswith(connection, table):
-    """Filter data with endswith from the table.
-
-    The table must already exist and can be created using
-    `create_table.`
-    """
-    with connection:
-        result = list(
-            connection.execute(table.select().where(table.c.user_name.endswith("%efg")))
-        )
-    print("Filtered data:", result)
-    return result
-
-
-# [END sqlalchemy_spanner_filter_data_endswith]
-
-
 # [START sqlalchemy_spanner_filter_data_startswith]
 def filter_data_startswith(connection, table):
-    """Filter data with startswith from the table.
+    """Filter data with STARTSWITH clause.
 
     The table must already exist and can be created using
     `create_table.`
     """
     with connection:
-        result = list(
+        rows = list(
             connection.execute(
                 table.select().where(table.c.user_name.startswith("abcd%"))
             )
         )
-    print("Filtered data:", result)
-    return result
+    print("Fetched rows:", rows)
 
 
 # [END sqlalchemy_spanner_filter_data_startswith]
@@ -305,17 +244,16 @@ def filter_data_startswith(connection, table):
 
 # [START sqlalchemy_spanner_filter_data_with_contains]
 def filter_data_with_contains(connection, table):
-    """Filter data with contains from the table.
+    """Filter data with CONTAINS clause.
 
     The table must already exist and can be created using
     `create_table.`
     """
     with connection:
-        result = list(
+        rows = list(
             connection.execute(table.select().where(table.c.user_name.contains("defg")))
         )
-    print("Filtered data:", result)
-    return result
+    print("Fetched rows:", rows)
 
 
 # [END sqlalchemy_spanner_filter_data_with_contains]
@@ -323,17 +261,16 @@ def filter_data_with_contains(connection, table):
 
 # [START sqlalchemy_spanner_filter_data_with_like]
 def filter_data_with_like(connection, table):
-    """Filter data with like from the table.
+    """Filter data with LIKE clause.
 
     The table must already exist and can be created using
     `create_table.`
     """
     with connection:
-        result = list(
+        rows = list(
             connection.execute(table.select().where(table.c.user_name.like("abc%")))
         )
-    print("Filtered data:", result)
-    return result
+    print("Fetched rows:", rows)
 
 
 # [END sqlalchemy_spanner_filter_data_with_like]
@@ -341,7 +278,7 @@ def filter_data_with_like(connection, table):
 
 # [START sqlalchemy_spanner_get_table_columns]
 def get_table_columns(url, table):
-    """Retrieve the columns list of the table.
+    """Retrieve the list of columns of the table.
 
     The table must already exist and can be created using
     `create_table.`
@@ -350,8 +287,7 @@ def get_table_columns(url, table):
     insp = inspect(engine)
     columns = insp.get_columns(table.name)
 
-    print("Columns are:", columns)
-    return columns
+    print("Fetched columns:", columns)
 
 
 # [END sqlalchemy_spanner_get_table_columns]
@@ -359,7 +295,7 @@ def get_table_columns(url, table):
 
 # [START sqlalchemy_spanner_get_foreign_key]
 def get_table_foreign_key(url, table):
-    """Retrieve the Foreign key of the table.
+    """Retrieve a Foreign Key.
 
     The table must already exist and can be created using
     `create_table.`
@@ -368,8 +304,7 @@ def get_table_foreign_key(url, table):
     insp = inspect(engine)
     f_key = insp.get_foreign_keys(table.name)
 
-    print("Foreign key is:", f_key)
-    return f_key
+    print("Fetched foreign key:", f_key)
 
 
 # [END sqlalchemy_spanner_get_foreign_key]
@@ -377,21 +312,16 @@ def get_table_foreign_key(url, table):
 
 # [START sqlalchemy_spanner_get_indexes]
 def get_table_indexes(url, table):
-    """Retrieve the Indexes of the table.
+    """Retrieve the table indexes.
 
     The table must already exist and can be created using
     `create_table.`
     """
-    # Create Index
-    index = Index("some_index", table.c.user_name)
-    index.create()
-
     engine = create_engine(url)
     insp = inspect(engine)
     indexes = insp.get_indexes(table.name)
 
-    print("Indexes are:", indexes)
-    return indexes
+    print("Fetched indexes:", indexes)
 
 
 # [END sqlalchemy_spanner_get_indexes]
@@ -399,7 +329,7 @@ def get_table_indexes(url, table):
 
 # [START sqlalchemy_spanner_get_primary_key]
 def get_table_primary_key(url, table):
-    """Retrieve the Primary key of the table.
+    """Retrieve the table Primary Key.
 
     The table must already exist and can be created using
     `create_table.`
@@ -408,8 +338,7 @@ def get_table_primary_key(url, table):
     insp = inspect(engine)
     p_key = insp.get_pk_constraint(table.name)
 
-    print("Primary key is:", p_key)
-    return p_key
+    print("Fetched primary key:", p_key)
 
 
 # [END sqlalchemy_spanner_get_primary_key]
@@ -417,17 +346,16 @@ def get_table_primary_key(url, table):
 
 # [START sqlalchemy_spanner_insert_row]
 def insert_row(connection, table):
-    """Insert row in the table.
+    """Insert row into the table.
 
     The table must already exist and can be created using
     `create_table.`
     """
     connection.execute(table.insert(), {"user_id": 1, "user_name": "ABC"})
 
-    result = [row for row in connection.execute(table.select())]
+    row = list(connection.execute(table.select()))
 
-    print("Total rows:", result)
-    return result
+    print("Inserted row:", row)
 
 
 # [END sqlalchemy_spanner_insert_row]
@@ -435,7 +363,7 @@ def insert_row(connection, table):
 
 # [START sqlalchemy_spanner_update_row]
 def update_row(connection, table):
-    """Update row in the table.
+    """Update a row in the table.
 
     The table must already exist and can be created using
     `create_table.`
@@ -445,9 +373,8 @@ def update_row(connection, table):
     )
 
     with connection:
-        result = list(connection.execute(table.select().where(table.c.user_id == 2)))
-    print("Updated row is :", result)
-    return result
+        row = list(connection.execute(table.select().where(table.c.user_id == 2)))
+    print("Updated row:", row)
 
 
 # [END sqlalchemy_spanner_update_row]
