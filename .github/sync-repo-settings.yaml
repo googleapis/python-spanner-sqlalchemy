@@ -9,3 +9,4 @@ branchProtectionRules:
   requiredStatusCheckContexts:
     - 'tests'
     - 'cla/google'
+    - 'ci/circleci: build-and-test'
