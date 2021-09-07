@@ -29,8 +29,6 @@ from sqlalchemy.sql.compiler import (
 from google.cloud import spanner_dbapi
 from google.cloud.sqlalchemy_spanner._opentelemetry_tracing import trace_call
 
-from package_meta import __name__, __version__
-
 # Spanner-to-SQLAlchemy types map
 _type_map = {
     "BOOL": types.Boolean,
@@ -436,14 +434,7 @@ class SpannerDialect(DefaultDialect):
             url.database,
         )
         return (
-            [
-                match.group("instance"),
-                match.group("database"),
-                match.group("project"),
-                None,
-                None,
-                __name__ + "/" + __version__,
-            ],
+            [match.group("instance"), match.group("database"), match.group("project")],
             {},
         )
 
