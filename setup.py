@@ -14,11 +14,14 @@
 
 import setuptools
 
+from package_meta import __author__
+from package_meta import __author_email__
+from package_meta import __description__
+from package_meta import __name__
+from package_meta import __version__
 
 # Package metadata.
 
-name = "sqlalchemy-spanner"
-description = "SQLAlchemy dialect integrated into Cloud Spanner database"
 dependencies = ["sqlalchemy>=1.1.13, <=1.3.23", "google-cloud-spanner>=3.3.0"]
 extras = {
     "tracing": [
@@ -42,10 +45,10 @@ if "google.cloud" in packages:
     namespaces.append("google.cloud")
 
 setuptools.setup(
-    author="Google LLC",
-    author_email="cloud-spanner-developers@googlegroups.com",
+    author=__author__,
+    author_email=__author_email__,
     classifiers=["Intended Audience :: Developers"],
-    description=description,
+    description=__description__,
     entry_points={
         "sqlalchemy.dialects": [
             "spanner = google.cloud.sqlalchemy_spanner:SpannerDialect"
@@ -53,11 +56,11 @@ setuptools.setup(
     },
     install_requires=dependencies,
     extras_require=extras,
-    name=name,
+    name=__name__,
     namespace_packages=namespaces,
     packages=packages,
     url="https://github.com/cloudspannerecosystem/python-spanner-sqlalchemy",
-    version="0.1",
+    version=__version__,
     include_package_data=True,
     zip_safe=False,
 )
