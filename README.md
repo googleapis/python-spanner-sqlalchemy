@@ -2,7 +2,9 @@
 
 Spanner dialect for SQLAlchemy represents an interface API designed to make it possible to control Cloud Spanner databases with SQLAlchemy API. The dialect is built on top of [the Spanner DB API](https://github.com/googleapis/python-spanner/tree/master/google/cloud/spanner_dbapi), which is designed in accordance with [PEP-249](https://www.python.org/dev/peps/pep-0249/).
 
-**NOTE: This project is still in DEVELOPMENT. It may make breaking changes without prior notice and should not yet be used for production purposes.**  
+This project has **Preview** release status. Known limitations are listed [here](#features-and-limitations). All supported features have been tested and verified to work with the test configurations. There may be configurations and/or data model variations that have not yet been covered by the tests and that show unexpected behavior. Please report any problems that you might encounter by [creating a new issue](https://github.com/cloudspannerecosystem/python-spanner-sqlalchemy/issues/new).
+
+**NOTE: This project may still make breaking changes without prior notice and should not yet be used for production purposes.**  
 
 - [Cloud Spanner product documentation](https://cloud.google.com/spanner/docs)
 - [SQLAlchemy product documentation](https://www.sqlalchemy.org/)
@@ -97,6 +99,33 @@ A migration script can produce a lot of DDL statements. If each of the statement
 
 Features and limitations
 -----------
+**Interleaved tables**  
+Cloud Spanner dialect includes two dialect-specific arguments for `Table` constructor, which help to define interleave relations:
+`spanner_interleave_in` - a parent table name
+`spanner_inverleave_on_delete_cascade` - a flag specifying if `ON DELETE CASCADE` statement must be used for the interleave relation  
+An example of interleave relations definition:
+```python
+team = Table(
+    "team",
+    metadata,
+    Column("team_id", Integer, primary_key=True),
+    Column("team_name", String(16), nullable=False),
+)
+team.create(engine)
+
+client = Table(
+    "client",
+    metadata,
+    Column("team_id", Integer, primary_key=True),
+    Column("client_id", Integer, primary_key=True),
+    Column("client_name", String(16), nullable=False),
+    spanner_interleave_in="team",
+    spanner_interleave_on_delete_cascade=True,
+)
+
+client.create(engine)
+```
+
 **Unique constraints**  
 Cloud Spanner doesn't support direct UNIQUE constraints creation. In order to achieve column values uniqueness UNIQUE indexes should be used.
 
@@ -177,13 +206,26 @@ with engine.begin() as connection:
 ```
 Connectionless way of use is also deprecated since SQLAlchemy 2.0 and soon will be removed (see in [SQLAlchemy docs](https://docs.sqlalchemy.org/en/14/core/connections.html#connectionless-execution-implicit-execution)).
 
+Running tests
+------------
+Spanner dialect includes a compliance, migration and unit test suite. To run the tests the `nox` package commands can be used:
+```
+# Run the whole suite
+$ nox
+
+# Run a particular test session
+$ nox -s migration_test
+```
+**Running tests on Spanner emulator**  
+The dialect test suite can be runned on [Spanner emulator](https://cloud.google.com/spanner/docs/emulator). Several tests, relating to `NULL` values of data types, are skipped when executed on emulator.
+
 Contributing
 ------------
 
-Contributions to this library are welcome and encouraged.
-
-See [CONTRIBUTING](https://github.com/cloudspannerecosystem/python-spanner-sqlalchemy/blob/main/contributing.md) for more information on how to get
+Contributions to this library are welcome and encouraged. Please report issues, file feature requests, and send pull requests. See [CONTRIBUTING](https://github.com/cloudspannerecosystem/python-spanner-sqlalchemy/blob/main/contributing.md) for more information on how to get
 started.
+
+**Note that this project is not officially supported by Google as part of the Cloud Spanner product.**
 
 Please note that this project is released with a Contributor Code of Conduct.
 By participating in this project you agree to abide by its terms. See the [Code

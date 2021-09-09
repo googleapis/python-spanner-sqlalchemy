@@ -14,10 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import operator
-import pytest
+from datetime import timezone
 import decimal
-import pytz
+import operator
+import os
+import pytest
+from unittest import mock
 
 import sqlalchemy
 from sqlalchemy import create_engine
@@ -328,7 +330,17 @@ class DateTest(DateFixtureTest, _DateTest):
     and maintain DRY concept just inherit the class to run tests successfully.
     """
 
-    pass
+    @pytest.mark.skipif(
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+    )
+    def test_null_bound_comparison(self):
+        super().test_null_bound_comparison()
+
+    @pytest.mark.skipif(
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+    )
+    def test_null(self):
+        super().test_null()
 
 
 class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest, DateTest):
@@ -348,6 +360,18 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest, DateTest):
         eq_(row[0].rfc3339(), compare)
         assert isinstance(row[0], DatetimeWithNanoseconds)
 
+    @pytest.mark.skipif(
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+    )
+    def test_null_bound_comparison(self):
+        super().test_null_bound_comparison()
+
+    @pytest.mark.skipif(
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+    )
+    def test_null(self):
+        super().test_null()
+
 
 class DateTimeTest(_DateTimeTest, DateTimeMicrosecondsTest):
     """
@@ -358,7 +382,17 @@ class DateTimeTest(_DateTimeTest, DateTimeMicrosecondsTest):
     tests successfully.
     """
 
-    pass
+    @pytest.mark.skipif(
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+    )
+    def test_null_bound_comparison(self):
+        super().test_null_bound_comparison()
+
+    @pytest.mark.skipif(
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+    )
+    def test_null(self):
+        super().test_null()
 
 
 @pytest.mark.skip("Spanner doesn't support Time data type.")
@@ -911,7 +945,7 @@ class RowFetchTest(_RowFetchTest):
 
         eq_(
             row["somelabel"],
-            DatetimeWithNanoseconds(2006, 5, 12, 12, 0, 0, tzinfo=pytz.UTC),
+            DatetimeWithNanoseconds(2006, 5, 12, 12, 0, 0, tzinfo=timezone.utc),
         )
 
 
@@ -1436,3 +1470,58 @@ class TestQueryHints(fixtures.TablesTest):
         query = query.join(Address)
 
         assert str(query.statement.compile(session.bind)) == EXPECTED_QUERY
+
+
+class InterleavedTablesTest(fixtures.TestBase):
+    """
+    Check that CREATE TABLE statements for interleaved tables are correctly
+    generated.
+    """
+
+    def setUp(self):
+        self._engine = create_engine(
+            "spanner:///projects/appdev-soda-spanner-staging/instances/"
+            "sqlalchemy-dialect-test/databases/compliance-test"
+        )
+        self._metadata = MetaData(bind=self._engine)
+
+    def test_interleave(self):
+        EXP_QUERY = (
+            "\nCREATE TABLE client (\n\tteam_id INT64 NOT NULL, "
+            "\n\tclient_id INT64 NOT NULL, "
+            "\n\tclient_name STRING(16) NOT NULL"
+            "\n) PRIMARY KEY (team_id, client_id),"
+            "\nINTERLEAVE IN PARENT team\n\n"
+        )
+        client = Table(
+            "client",
+            self._metadata,
+            Column("team_id", Integer, primary_key=True),
+            Column("client_id", Integer, primary_key=True),
+            Column("client_name", String(16), nullable=False),
+            spanner_interleave_in="team",
+        )
+        with mock.patch("google.cloud.spanner_dbapi.cursor.Cursor.execute") as execute:
+            client.create(self._engine)
+            execute.assert_called_once_with(EXP_QUERY, [])
+
+    def test_interleave_on_delete_cascade(self):
+        EXP_QUERY = (
+            "\nCREATE TABLE client (\n\tteam_id INT64 NOT NULL, "
+            "\n\tclient_id INT64 NOT NULL, "
+            "\n\tclient_name STRING(16) NOT NULL"
+            "\n) PRIMARY KEY (team_id, client_id),"
+            "\nINTERLEAVE IN PARENT team ON DELETE CASCADE\n\n"
+        )
+        client = Table(
+            "client",
+            self._metadata,
+            Column("team_id", Integer, primary_key=True),
+            Column("client_id", Integer, primary_key=True),
+            Column("client_name", String(16), nullable=False),
+            spanner_interleave_in="team",
+            spanner_interleave_on_delete_cascade=True,
+        )
+        with mock.patch("google.cloud.spanner_dbapi.cursor.Cursor.execute") as execute:
+            client.create(self._engine)
+            execute.assert_called_once_with(EXP_QUERY, [])
