@@ -113,9 +113,7 @@ def delete_all_rows(connection, table):
 
     connection.execute(table.delete())
 
-    with connection:
-        rows = connection.execute(table.select()).fetchall()
-
+    rows = connection.execute(table.select()).fetchall()
     print("Rows exist after deletion:", len(rows))
 
 
@@ -134,9 +132,7 @@ def delete_row_with_where_clause(connection, table):
 
     connection.execute(table.delete().where(table.c.user_id == 1))
 
-    with connection:
-        rows = connection.execute(table.select()).fetchall()
-
+    rows = connection.execute(table.select()).fetchall()
     print("Rows exist after deletion:", len(rows))
 
 
