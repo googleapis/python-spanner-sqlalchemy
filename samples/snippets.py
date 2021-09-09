@@ -22,7 +22,7 @@ from sqlalchemy import (
 )
 
 
-# [START sqlalchemy_spanner_autocommit_on]
+# [START spanner_sqlalchemy_autocommit_on]
 def enable_autocommit_mode(connection, url):
     """Enable AUTOCOMMIT mode."""
     level = connection.get_isolation_level()
@@ -33,10 +33,10 @@ def enable_autocommit_mode(connection, url):
     print("Connection mode is now {}".format(level))
 
 
-# [END sqlalchemy_spanner_autocommit_on]
+# [END spanner_sqlalchemy_autocommit_on]
 
 
-# [START sqlalchemy_spanner_create_table]
+# [START spanner_sqlalchemy_create_table]
 def create_table(url, table_id):
     """Create a table."""
     engine = create_engine(url)
@@ -53,10 +53,10 @@ def create_table(url, table_id):
     print("Table {} successfully created".format(table.name))
 
 
-# [END sqlalchemy_spanner_create_table]
+# [END spanner_sqlalchemy_create_table]
 
 
-# [START sqlalchemy_spanner_drop_table]
+# [START spanner_sqlalchemy_drop_table]
 def drop_table(table):
     """Drop the table."""
     table.drop()
@@ -64,10 +64,10 @@ def drop_table(table):
     print("Table {} successfully dropped".format(table.name))
 
 
-# [END sqlalchemy_spanner_drop_table]
+# [END spanner_sqlalchemy_drop_table]
 
 
-# [START sqlalchemy_spanner_get_table_names]
+# [START spanner_sqlalchemy_get_table_names]
 def get_table_names(url):
     """Retrieve the list of the table names in the database.
 
@@ -83,10 +83,10 @@ def get_table_names(url):
         print(name)
 
 
-# [END sqlalchemy_spanner_get_table_names]
+# [END spanner_sqlalchemy_get_table_names]
 
 
-# [START sqlalchemy_spanner_create_unique_index]
+# [START spanner_sqlalchemy_create_unique_index]
 def create_unique_index(table):
     """Create unique index.
 
@@ -98,10 +98,10 @@ def create_unique_index(table):
     print("Index created")
 
 
-# [END sqlalchemy_spanner_create_unique_index]
+# [END spanner_sqlalchemy_create_unique_index]
 
 
-# [START sqlalchemy_spanner_delete_all_rows]
+# [START spanner_sqlalchemy_delete_all_rows]
 def delete_all_rows(connection, table):
     """Delete all rows from the table.
 
@@ -117,10 +117,10 @@ def delete_all_rows(connection, table):
     print("Rows exist after deletion:", len(rows))
 
 
-# [END sqlalchemy_spanner_delete_all_rows]
+# [END spanner_sqlalchemy_delete_all_rows]
 
 
-# [START sqlalchemy_spanner_delete_row]
+# [START spanner_sqlalchemy_delete_row]
 def delete_row_with_where_clause(connection, table):
     """Delete a row.
 
@@ -136,10 +136,10 @@ def delete_row_with_where_clause(connection, table):
     print("Rows exist after deletion:", len(rows))
 
 
-# [END sqlalchemy_spanner_delete_row]
+# [END spanner_sqlalchemy_delete_row]
 
 
-# [START sqlalchemy_spanner_table_exists]
+# [START spanner_sqlalchemy_table_exists]
 def table_exists(table):
     """Check the table exists.
 
@@ -151,10 +151,10 @@ def table_exists(table):
         print("Table exists")
 
 
-# [END sqlalchemy_spanner_table_exists]
+# [END spanner_sqlalchemy_table_exists]
 
 
-# [START sqlalchemy_spanner_fetch_rows]
+# [START spanner_sqlalchemy_fetch_rows]
 def fetch_rows(connection, table):
     """Fetch all rows from the table.
 
@@ -166,10 +166,10 @@ def fetch_rows(connection, table):
     print("Fetched rows:", rows)
 
 
-# [END sqlalchemy_spanner_fetch_rows]
+# [END spanner_sqlalchemy_fetch_rows]
 
 
-# [START sqlalchemy_spanner_fetch_row]
+# [START spanner_sqlalchemy_fetch_row]
 def fetch_row_with_where_clause(connection, table):
     """Fetch row with a WHERE clause.
 
@@ -181,10 +181,10 @@ def fetch_row_with_where_clause(connection, table):
     print("Fetched row:", row)
 
 
-# [END sqlalchemy_spanner_fetch_row]
+# [END spanner_sqlalchemy_fetch_row]
 
 
-# [START sqlalchemy_spanner_fetch_rows_with_limit_offset]
+# [START spanner_sqlalchemy_fetch_rows_with_limit_offset]
 def fetch_rows_with_limit_offset(connection, table):
     """Fetch rows from the table with LIMIT and OFFSET clauses.
 
@@ -196,10 +196,10 @@ def fetch_rows_with_limit_offset(connection, table):
     print("Fetched rows:", rows)
 
 
-# [END sqlalchemy_spanner_fetch_rows_with_limit_offset]
+# [END spanner_sqlalchemy_fetch_rows_with_limit_offset]
 
 
-# [START sqlalchemy_spanner_fetch_rows_with_order_by]
+# [START spanner_sqlalchemy_fetch_rows_with_order_by]
 def fetch_rows_with_order_by(connection, table):
     """Fetch all rows ordered.
 
@@ -212,10 +212,10 @@ def fetch_rows_with_order_by(connection, table):
     print("Ordered rows:", rows)
 
 
-# [END sqlalchemy_spanner_fetch_rows_with_order_by]
+# [END spanner_sqlalchemy_fetch_rows_with_order_by]
 
 
-# [START sqlalchemy_spanner_filter_data_startswith]
+# [START spanner_sqlalchemy_filter_data_startswith]
 def filter_data_startswith(connection, table):
     """Filter data with STARTSWITH clause.
 
@@ -228,10 +228,10 @@ def filter_data_startswith(connection, table):
     print("Fetched rows:", rows)
 
 
-# [END sqlalchemy_spanner_filter_data_startswith]
+# [END spanner_sqlalchemy_filter_data_startswith]
 
 
-# [START sqlalchemy_spanner_get_table_columns]
+# [START spanner_sqlalchemy_get_table_columns]
 def get_table_columns(url, table):
     """Retrieve the list of columns of the table.
 
@@ -245,10 +245,10 @@ def get_table_columns(url, table):
     print("Fetched columns:", columns)
 
 
-# [END sqlalchemy_spanner_get_table_columns]
+# [END spanner_sqlalchemy_get_table_columns]
 
 
-# [START sqlalchemy_spanner_get_foreign_key]
+# [START spanner_sqlalchemy_get_foreign_key]
 def get_table_foreign_key(url, table):
     """Retrieve a Foreign Key.
 
@@ -263,10 +263,10 @@ def get_table_foreign_key(url, table):
         print("Fetched foreign key:", f_keys)
 
 
-# [END sqlalchemy_spanner_get_foreign_key]
+# [END spanner_sqlalchemy_get_foreign_key]
 
 
-# [START sqlalchemy_spanner_get_indexes]
+# [START spanner_sqlalchemy_get_indexes]
 def get_table_indexes(url, table):
     """Retrieve the table indexes.
 
@@ -281,10 +281,10 @@ def get_table_indexes(url, table):
         print("Fetched indexes:", indexes)
 
 
-# [END sqlalchemy_spanner_get_indexes]
+# [END spanner_sqlalchemy_get_indexes]
 
 
-# [START sqlalchemy_spanner_get_primary_key]
+# [START spanner_sqlalchemy_get_primary_key]
 def get_table_primary_key(url, table):
     """Retrieve the table Primary Key.
 
@@ -299,10 +299,10 @@ def get_table_primary_key(url, table):
         print("Fetched primary key:", p_key)
 
 
-# [END sqlalchemy_spanner_get_primary_key]
+# [END spanner_sqlalchemy_get_primary_key]
 
 
-# [START sqlalchemy_spanner_insert_row]
+# [START spanner_sqlalchemy_insert_row]
 def insert_row(connection, table):
     """Insert row into the table.
 
@@ -316,10 +316,10 @@ def insert_row(connection, table):
     print("Inserted row:", row)
 
 
-# [END sqlalchemy_spanner_insert_row]
+# [END spanner_sqlalchemy_insert_row]
 
 
-# [START sqlalchemy_spanner_update_row]
+# [START spanner_sqlalchemy_update_row]
 def update_row(connection, table):
     """Update a row in the table.
 
@@ -334,4 +334,4 @@ def update_row(connection, table):
     print("Updated row:", row)
 
 
-# [END sqlalchemy_spanner_update_row]
+# [END spanner_sqlalchemy_update_row]
