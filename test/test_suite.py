@@ -930,6 +930,27 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         tab.drop()
 
 
+class CompositeKeyReflectionTest(_CompositeKeyReflectionTest):
+    @testing.requires.foreign_key_constraint_reflection
+    @testing.provide_metadata
+    def test_fk_column_order(self):
+        """
+        SPANNER OVERRIDE:
+
+        Spanner column usage reflection doesn't support determenistic
+        ordering. Overriding the test to check that columns are
+        reflected correctly, without considering their order.
+        """
+        # test for issue #5661
+        meta = self.metadata
+        insp = inspect(meta.bind)
+        foreign_keys = insp.get_foreign_keys(self.tables.tb2.name)
+        eq_(len(foreign_keys), 1)
+        fkey1 = foreign_keys[0]
+        eq_(set(fkey1.get("referred_columns")), {"name", "id", "attr"})
+        eq_(set(fkey1.get("constrained_columns")), {"pname", "pid", "pattr"})
+
+
 class RowFetchTest(_RowFetchTest):
     def test_row_w_scalar_select(self):
         """
