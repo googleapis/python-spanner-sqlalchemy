@@ -927,6 +927,8 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         ):
             assert type_ in col_types
 
+        tab.drop()
+
 
 class RowFetchTest(_RowFetchTest):
     def test_row_w_scalar_select(self):
