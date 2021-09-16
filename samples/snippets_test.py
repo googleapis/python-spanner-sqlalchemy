@@ -97,8 +97,8 @@ def test_table_delete_all_rows(capsys, connection, table):
     snippets.delete_all_rows(connection, table)
 
     out, err = capsys.readouterr()
-    assert "Rows exist: 6" in out
-    assert "Rows exist after deletion: 0" in out
+    assert "Row count: 6" in out
+    assert "Row count after deletion: 0" in out
 
 
 def test_table_delete_row_with_where_clause(capsys, connection, table):
@@ -106,8 +106,8 @@ def test_table_delete_row_with_where_clause(capsys, connection, table):
     snippets.delete_row_with_where_clause(connection, table)
 
     out, err = capsys.readouterr()
-    assert "Rows exist: 6" in out
-    assert "Rows exist after deletion: 5" in out
+    assert "Row count: 6" in out
+    assert "Row count after deletion: 5" in out
 
 
 def test_exists_table(capsys, table):
@@ -187,7 +187,7 @@ def test_table_get_foreign_key(capsys, db_url, table_w_foreign_key):
     snippets.get_table_foreign_key(db_url, table_w_foreign_key)
     out, err = capsys.readouterr()
 
-    assert "Fetched foreign key:" in out
+    assert "Fetched foreign keys:" in out
 
 
 def test_table_get_indexes(capsys, db_url, table):

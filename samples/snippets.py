@@ -26,11 +26,11 @@ from sqlalchemy import (
 def enable_autocommit_mode(connection, url):
     """Enable AUTOCOMMIT mode."""
     level = connection.get_isolation_level()
-    print("Connection default mode is {}".format(level))
+    print("Connection default mode is {}.".format(level))
 
     connection.execution_options(isolation_level="AUTOCOMMIT")
     level = connection.get_isolation_level()
-    print("Connection mode is now {}".format(level))
+    print("Connection mode is now {}.".format(level))
 
 
 # [END spanner_sqlalchemy_autocommit_on]
@@ -50,7 +50,7 @@ def create_table(url, table_id):
     )
     table.create()
 
-    print("Table {} successfully created".format(table.name))
+    print("Table {} successfully created.".format(table.name))
 
 
 # [END spanner_sqlalchemy_create_table]
@@ -61,7 +61,7 @@ def drop_table(table):
     """Drop the table."""
     table.drop()
 
-    print("Table {} successfully dropped".format(table.name))
+    print("Table {} successfully dropped.".format(table.name))
 
 
 # [END spanner_sqlalchemy_drop_table]
@@ -95,7 +95,7 @@ def create_unique_index(table):
     """
     index = Index("some_index", table.c.user_name, unique=True)
     index.create()
-    print("Index created")
+    print("Index created.")
 
 
 # [END spanner_sqlalchemy_create_unique_index]
@@ -109,12 +109,12 @@ def delete_all_rows(connection, table):
     `create_table.`
     """
     rows = connection.execute(table.select()).fetchall()
-    print("Rows exist:", len(rows))
+    print("Row count: ", len(rows))
 
     connection.execute(table.delete())
 
     rows = connection.execute(table.select()).fetchall()
-    print("Rows exist after deletion:", len(rows))
+    print("Row count after deletion: ", len(rows))
 
 
 # [END spanner_sqlalchemy_delete_all_rows]
@@ -128,12 +128,12 @@ def delete_row_with_where_clause(connection, table):
     `create_table.`
     """
     rows = connection.execute(table.select()).fetchall()
-    print("Rows exist:", len(rows))
+    print("Row count: ", len(rows))
 
     connection.execute(table.delete().where(table.c.user_id == 1))
 
     rows = connection.execute(table.select()).fetchall()
-    print("Rows exist after deletion:", len(rows))
+    print("Row count after deletion: ", len(rows))
 
 
 # [END spanner_sqlalchemy_delete_row]
@@ -148,7 +148,7 @@ def table_exists(table):
     """
     result = table.exists()
     if result is True:
-        print("Table exists")
+        print("Table exists.")
 
 
 # [END spanner_sqlalchemy_table_exists]
@@ -163,7 +163,7 @@ def fetch_rows(connection, table):
     """
     rows = connection.execute(table.select()).fetchall()
 
-    print("Fetched rows:", rows)
+    print("Fetched rows: ", rows)
 
 
 # [END spanner_sqlalchemy_fetch_rows]
@@ -178,7 +178,7 @@ def fetch_row_with_where_clause(connection, table):
     """
     row = list(connection.execute(table.select().where(table.c.user_id == 1)))
 
-    print("Fetched row:", row)
+    print("Fetched row: ", row)
 
 
 # [END spanner_sqlalchemy_fetch_row]
@@ -193,7 +193,7 @@ def fetch_rows_with_limit_offset(connection, table):
     """
     rows = list(connection.execute(table.select().limit(2).offset(1)))
 
-    print("Fetched rows:", rows)
+    print("Fetched rows: ", rows)
 
 
 # [END spanner_sqlalchemy_fetch_rows_with_limit_offset]
@@ -209,7 +209,7 @@ def fetch_rows_with_order_by(connection, table):
     rows = list(
         connection.execute(table.select().order_by(table.c.user_name)).fetchall()
     )
-    print("Ordered rows:", rows)
+    print("Ordered rows: ", rows)
 
 
 # [END spanner_sqlalchemy_fetch_rows_with_order_by]
@@ -225,7 +225,7 @@ def filter_data_startswith(connection, table):
     rows = list(
         connection.execute(table.select().where(table.c.user_name.startswith("abcd%")))
     )
-    print("Fetched rows:", rows)
+    print("Fetched rows: ", rows)
 
 
 # [END spanner_sqlalchemy_filter_data_startswith]
@@ -242,7 +242,7 @@ def get_table_columns(url, table):
     insp = inspect(engine)
     columns = insp.get_columns(table.name)
 
-    print("Fetched columns:", columns)
+    print("Fetched columns: ", columns)
 
 
 # [END spanner_sqlalchemy_get_table_columns]
@@ -260,7 +260,7 @@ def get_table_foreign_key(url, table):
     f_keys = insp.get_foreign_keys(table.name)
 
     if f_keys:
-        print("Fetched foreign key:", f_keys)
+        print("Fetched foreign keys: ", f_keys)
 
 
 # [END spanner_sqlalchemy_get_foreign_key]
@@ -278,7 +278,7 @@ def get_table_indexes(url, table):
     indexes = insp.get_indexes(table.name)
 
     if indexes:
-        print("Fetched indexes:", indexes)
+        print("Fetched indexes: ", indexes)
 
 
 # [END spanner_sqlalchemy_get_indexes]
@@ -296,7 +296,7 @@ def get_table_primary_key(url, table):
     p_key = insp.get_pk_constraint(table.name)
 
     if p_key:
-        print("Fetched primary key:", p_key)
+        print("Fetched primary key: ", p_key)
 
 
 # [END spanner_sqlalchemy_get_primary_key]
@@ -313,7 +313,7 @@ def insert_row(connection, table):
 
     row = list(connection.execute(table.select()))
 
-    print("Inserted row:", row)
+    print("Inserted row: ", row)
 
 
 # [END spanner_sqlalchemy_insert_row]
@@ -331,7 +331,7 @@ def update_row(connection, table):
     )
     row = list(connection.execute(table.select().where(table.c.user_id == 2)))
 
-    print("Updated row:", row)
+    print("Updated row: ", row)
 
 
 # [END spanner_sqlalchemy_update_row]
