@@ -109,12 +109,12 @@ def delete_all_rows(connection, table):
     `create_table.`
     """
     rows = connection.execute(table.select()).fetchall()
-    print("Row count: ", len(rows))
+    print("Row count:", len(rows))
 
     connection.execute(table.delete())
 
     rows = connection.execute(table.select()).fetchall()
-    print("Row count after deletion: ", len(rows))
+    print("Row count after deletion:", len(rows))
 
 
 # [END spanner_sqlalchemy_delete_all_rows]
@@ -128,12 +128,12 @@ def delete_row_with_where_clause(connection, table):
     `create_table.`
     """
     rows = connection.execute(table.select()).fetchall()
-    print("Row count: ", len(rows))
+    print("Row count:", len(rows))
 
     connection.execute(table.delete().where(table.c.user_id == 1))
 
     rows = connection.execute(table.select()).fetchall()
-    print("Row count after deletion: ", len(rows))
+    print("Row count after deletion:", len(rows))
 
 
 # [END spanner_sqlalchemy_delete_row]
