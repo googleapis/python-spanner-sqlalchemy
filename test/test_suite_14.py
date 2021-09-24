@@ -58,44 +58,52 @@ from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
 from google.cloud import spanner_dbapi
 
-# from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403  # uncomment
+from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_ddl import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_insert import *  # noqa: F401, F403
-
-# from sqlalchemy.testing.suite.test_reflection import *  # noqa: F401, F403  # uncomment
+from sqlalchemy.testing.suite.test_reflection import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_results import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_select import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_sequence import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
-
-
-# from sqlalchemy.testing.suite.test_cte import CTETest as _CTETest  # uncomment
+from sqlalchemy.testing.suite.test_cte import CTETest as _CTETest
 from sqlalchemy.testing.suite.test_ddl import TableDDLTest as _TableDDLTest
 from sqlalchemy.testing.suite.test_ddl import (
+    FutureTableDDLTest as _FutureTableDDLTest,
     LongNameBlowoutTest as _LongNameBlowoutTest,
 )
-from sqlalchemy.testing.suite.test_dialect import EscapingTest as _EscapingTest
+from sqlalchemy.testing.suite.test_update_delete import (
+    SimpleUpdateDeleteTest as _SimpleUpdateDeleteTest,
+)
+from sqlalchemy.testing.suite.test_dialect import (
+    DifficultParametersTest as _DifficultParametersTest,
+    EscapingTest as _EscapingTest,
+)
 from sqlalchemy.testing.suite.test_insert import (
     InsertBehaviorTest as _InsertBehaviorTest,
 )
 from sqlalchemy.testing.suite.test_select import (  # noqa: F401, F403
     CompoundSelectTest as _CompoundSelectTest,
     ExistsTest as _ExistsTest,
+    FetchLimitOffsetTest as _FetchLimitOffsetTest,
+    IdentityAutoincrementTest as _IdentityAutoincrementTest,
     IsOrIsNotDistinctFromTest as _IsOrIsNotDistinctFromTest,
     LikeFunctionsTest as _LikeFunctionsTest,
     OrderByLabelTest as _OrderByLabelTest,
+    PostCompileParamsTest as _PostCompileParamsTest,
 )
-
-# from sqlalchemy.testing.suite.test_reflection import (  # uncomment
-#     ComponentReflectionTestExtra as _ComponentReflectionTestExtra,
-#     QuotedNameArgumentTest as _QuotedNameArgumentTest,
-#     ComponentReflectionTest as _ComponentReflectionTest,
-#     CompositeKeyReflectionTest as _CompositeKeyReflectionTest,
-# )
+from sqlalchemy.testing.suite.test_reflection import (
+    ComponentReflectionTestExtra as _ComponentReflectionTestExtra,
+    QuotedNameArgumentTest as _QuotedNameArgumentTest,
+    ComponentReflectionTest as _ComponentReflectionTest,
+    CompositeKeyReflectionTest as _CompositeKeyReflectionTest,
+    HasIndexTest as _HasIndexTest,
+    HasTableTest as _HasTableTest,
+)
 from sqlalchemy.testing.suite.test_results import RowFetchTest as _RowFetchTest
 from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
-    # BooleanTest as _BooleanTest,  # uncomment
+    BooleanTest as _BooleanTest,
     DateTest as _DateTest,
     _DateFixture as __DateFixture,
     DateTimeHistoricTest,
@@ -112,587 +120,596 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     TimestampMicrosecondsTest,
     UnicodeVarcharTest as _UnicodeVarcharTest,
     UnicodeTextTest as _UnicodeTextTest,
-    _UnicodeFixture as _UnicodeFixtureTest,
+    _UnicodeFixture as __UnicodeFixture,
 )
 
 config.test_schema = ""
 
 
-# class BooleanTest(_BooleanTest):  # uncomment
-#     @pytest.mark.skip(
-#         "The original test case was splitted to: "
-#         "test_render_literal_bool_true and test_render_literal_bool_false"
-#     )
-#     def test_render_literal_bool(self):
-#         pass
-
-#     def test_render_literal_bool_true(self, literal_round_trip):
-#         """
-#         SPANNER OVERRIDE:
-
-#         Cloud Spanner supports tables with an empty primary key, but
-#         only a single row can be inserted into such a table -
-#         following insertions will fail with `Row [] already exists".
-#         Overriding the test to avoid the same failure.
-#         """
-#         literal_round_trip(Boolean(), [True], [True])
-
-#     def test_render_literal_bool_false(self, literal_round_trip):
-#         """
-#         SPANNER OVERRIDE:
-
-#         Cloud Spanner supports tables with an empty primary key, but
-#         only a single row can be inserted into such a table -
-#         following insertions will fail with `Row [] already exists".
-#         Overriding the test to avoid the same failure.
-#         """
-#         literal_round_trip(Boolean(), [False], [False])
-
-
-# class ComponentReflectionTestExtra(_ComponentReflectionTestExtra):
-#     @testing.requires.table_reflection
-#     def test_nullable_reflection(self, connection, metadata):
-#         t = Table(
-#             "t",
-#             metadata,
-#             Column("a", Integer, nullable=True),
-#             Column("b", Integer, nullable=False),
-#         )
-#         t.create(connection)
-#         connection.connection.commit()
-#         eq_(
-#             dict(
-#                 (col["name"], col["nullable"])
-#                 for col in inspect(connection).get_columns("t")
-#             ),
-#             {"a": True, "b": False},
-#         )
-
-#     def _type_round_trip(self, connection, metadata, *types):
-#         t = Table(
-#             "t", metadata, *[Column("t%d" % i, type_) for i, type_ in enumerate(types)]
-#         )
-#         t.create(connection)
-#         connection.connection.commit()
-
-#         return [c["type"] for c in inspect(connection).get_columns("t")]
-
-#     @testing.requires.table_reflection
-#     def test_numeric_reflection(self, connection, metadata):
-#         """
-#         SPANNER OVERRIDE:
-
-#         Spanner defines NUMERIC type with the constant precision=38
-#         and scale=9. Overriding the test to check if the NUMERIC
-#         column is successfully created and has dimensions
-#         correct for Cloud Spanner.
-#         """
-#         for typ in self._type_round_trip(connection, metadata, Numeric(18, 5)):
-#             assert isinstance(typ, Numeric)
-#             eq_(typ.precision, 38)
-#             eq_(typ.scale, 9)
-
-#     @testing.requires.table_reflection
-#     def test_binary_reflection(self, connection, metadata):
-#         """
-#         Check that a BYTES column with an explicitly
-#         set size is correctly reflected.
-#         """
-#         for typ in self._type_round_trip(connection, metadata, LargeBinary(20)):
-#             assert isinstance(typ, LargeBinary)
-#             eq_(typ.length, 20)
-
-# class ComponentReflectionTest(_ComponentReflectionTest):
-#     @classmethod
-#     def define_tables(cls, metadata):
-#         cls.define_reflected_tables(metadata, None)
-
-#     @classmethod
-#     def define_reflected_tables(cls, metadata, schema):
-#         if schema:
-#             schema_prefix = schema + "."
-#         else:
-#             schema_prefix = ""
-
-#         if testing.requires.self_referential_foreign_keys.enabled:
-#             users = Table(
-#                 "users",
-#                 metadata,
-#                 Column("user_id", sqlalchemy.INT, primary_key=True),
-#                 Column("test1", sqlalchemy.CHAR(5), nullable=False),
-#                 Column("test2", sqlalchemy.Float(5), nullable=False),
-#                 Column(
-#                     "parent_user_id",
-#                     sqlalchemy.Integer,
-#                     sqlalchemy.ForeignKey(
-#                         "%susers.user_id" % schema_prefix, name="user_id_fk"
-#                     ),
-#                 ),
-#                 schema=schema,
-#                 test_needs_fk=True,
-#             )
-#         else:
-#             users = Table(
-#                 "users",
-#                 metadata,
-#                 Column("user_id", sqlalchemy.INT, primary_key=True),
-#                 Column("test1", sqlalchemy.CHAR(5), nullable=False),
-#                 Column("test2", sqlalchemy.Float(5), nullable=False),
-#                 schema=schema,
-#                 test_needs_fk=True,
-#             )
-
-#         Table(
-#             "dingalings",
-#             metadata,
-#             Column("dingaling_id", sqlalchemy.Integer, primary_key=True),
-#             Column(
-#                 "address_id",
-#                 sqlalchemy.Integer,
-#                 sqlalchemy.ForeignKey("%semail_addresses.address_id" % schema_prefix),
-#             ),
-#             Column("data", sqlalchemy.String(30)),
-#             schema=schema,
-#             test_needs_fk=True,
-#         )
-#         Table(
-#             "email_addresses",
-#             metadata,
-#             Column("address_id", sqlalchemy.Integer, primary_key=True),
-#             Column(
-#                 "remote_user_id",
-#                 sqlalchemy.Integer,
-#                 sqlalchemy.ForeignKey(users.c.user_id),
-#             ),
-#             Column("email_address", sqlalchemy.String(20)),
-#             sqlalchemy.PrimaryKeyConstraint("address_id", name="email_ad_pk"),
-#             schema=schema,
-#             test_needs_fk=True,
-#         )
-#         Table(
-#             "comment_test",
-#             metadata,
-#             Column("id", sqlalchemy.Integer, primary_key=True, comment="id comment"),
-#             Column("data", sqlalchemy.String(20), comment="data % comment"),
-#             Column(
-#                 "d2",
-#                 sqlalchemy.String(20),
-#                 comment=r"""Comment types type speedily ' " \ '' Fun!""",
-#             ),
-#             schema=schema,
-#             comment=r"""the test % ' " \ table comment""",
-#         )
-
-#         if testing.requires.cross_schema_fk_reflection.enabled:
-#             if schema is None:
-#                 Table(
-#                     "local_table",
-#                     metadata,
-#                     Column("id", sqlalchemy.Integer, primary_key=True),
-#                     Column("data", sqlalchemy.String(20)),
-#                     Column(
-#                         "remote_id",
-#                         ForeignKey("%s.remote_table_2.id" % testing.config.test_schema),
-#                     ),
-#                     test_needs_fk=True,
-#                     schema=config.db.dialect.default_schema_name,
-#                 )
-#             else:
-#                 Table(
-#                     "remote_table",
-#                     metadata,
-#                     Column("id", sqlalchemy.Integer, primary_key=True),
-#                     Column(
-#                         "local_id",
-#                         ForeignKey(
-#                             "%s.local_table.id" % config.db.dialect.default_schema_name
-#                         ),
-#                     ),
-#                     Column("data", sqlalchemy.String(20)),
-#                     schema=schema,
-#                     test_needs_fk=True,
-#                 )
-#                 Table(
-#                     "remote_table_2",
-#                     metadata,
-#                     Column("id", sqlalchemy.Integer, primary_key=True),
-#                     Column("data", sqlalchemy.String(20)),
-#                     schema=schema,
-#                     test_needs_fk=True,
-#                 )
-
-#         if testing.requires.index_reflection.enabled:
-#             cls.define_index(metadata, users)
-
-#             if not schema:
-#                 # test_needs_fk is at the moment to force MySQL InnoDB
-#                 noncol_idx_test_nopk = Table(
-#                     "noncol_idx_test_nopk",
-#                     metadata,
-#                     Column("id", sqlalchemy.Integer, primary_key=True),
-#                     Column("q", sqlalchemy.String(5)),
-#                     test_needs_fk=True,
-#                     extend_existing=True,
-#                 )
-
-#                 noncol_idx_test_pk = Table(
-#                     "noncol_idx_test_pk",
-#                     metadata,
-#                     Column("id", sqlalchemy.Integer, primary_key=True),
-#                     Column("q", sqlalchemy.String(5)),
-#                     test_needs_fk=True,
-#                     extend_existing=True,
-#                 )
-
-#                 if testing.requires.indexes_with_ascdesc.enabled:
-#                     sqlalchemy.Index("noncol_idx_nopk", noncol_idx_test_nopk.c.q.desc())
-#                     sqlalchemy.Index("noncol_idx_pk", noncol_idx_test_pk.c.q.desc())
-
-#         if testing.requires.view_column_reflection.enabled:
-#             cls.define_views(metadata, schema)
-#         if not schema and testing.requires.temp_table_reflection.enabled:
-#             cls.define_temp_tables(metadata)
-
-#     @testing.combinations((False,), argnames="use_schema")
-#     @testing.requires.foreign_key_constraint_reflection
-#     def test_get_foreign_keys(self, connection, use_schema):
-#         if use_schema:
-#             schema = config.test_schema
-#         else:
-#             schema = None
-
-#         users, addresses = (self.tables.users, self.tables.email_addresses)
-#         insp = inspect(connection)
-#         expected_schema = schema
-#         # users
-
-#         if testing.requires.self_referential_foreign_keys.enabled:
-#             users_fkeys = insp.get_foreign_keys(users.name, schema=schema)
-#             fkey1 = users_fkeys[0]
-
-#             with testing.requires.named_constraints.fail_if():
-#                 eq_(fkey1["name"], "user_id_fk")
-
-#             eq_(fkey1["referred_schema"], expected_schema)
-#             eq_(fkey1["referred_table"], users.name)
-#             eq_(fkey1["referred_columns"], ["user_id"])
-#             if testing.requires.self_referential_foreign_keys.enabled:
-#                 eq_(fkey1["constrained_columns"], ["parent_user_id"])
-
-#         # addresses
-#         addr_fkeys = insp.get_foreign_keys(addresses.name, schema=schema)
-#         fkey1 = addr_fkeys[0]
-
-#         with testing.requires.implicitly_named_constraints.fail_if():
-#             self.assert_(fkey1["name"] is not None)
-
-#         eq_(fkey1["referred_schema"], expected_schema)
-#         eq_(fkey1["referred_table"], users.name)
-#         eq_(fkey1["referred_columns"], ["user_id"])
-#         eq_(fkey1["constrained_columns"], ["remote_user_id"])
-
-#     @testing.requires.foreign_key_constraint_reflection
-#     @testing.combinations(
-#         (None, True, False, False),
-#         (None, True, False, True, testing.requires.schemas),
-#         ("foreign_key", True, False, False),
-#         (None, False, False, False),
-#         (None, False, False, True, testing.requires.schemas),
-#         (None, True, False, False),
-#         (None, True, False, True, testing.requires.schemas),
-#         argnames="order_by,include_plain,include_views,use_schema",
-#     )
-#     def test_get_table_names(
-#         self, connection, order_by, include_plain, include_views, use_schema
-#     ):
-
-#         if use_schema:
-#             schema = config.test_schema
-#         else:
-#             schema = None
-
-#         _ignore_tables = [
-#             "bytes_table",
-#             "comment_test",
-#             "noncol_idx_test_pk",
-#             "noncol_idx_test_nopk",
-#             "local_table",
-#             "remote_table",
-#             "remote_table_2",
-#             "text_table",
-#             "user_tmp",
-#         ]
-
-#         insp = inspect(connection)
-
-#         if include_views:
-#             table_names = insp.get_view_names(schema)
-#             table_names.sort()
-#             answer = ["email_addresses_v", "users_v"]
-#             eq_(sorted(table_names), answer)
-
-#         if include_plain:
-#             if order_by:
-#                 tables = [
-#                     rec[0]
-#                     for rec in insp.get_sorted_table_and_fkc_names(schema)
-#                     if rec[0]
-#                 ]
-#             else:
-#                 tables = insp.get_table_names(schema)
-#             table_names = [t for t in tables if t not in _ignore_tables]
-
-#             if order_by == "foreign_key":
-#                 answer = ["users", "email_addresses", "dingalings"]
-#                 eq_(table_names, answer)
-#             else:
-#                 answer = ["dingalings", "email_addresses", "users"]
-#                 eq_(sorted(table_names), answer)
-
-#     @classmethod
-#     def define_temp_tables(cls, metadata):
-#         """
-#         SPANNER OVERRIDE:
-
-#         In Cloud Spanner unique indexes are used instead of directly
-#         creating unique constraints. Overriding the test to replace
-#         constraints with indexes in testing data.
-#         """
-#         kw = temp_table_keyword_args(config, config.db)
-#         user_tmp = Table(
-#             "user_tmp",
-#             metadata,
-#             Column("id", sqlalchemy.INT, primary_key=True),
-#             Column("name", sqlalchemy.VARCHAR(50)),
-#             Column("foo", sqlalchemy.INT),
-#             sqlalchemy.Index("user_tmp_uq", "name", unique=True),
-#             sqlalchemy.Index("user_tmp_ix", "foo"),
-#             extend_existing=True,
-#             **kw,
-#         )
-#         if (
-#             testing.requires.view_reflection.enabled
-#             and testing.requires.temporary_views.enabled
-#         ):
-#             event.listen(
-#                 user_tmp,
-#                 "after_create",
-#                 DDL("create temporary view user_tmp_v as " "select * from user_tmp"),
-#             )
-#             event.listen(user_tmp, "before_drop", DDL("drop view user_tmp_v"))
-
-#     @testing.provide_metadata
-#     def test_reflect_string_column_max_len(self):
-#         """
-#         SPANNER SPECIFIC TEST:
-
-#         In Spanner column of the STRING type can be
-#         created with size defined as MAX. The test
-#         checks that such a column is correctly reflected.
-#         """
-#         metadata = MetaData(self.bind)
-#         Table("text_table", metadata, Column("TestColumn", Text, nullable=False))
-#         metadata.create_all()
-
-#         Table("text_table", metadata, autoload=True)
-
-#     def test_reflect_bytes_column_max_len(self):
-#         """
-#         SPANNER SPECIFIC TEST:
-
-#         In Spanner column of the BYTES type can be
-#         created with size defined as MAX. The test
-#         checks that such a column is correctly reflected.
-#         """
-#         metadata = MetaData(self.bind)
-#         Table(
-#             "bytes_table", metadata, Column("TestColumn", LargeBinary, nullable=False),
-#         )
-#         metadata.create_all()
-
-#         Table("bytes_table", metadata, autoload=True)
-
-#     @testing.combinations(
-#         (True, testing.requires.schemas), (False,), argnames="use_schema"
-#     )
-#     @testing.requires.unique_constraint_reflection
-#     def test_get_unique_constraints(self, metadata, connection, use_schema):
-#         # SQLite dialect needs to parse the names of the constraints
-#         # separately from what it gets from PRAGMA index_list(), and
-#         # then matches them up.  so same set of column_names in two
-#         # constraints will confuse it.    Perhaps we should no longer
-#         # bother with index_list() here since we have the whole
-#         # CREATE TABLE?
-
-#         if use_schema:
-#             schema = config.test_schema
-#         else:
-#             schema = None
-#         uniques = sorted(
-#             [
-#                 {"name": "unique_a", "column_names": ["a"]},
-#                 {"name": "unique_a_b_c", "column_names": ["a", "b", "c"]},
-#                 {"name": "unique_c_a_b", "column_names": ["c", "a", "b"]},
-#                 {"name": "unique_asc_key", "column_names": ["asc", "key"]},
-#                 {"name": "i.have.dots", "column_names": ["b"]},
-#                 {"name": "i have spaces", "column_names": ["c"]},
-#             ],
-#             key=operator.itemgetter("name"),
-#         )
-#         table = Table(
-#             "testtbl",
-#             metadata,
-#             Column("a", String(20)),
-#             Column("b", String(30)),
-#             Column("c", Integer),
-#             # reserved identifiers
-#             Column("asc", String(30)),
-#             Column("key", String(30)),
-#             sqlalchemy.Index("unique_a", "a", unique=True),
-#             sqlalchemy.Index("unique_a_b_c", "a", "b", "c", unique=True),
-#             sqlalchemy.Index("unique_c_a_b", "c", "a", "b", unique=True),
-#             sqlalchemy.Index("unique_asc_key", "asc", "key", unique=True),
-#             schema=schema,
-#         )
-#         table.create(connection)
-#         connection.connection.commit()
-
-#         inspector = inspect(connection)
-#         reflected = sorted(
-#             inspector.get_unique_constraints("testtbl", schema=schema),
-#             key=operator.itemgetter("name"),
-#         )
-
-#         names_that_duplicate_index = set()
-
-#         for orig, refl in zip(uniques, reflected):
-#             # Different dialects handle duplicate index and constraints
-#             # differently, so ignore this flag
-#             dupe = refl.pop("duplicates_index", None)
-#             if dupe:
-#                 names_that_duplicate_index.add(dupe)
-#             eq_(orig, refl)
-
-#         reflected_metadata = MetaData()
-#         reflected = Table(
-#             "testtbl", reflected_metadata, autoload_with=connection, schema=schema,
-#         )
-
-#         # test "deduplicates for index" logic.   MySQL and Oracle
-#         # "unique constraints" are actually unique indexes (with possible
-#         # exception of a unique that is a dupe of another one in the case
-#         # of Oracle).  make sure # they aren't duplicated.
-#         idx_names = set([idx.name for idx in reflected.indexes])
-#         uq_names = set(
-#             [
-#                 uq.name
-#                 for uq in reflected.constraints
-#                 if isinstance(uq, sqlalchemy.UniqueConstraint)
-#             ]
-#         ).difference(["unique_c_a_b"])
-
-#         assert not idx_names.intersection(uq_names)
-#         if names_that_duplicate_index:
-#             eq_(names_that_duplicate_index, idx_names)
-#             eq_(uq_names, set())
-
-#     @testing.provide_metadata
-#     def test_unique_constraint_raises(self):
-#         """
-#         Checking that unique constraint creation
-#         fails due to a ProgrammingError.
-#         """
-#         metadata = MetaData(self.bind)
-#         Table(
-#             "user_tmp_failure",
-#             metadata,
-#             Column("id", sqlalchemy.INT, primary_key=True),
-#             Column("name", sqlalchemy.VARCHAR(50)),
-#             sqlalchemy.UniqueConstraint("name", name="user_tmp_uq"),
-#         )
-
-#         with pytest.raises(spanner_dbapi.exceptions.ProgrammingError):
-#             metadata.create_all()
-
-#     @testing.provide_metadata
-#     def _test_get_table_names(self, schema=None, table_type="table", order_by=None):
-#         """
-#         SPANNER OVERRIDE:
-
-#         Spanner doesn't support temporary tables, so real tables are
-#         used for testing. As the original test expects only real
-#         tables to be read, and in Spanner all the tables are real,
-#         expected results override is required.
-#         """
-#         _ignore_tables = [
-#             "comment_test",
-#             "noncol_idx_test_pk",
-#             "noncol_idx_test_nopk",
-#             "local_table",
-#             "remote_table",
-#             "remote_table_2",
-#         ]
-#         meta = self.metadata
-
-#         insp = inspect(meta.bind)
-
-#         if table_type == "view":
-#             table_names = insp.get_view_names(schema)
-#             table_names.sort()
-#             answer = ["email_addresses_v", "users_v"]
-#             eq_(sorted(table_names), answer)
-#         else:
-#             if order_by:
-#                 tables = [
-#                     rec[0]
-#                     for rec in insp.get_sorted_table_and_fkc_names(schema)
-#                     if rec[0]
-#                 ]
-#             else:
-#                 tables = insp.get_table_names(schema)
-#             table_names = [t for t in tables if t not in _ignore_tables]
-
-#             if order_by == "foreign_key":
-#                 answer = {"dingalings", "email_addresses", "user_tmp", "users"}
-#                 eq_(set(table_names), answer)
-#             else:
-#                 answer = ["dingalings", "email_addresses", "user_tmp", "users"]
-#                 eq_(sorted(table_names), answer)
-
-#     @pytest.mark.skip("Spanner doesn't support temporary tables")
-#     def test_get_temp_table_indexes(self):
-#         pass
-
-#     @pytest.mark.skip("Spanner doesn't support temporary tables")
-#     def test_get_temp_table_unique_constraints(self):
-#         pass
-
-#     @pytest.mark.skip("Spanner doesn't support temporary tables")
-#     def test_get_temp_table_columns(self):
-#         pass
-
-
-# class CompositeKeyReflectionTest(_CompositeKeyReflectionTest):
-#     @testing.requires.foreign_key_constraint_reflection
-#     def test_fk_column_order(self):
-#         """
-#         SPANNER OVERRIDE:
-
-#         Spanner column usage reflection doesn't support determenistic
-#         ordering. Overriding the test to check that columns are
-#         reflected correctly, without considering their order.
-#         """
-#         # test for issue #5661
-#         insp = inspect(self.bind)
-#         foreign_keys = insp.get_foreign_keys(self.tables.tb2.name)
-#         eq_(len(foreign_keys), 1)
-#         fkey1 = foreign_keys[0]
-#         eq_(set(fkey1.get("referred_columns")), {"name", "id", "attr"})
-#         eq_(set(fkey1.get("constrained_columns")), {"pname", "pid", "pattr"})
-
-# @pytest.mark.skip("Spanner doesn't support quotes in table names.")
-# class QuotedNameArgumentTest(_QuotedNameArgumentTest):
-#     pass
+class BooleanTest(_BooleanTest):
+    @pytest.mark.skip(
+        "The original test case was splitted to: "
+        "test_render_literal_bool_true and test_render_literal_bool_false"
+    )
+    def test_render_literal_bool(self):
+        pass
+
+    def test_render_literal_bool_true(self, literal_round_trip):
+        """
+        SPANNER OVERRIDE:
+
+        Cloud Spanner supports tables with an empty primary key, but
+        only a single row can be inserted into such a table -
+        following insertions will fail with `Row [] already exists".
+        Overriding the test to avoid the same failure.
+        """
+        literal_round_trip(Boolean(), [True], [True])
+
+    def test_render_literal_bool_false(self, literal_round_trip):
+        """
+        SPANNER OVERRIDE:
+
+        Cloud Spanner supports tables with an empty primary key, but
+        only a single row can be inserted into such a table -
+        following insertions will fail with `Row [] already exists".
+        Overriding the test to avoid the same failure.
+        """
+        literal_round_trip(Boolean(), [False], [False])
+
+    @pytest.mark.skip("Not supported by Cloud Spanner")
+    def test_whereclause(self):
+        pass
+
+
+class ComponentReflectionTestExtra(_ComponentReflectionTestExtra):
+    @testing.requires.table_reflection
+    def test_nullable_reflection(self, connection, metadata):
+        t = Table(
+            "t",
+            metadata,
+            Column("a", Integer, nullable=True),
+            Column("b", Integer, nullable=False),
+        )
+        t.create(connection)
+        connection.connection.commit()
+        eq_(
+            dict(
+                (col["name"], col["nullable"])
+                for col in inspect(connection).get_columns("t")
+            ),
+            {"a": True, "b": False},
+        )
+
+    def _type_round_trip(self, connection, metadata, *types):
+        t = Table(
+            "t", metadata, *[Column("t%d" % i, type_) for i, type_ in enumerate(types)]
+        )
+        t.create(connection)
+        connection.connection.commit()
+
+        return [c["type"] for c in inspect(connection).get_columns("t")]
+
+    @testing.requires.table_reflection
+    def test_numeric_reflection(self, connection, metadata):
+        """
+        SPANNER OVERRIDE:
+
+        Spanner defines NUMERIC type with the constant precision=38
+        and scale=9. Overriding the test to check if the NUMERIC
+        column is successfully created and has dimensions
+        correct for Cloud Spanner.
+        """
+        for typ in self._type_round_trip(connection, metadata, Numeric(18, 5)):
+            assert isinstance(typ, Numeric)
+            eq_(typ.precision, 38)
+            eq_(typ.scale, 9)
+
+    @testing.requires.table_reflection
+    def test_binary_reflection(self, connection, metadata):
+        """
+        Check that a BYTES column with an explicitly
+        set size is correctly reflected.
+        """
+        for typ in self._type_round_trip(connection, metadata, LargeBinary(20)):
+            assert isinstance(typ, LargeBinary)
+            eq_(typ.length, 20)
+
+
+class ComponentReflectionTest(_ComponentReflectionTest):
+    @classmethod
+    def define_tables(cls, metadata):
+        cls.define_reflected_tables(metadata, None)
+
+    @classmethod
+    def define_reflected_tables(cls, metadata, schema):
+        if schema:
+            schema_prefix = schema + "."
+        else:
+            schema_prefix = ""
+
+        if testing.requires.self_referential_foreign_keys.enabled:
+            users = Table(
+                "users",
+                metadata,
+                Column("user_id", sqlalchemy.INT, primary_key=True),
+                Column("test1", sqlalchemy.CHAR(5), nullable=False),
+                Column("test2", sqlalchemy.Float(5), nullable=False),
+                Column(
+                    "parent_user_id",
+                    sqlalchemy.Integer,
+                    sqlalchemy.ForeignKey(
+                        "%susers.user_id" % schema_prefix, name="user_id_fk"
+                    ),
+                ),
+                schema=schema,
+                test_needs_fk=True,
+            )
+        else:
+            users = Table(
+                "users",
+                metadata,
+                Column("user_id", sqlalchemy.INT, primary_key=True),
+                Column("test1", sqlalchemy.CHAR(5), nullable=False),
+                Column("test2", sqlalchemy.Float(5), nullable=False),
+                schema=schema,
+                test_needs_fk=True,
+            )
+
+        Table(
+            "dingalings",
+            metadata,
+            Column("dingaling_id", sqlalchemy.Integer, primary_key=True),
+            Column(
+                "address_id",
+                sqlalchemy.Integer,
+                sqlalchemy.ForeignKey("%semail_addresses.address_id" % schema_prefix),
+            ),
+            Column("data", sqlalchemy.String(30)),
+            schema=schema,
+            test_needs_fk=True,
+        )
+        Table(
+            "email_addresses",
+            metadata,
+            Column("address_id", sqlalchemy.Integer, primary_key=True),
+            Column(
+                "remote_user_id",
+                sqlalchemy.Integer,
+                sqlalchemy.ForeignKey(users.c.user_id),
+            ),
+            Column("email_address", sqlalchemy.String(20)),
+            sqlalchemy.PrimaryKeyConstraint("address_id", name="email_ad_pk"),
+            schema=schema,
+            test_needs_fk=True,
+        )
+        Table(
+            "comment_test",
+            metadata,
+            Column("id", sqlalchemy.Integer, primary_key=True, comment="id comment"),
+            Column("data", sqlalchemy.String(20), comment="data % comment"),
+            Column(
+                "d2",
+                sqlalchemy.String(20),
+                comment=r"""Comment types type speedily ' " \ '' Fun!""",
+            ),
+            schema=schema,
+            comment=r"""the test % ' " \ table comment""",
+        )
+
+        if testing.requires.cross_schema_fk_reflection.enabled:
+            if schema is None:
+                Table(
+                    "local_table",
+                    metadata,
+                    Column("id", sqlalchemy.Integer, primary_key=True),
+                    Column("data", sqlalchemy.String(20)),
+                    Column(
+                        "remote_id",
+                        ForeignKey("%s.remote_table_2.id" % testing.config.test_schema),
+                    ),
+                    test_needs_fk=True,
+                    schema=config.db.dialect.default_schema_name,
+                )
+            else:
+                Table(
+                    "remote_table",
+                    metadata,
+                    Column("id", sqlalchemy.Integer, primary_key=True),
+                    Column(
+                        "local_id",
+                        ForeignKey(
+                            "%s.local_table.id" % config.db.dialect.default_schema_name
+                        ),
+                    ),
+                    Column("data", sqlalchemy.String(20)),
+                    schema=schema,
+                    test_needs_fk=True,
+                )
+                Table(
+                    "remote_table_2",
+                    metadata,
+                    Column("id", sqlalchemy.Integer, primary_key=True),
+                    Column("data", sqlalchemy.String(20)),
+                    schema=schema,
+                    test_needs_fk=True,
+                )
+
+        if testing.requires.index_reflection.enabled:
+            cls.define_index(metadata, users)
+
+            if not schema:
+                # test_needs_fk is at the moment to force MySQL InnoDB
+                noncol_idx_test_nopk = Table(
+                    "noncol_idx_test_nopk",
+                    metadata,
+                    Column("id", sqlalchemy.Integer, primary_key=True),
+                    Column("q", sqlalchemy.String(5)),
+                    test_needs_fk=True,
+                    extend_existing=True,
+                )
+
+                noncol_idx_test_pk = Table(
+                    "noncol_idx_test_pk",
+                    metadata,
+                    Column("id", sqlalchemy.Integer, primary_key=True),
+                    Column("q", sqlalchemy.String(5)),
+                    test_needs_fk=True,
+                    extend_existing=True,
+                )
+
+                if testing.requires.indexes_with_ascdesc.enabled:
+                    sqlalchemy.Index("noncol_idx_nopk", noncol_idx_test_nopk.c.q.desc())
+                    sqlalchemy.Index("noncol_idx_pk", noncol_idx_test_pk.c.q.desc())
+
+        if testing.requires.view_column_reflection.enabled:
+            cls.define_views(metadata, schema)
+        if not schema and testing.requires.temp_table_reflection.enabled:
+            cls.define_temp_tables(metadata)
+
+    @testing.combinations((False,), argnames="use_schema")
+    @testing.requires.foreign_key_constraint_reflection
+    def test_get_foreign_keys(self, connection, use_schema):
+        if use_schema:
+            schema = config.test_schema
+        else:
+            schema = None
+
+        users, addresses = (self.tables.users, self.tables.email_addresses)
+        insp = inspect(connection)
+        expected_schema = schema
+        # users
+
+        if testing.requires.self_referential_foreign_keys.enabled:
+            users_fkeys = insp.get_foreign_keys(users.name, schema=schema)
+            fkey1 = users_fkeys[0]
+
+            with testing.requires.named_constraints.fail_if():
+                eq_(fkey1["name"], "user_id_fk")
+
+            eq_(fkey1["referred_schema"], expected_schema)
+            eq_(fkey1["referred_table"], users.name)
+            eq_(fkey1["referred_columns"], ["user_id"])
+            if testing.requires.self_referential_foreign_keys.enabled:
+                eq_(fkey1["constrained_columns"], ["parent_user_id"])
+
+        # addresses
+        addr_fkeys = insp.get_foreign_keys(addresses.name, schema=schema)
+        fkey1 = addr_fkeys[0]
+
+        with testing.requires.implicitly_named_constraints.fail_if():
+            self.assert_(fkey1["name"] is not None)
+
+        eq_(fkey1["referred_schema"], expected_schema)
+        eq_(fkey1["referred_table"], users.name)
+        eq_(fkey1["referred_columns"], ["user_id"])
+        eq_(fkey1["constrained_columns"], ["remote_user_id"])
+
+    @testing.requires.foreign_key_constraint_reflection
+    @testing.combinations(
+        (None, True, False, False),
+        (None, True, False, True, testing.requires.schemas),
+        ("foreign_key", True, False, False),
+        (None, False, False, False),
+        (None, False, False, True, testing.requires.schemas),
+        (None, True, False, False),
+        (None, True, False, True, testing.requires.schemas),
+        argnames="order_by,include_plain,include_views,use_schema",
+    )
+    def test_get_table_names(
+        self, connection, order_by, include_plain, include_views, use_schema
+    ):
+
+        if use_schema:
+            schema = config.test_schema
+        else:
+            schema = None
+
+        _ignore_tables = [
+            "account",
+            "alembic_version",
+            "bytes_table",
+            "comment_test",
+            "date_table",
+            "noncol_idx_test_pk",
+            "noncol_idx_test_nopk",
+            "local_table",
+            "remote_table",
+            "remote_table_2",
+            "text_table",
+            "user_tmp",
+        ]
+
+        insp = inspect(connection)
+
+        if include_views:
+            table_names = insp.get_view_names(schema)
+            table_names.sort()
+            answer = ["email_addresses_v", "users_v"]
+            eq_(sorted(table_names), answer)
+
+        if include_plain:
+            if order_by:
+                tables = [
+                    rec[0]
+                    for rec in insp.get_sorted_table_and_fkc_names(schema)
+                    if rec[0]
+                ]
+            else:
+                tables = insp.get_table_names(schema)
+            table_names = [t for t in tables if t not in _ignore_tables]
+
+            if order_by == "foreign_key":
+                answer = ["users", "email_addresses", "dingalings"]
+                eq_(table_names, answer)
+            else:
+                answer = ["dingalings", "email_addresses", "users"]
+                eq_(sorted(table_names), answer)
+
+    @classmethod
+    def define_temp_tables(cls, metadata):
+        """
+        SPANNER OVERRIDE:
+
+        In Cloud Spanner unique indexes are used instead of directly
+        creating unique constraints. Overriding the test to replace
+        constraints with indexes in testing data.
+        """
+        kw = temp_table_keyword_args(config, config.db)
+        user_tmp = Table(
+            "user_tmp",
+            metadata,
+            Column("id", sqlalchemy.INT, primary_key=True),
+            Column("name", sqlalchemy.VARCHAR(50)),
+            Column("foo", sqlalchemy.INT),
+            sqlalchemy.Index("user_tmp_uq", "name", unique=True),
+            sqlalchemy.Index("user_tmp_ix", "foo"),
+            extend_existing=True,
+            **kw,
+        )
+        if (
+            testing.requires.view_reflection.enabled
+            and testing.requires.temporary_views.enabled
+        ):
+            event.listen(
+                user_tmp,
+                "after_create",
+                DDL("create temporary view user_tmp_v as " "select * from user_tmp"),
+            )
+            event.listen(user_tmp, "before_drop", DDL("drop view user_tmp_v"))
+
+    @testing.provide_metadata
+    def test_reflect_string_column_max_len(self):
+        """
+        SPANNER SPECIFIC TEST:
+
+        In Spanner column of the STRING type can be
+        created with size defined as MAX. The test
+        checks that such a column is correctly reflected.
+        """
+        metadata = MetaData(self.bind)
+        Table("text_table", metadata, Column("TestColumn", Text, nullable=False))
+        metadata.create_all()
+
+        Table("text_table", metadata, autoload=True)
+
+    def test_reflect_bytes_column_max_len(self):
+        """
+        SPANNER SPECIFIC TEST:
+
+        In Spanner column of the BYTES type can be
+        created with size defined as MAX. The test
+        checks that such a column is correctly reflected.
+        """
+        metadata = MetaData(self.bind)
+        Table(
+            "bytes_table", metadata, Column("TestColumn", LargeBinary, nullable=False),
+        )
+        metadata.create_all()
+
+        Table("bytes_table", metadata, autoload=True)
+
+    @testing.combinations(
+        (True, testing.requires.schemas), (False,), argnames="use_schema"
+    )
+    @testing.requires.unique_constraint_reflection
+    def test_get_unique_constraints(self, metadata, connection, use_schema):
+        # SQLite dialect needs to parse the names of the constraints
+        # separately from what it gets from PRAGMA index_list(), and
+        # then matches them up.  so same set of column_names in two
+        # constraints will confuse it.    Perhaps we should no longer
+        # bother with index_list() here since we have the whole
+        # CREATE TABLE?
+
+        if use_schema:
+            schema = config.test_schema
+        else:
+            schema = None
+        uniques = sorted(
+            [
+                {"name": "unique_a", "column_names": ["a"]},
+                {"name": "unique_a_b_c", "column_names": ["a", "b", "c"]},
+                {"name": "unique_c_a_b", "column_names": ["c", "a", "b"]},
+                {"name": "unique_asc_key", "column_names": ["asc", "key"]},
+                {"name": "i.have.dots", "column_names": ["b"]},
+                {"name": "i have spaces", "column_names": ["c"]},
+            ],
+            key=operator.itemgetter("name"),
+        )
+        table = Table(
+            "testtbl",
+            metadata,
+            Column("a", String(20)),
+            Column("b", String(30)),
+            Column("c", Integer),
+            # reserved identifiers
+            Column("asc", String(30)),
+            Column("key", String(30)),
+            sqlalchemy.Index("unique_a", "a", unique=True),
+            sqlalchemy.Index("unique_a_b_c", "a", "b", "c", unique=True),
+            sqlalchemy.Index("unique_c_a_b", "c", "a", "b", unique=True),
+            sqlalchemy.Index("unique_asc_key", "asc", "key", unique=True),
+            schema=schema,
+        )
+        table.create(connection)
+        connection.connection.commit()
+
+        inspector = inspect(connection)
+        reflected = sorted(
+            inspector.get_unique_constraints("testtbl", schema=schema),
+            key=operator.itemgetter("name"),
+        )
+
+        names_that_duplicate_index = set()
+
+        for orig, refl in zip(uniques, reflected):
+            # Different dialects handle duplicate index and constraints
+            # differently, so ignore this flag
+            dupe = refl.pop("duplicates_index", None)
+            if dupe:
+                names_that_duplicate_index.add(dupe)
+            eq_(orig, refl)
+
+        reflected_metadata = MetaData()
+        reflected = Table(
+            "testtbl", reflected_metadata, autoload_with=connection, schema=schema,
+        )
+
+        # test "deduplicates for index" logic.   MySQL and Oracle
+        # "unique constraints" are actually unique indexes (with possible
+        # exception of a unique that is a dupe of another one in the case
+        # of Oracle).  make sure # they aren't duplicated.
+        idx_names = set([idx.name for idx in reflected.indexes])
+        uq_names = set(
+            [
+                uq.name
+                for uq in reflected.constraints
+                if isinstance(uq, sqlalchemy.UniqueConstraint)
+            ]
+        ).difference(["unique_c_a_b"])
+
+        assert not idx_names.intersection(uq_names)
+        if names_that_duplicate_index:
+            eq_(names_that_duplicate_index, idx_names)
+            eq_(uq_names, set())
+
+    @testing.provide_metadata
+    def test_unique_constraint_raises(self):
+        """
+        Checking that unique constraint creation
+        fails due to a ProgrammingError.
+        """
+        metadata = MetaData(self.bind)
+        Table(
+            "user_tmp_failure",
+            metadata,
+            Column("id", sqlalchemy.INT, primary_key=True),
+            Column("name", sqlalchemy.VARCHAR(50)),
+            sqlalchemy.UniqueConstraint("name", name="user_tmp_uq"),
+        )
+
+        with pytest.raises(spanner_dbapi.exceptions.ProgrammingError):
+            metadata.create_all()
+
+    @testing.provide_metadata
+    def _test_get_table_names(self, schema=None, table_type="table", order_by=None):
+        """
+        SPANNER OVERRIDE:
+
+        Spanner doesn't support temporary tables, so real tables are
+        used for testing. As the original test expects only real
+        tables to be read, and in Spanner all the tables are real,
+        expected results override is required.
+        """
+        _ignore_tables = [
+            "comment_test",
+            "noncol_idx_test_pk",
+            "noncol_idx_test_nopk",
+            "local_table",
+            "remote_table",
+            "remote_table_2",
+        ]
+        meta = self.metadata
+
+        insp = inspect(meta.bind)
+
+        if table_type == "view":
+            table_names = insp.get_view_names(schema)
+            table_names.sort()
+            answer = ["email_addresses_v", "users_v"]
+            eq_(sorted(table_names), answer)
+        else:
+            if order_by:
+                tables = [
+                    rec[0]
+                    for rec in insp.get_sorted_table_and_fkc_names(schema)
+                    if rec[0]
+                ]
+            else:
+                tables = insp.get_table_names(schema)
+            table_names = [t for t in tables if t not in _ignore_tables]
+
+            if order_by == "foreign_key":
+                answer = {"dingalings", "email_addresses", "user_tmp", "users"}
+                eq_(set(table_names), answer)
+            else:
+                answer = ["dingalings", "email_addresses", "user_tmp", "users"]
+                eq_(sorted(table_names), answer)
+
+    @pytest.mark.skip("Spanner doesn't support temporary tables")
+    def test_get_temp_table_indexes(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support temporary tables")
+    def test_get_temp_table_unique_constraints(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support temporary tables")
+    def test_get_temp_table_columns(self):
+        pass
+
+
+class CompositeKeyReflectionTest(_CompositeKeyReflectionTest):
+    @testing.requires.foreign_key_constraint_reflection
+    def test_fk_column_order(self):
+        """
+        SPANNER OVERRIDE:
+
+        Spanner column usage reflection doesn't support determenistic
+        ordering. Overriding the test to check that columns are
+        reflected correctly, without considering their order.
+        """
+        # test for issue #5661
+        insp = inspect(self.bind)
+        foreign_keys = insp.get_foreign_keys(self.tables.tb2.name)
+        eq_(len(foreign_keys), 1)
+        fkey1 = foreign_keys[0]
+        eq_(set(fkey1.get("referred_columns")), {"name", "id", "attr"})
+        eq_(set(fkey1.get("constrained_columns")), {"pname", "pid", "pattr"})
+
+
+@pytest.mark.skip("Spanner doesn't support quotes in table names.")
+class QuotedNameArgumentTest(_QuotedNameArgumentTest):
+    pass
 
 
 class _DateFixture(__DateFixture):
@@ -722,7 +739,7 @@ class _DateFixture(__DateFixture):
         )
 
 
-class DateTest(_DateFixture, _DateTest):
+class DateTest(_DateTest):
     """
     SPANNER OVERRIDE:
 
@@ -743,84 +760,186 @@ class DateTest(_DateFixture, _DateTest):
         super().test_null(connection)
 
 
-# class CTETest(_CTETest):  # uncomment
-#     @classmethod
-#     def define_tables(cls, metadata):
-#         """
-#         The original method creates a foreign key without a name,
-#         which causes troubles on test cleanup. Overriding the
-#         method to explicitly set a foreign key name.
-#         """
-#         Table(
-#             "some_table",
-#             metadata,
-#             Column("id", Integer, primary_key=True),
-#             Column("data", String(50)),
-#             Column("parent_id", ForeignKey("some_table.id", name="fk_some_table")),
-#         )
+class CTETest(_CTETest):
+    @classmethod
+    def define_tables(cls, metadata):
+        """
+        The original method creates a foreign key without a name,
+        which causes troubles on test cleanup. Overriding the
+        method to explicitly set a foreign key name.
+        """
+        Table(
+            "some_table",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("data", String(50)),
+            Column("parent_id", ForeignKey("some_table.id", name="fk_some_table")),
+        )
 
-#         Table(
-#             "some_other_table",
-#             metadata,
-#             Column("id", Integer, primary_key=True),
-#             Column("data", String(50)),
-#             Column("parent_id", Integer),
-#         )
+        Table(
+            "some_other_table",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("data", String(50)),
+            Column("parent_id", Integer),
+        )
 
-#     @pytest.mark.skip("INSERT from WITH subquery is not supported")
-#     def test_insert_from_select_round_trip(self):
-#         """
-#         The test checks if an INSERT can be done from a cte, like:
+    @pytest.mark.skip("INSERT from WITH subquery is not supported")
+    def test_insert_from_select_round_trip(self):
+        """
+        The test checks if an INSERT can be done from a cte, like:
 
-#         WITH some_cte AS (...)
-#         INSERT INTO some_other_table (... SELECT * FROM some_cte)
+        WITH some_cte AS (...)
+        INSERT INTO some_other_table (... SELECT * FROM some_cte)
 
-#         Such queries are not supported by Spanner.
-#         """
-#         pass
+        Such queries are not supported by Spanner.
+        """
+        pass
 
-#     @pytest.mark.skip("DELETE from WITH subquery is not supported")
-#     def test_delete_scalar_subq_round_trip(self):
-#         """
-#         The test checks if a DELETE can be done from a cte, like:
+    @pytest.mark.skip("DELETE from WITH subquery is not supported")
+    def test_delete_scalar_subq_round_trip(self):
+        """
+        The test checks if a DELETE can be done from a cte, like:
 
-#         WITH some_cte AS (...)
-#         DELETE FROM some_other_table (... SELECT * FROM some_cte)
+        WITH some_cte AS (...)
+        DELETE FROM some_other_table (... SELECT * FROM some_cte)
 
-#         Such queries are not supported by Spanner.
-#         """
-#         pass
+        Such queries are not supported by Spanner.
+        """
+        pass
 
-#     @pytest.mark.skip("DELETE from WITH subquery is not supported")
-#     def test_delete_from_round_trip(self):
-#         """
-#         The test checks if a DELETE can be done from a cte, like:
+    @pytest.mark.skip("DELETE from WITH subquery is not supported")
+    def test_delete_from_round_trip(self):
+        """
+        The test checks if a DELETE can be done from a cte, like:
 
-#         WITH some_cte AS (...)
-#         DELETE FROM some_other_table (... SELECT * FROM some_cte)
+        WITH some_cte AS (...)
+        DELETE FROM some_other_table (... SELECT * FROM some_cte)
 
-#         Such queries are not supported by Spanner.
-#         """
-#         pass
+        Such queries are not supported by Spanner.
+        """
+        pass
 
-#     @pytest.mark.skip("UPDATE from WITH subquery is not supported")
-#     def test_update_from_round_trip(self):
-#         """
-#         The test checks if an UPDATE can be done from a cte, like:
+    @pytest.mark.skip("UPDATE from WITH subquery is not supported")
+    def test_update_from_round_trip(self):
+        """
+        The test checks if an UPDATE can be done from a cte, like:
 
-#         WITH some_cte AS (...)
-#         UPDATE some_other_table
-#         SET (... SELECT * FROM some_cte)
+        WITH some_cte AS (...)
+        UPDATE some_other_table
+        SET (... SELECT * FROM some_cte)
 
-#         Such queries are not supported by Spanner.
-#         """
-#         pass
+        Such queries are not supported by Spanner.
+        """
+        pass
 
-#     @pytest.mark.skip("WITH RECURSIVE subqueries are not supported")
-#     def test_select_recursive_round_trip(self):
-#         pass
+    @pytest.mark.skip("WITH RECURSIVE subqueries are not supported")
+    def test_select_recursive_round_trip(self):
+        pass
 
-# --------------------------------
+
+class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest, DateTest):
+    def test_round_trip(self):
+        """
+        SPANNER OVERRIDE:
+
+        Spanner converts timestamp into `%Y-%m-%dT%H:%M:%S.%fZ` format, so to avoid
+        assert failures convert datetime input to the desire timestamp format.
+        """
+        date_table = self.tables.date_table
+        config.db.execute(date_table.insert(), {"date_data": self.data, "id": 250})
+
+        row = config.db.execute(select([date_table.c.date_data])).first()
+        compare = self.compare or self.data
+        compare = compare.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        eq_(row[0].rfc3339(), compare)
+        assert isinstance(row[0], DatetimeWithNanoseconds)
+
+    def test_round_trip_decorated(self, connection):
+        """
+        SPANNER OVERRIDE:
+
+        Spanner converts timestamp into `%Y-%m-%dT%H:%M:%S.%fZ` format, so to avoid
+        assert failures convert datetime input to the desire timestamp format.
+        """
+        date_table = self.tables.date_table
+
+        connection.execute(
+            date_table.insert(), {"id": 1, "decorated_date_data": self.data}
+        )
+
+        row = connection.execute(select(date_table.c.decorated_date_data)).first()
+
+        compare = self.compare or self.data
+        compare = compare.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        eq_(row[0].rfc3339(), compare)
+        assert isinstance(row[0], DatetimeWithNanoseconds)
+
+    @pytest.mark.skipif(
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+    )
+    def test_null_bound_comparison(self):
+        super().test_null_bound_comparison()
+
+    @pytest.mark.skipif(
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+    )
+    def test_null(self, connection):
+        super().test_null(connection)
+
+
+class DateTimeTest(_DateTimeTest, DateTimeMicrosecondsTest):
+    """
+    SPANNER OVERRIDE:
+
+    DateTimeTest tests have the same failures same as DateTimeMicrosecondsTest tests,
+    so to avoid those failures and maintain DRY concept just inherit the class to run
+    tests successfully.
+    """
+
+    @pytest.mark.skipif(
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+    )
+    def test_null_bound_comparison(self):
+        super().test_null_bound_comparison()
+
+    @pytest.mark.skipif(
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+    )
+    def test_null(self, connection):
+        super().test_null(connection)
+
+
+@pytest.mark.skip("Not supported by Spanner")
+class DifficultParametersTest(_DifficultParametersTest):
+    pass
+
+
+class FetchLimitOffsetTest(_FetchLimitOffsetTest):
+    @pytest.mark.skip("Spanner doesn't support composite LIMIT and OFFSET clauses")
+    def test_expr_limit(self, connection):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support composite LIMIT and OFFSET clauses")
+    def test_expr_offset(self, connection):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support composite LIMIT and OFFSET clauses")
+    def test_expr_limit_offset(self, connection):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support composite LIMIT and OFFSET clauses")
+    def test_expr_limit_simple_offset(self, connection):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support composite LIMIT and OFFSET clauses")
+    def test_simple_limit_expr_offset(self, connection):
+        pass
+
+
+@pytest.mark.skip("Spanner doesn't support autoincrement")
+class IdentityAutoincrementTest(_IdentityAutoincrementTest):
+    pass
 
 
 class EscapingTest(_EscapingTest):
@@ -915,82 +1034,26 @@ class TableDDLTest(_TableDDLTest):
     def test_underscore_names(self):
         pass
 
+    @pytest.mark.skip("Table names incuding schemas are not supported by Spanner")
+    def test_create_table_schema(self):
+        pass
+
+
+class FutureTableDDLTest(_FutureTableDDLTest):
+    @pytest.mark.skip("Table names incuding schemas are not supported by Spanner")
+    def test_create_table_schema(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner table name must start with an uppercase or lowercase letter"
+    )
+    def test_underscore_names(self):
+        pass
+
 
 @pytest.mark.skip("Max identifier length in Spanner is 128")
 class LongNameBlowoutTest(_LongNameBlowoutTest):
     pass
-
-
-class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest, DateTest):
-    def test_round_trip(self):
-        """
-        SPANNER OVERRIDE:
-
-        Spanner converts timestamp into `%Y-%m-%dT%H:%M:%S.%fZ` format, so to avoid
-        assert failures convert datetime input to the desire timestamp format.
-        """
-        date_table = self.tables.date_table
-        config.db.execute(date_table.insert(), {"date_data": self.data})
-
-        row = config.db.execute(select([date_table.c.date_data])).first()
-        compare = self.compare or self.data
-        compare = compare.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        eq_(row[0].rfc3339(), compare)
-        assert isinstance(row[0], DatetimeWithNanoseconds)
-
-    def test_round_trip_decorated(self, connection):
-        """
-        SPANNER OVERRIDE:
-
-        Spanner converts timestamp into `%Y-%m-%dT%H:%M:%S.%fZ` format, so to avoid
-        assert failures convert datetime input to the desire timestamp format.
-        """
-        date_table = self.tables.date_table
-
-        connection.execute(
-            date_table.insert(), {"id": 1, "decorated_date_data": self.data}
-        )
-
-        row = connection.execute(select(date_table.c.decorated_date_data)).first()
-
-        compare = self.compare or self.data
-        compare = compare.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        eq_(row, (compare,))
-        assert isinstance(row[0], type(compare))
-
-    @pytest.mark.skipif(
-        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
-    )
-    def test_null_bound_comparison(self):
-        super().test_null_bound_comparison()
-
-    @pytest.mark.skipif(
-        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
-    )
-    def test_null(self, connection):
-        super().test_null(connection)
-
-
-class DateTimeTest(_DateTimeTest, DateTimeMicrosecondsTest):
-    """
-    SPANNER OVERRIDE:
-
-    DateTimeTest tests have the same failures same as DateTimeMicrosecondsTest tests,
-    so to avoid those failures and maintain DRY concept just inherit the class to run
-    tests successfully.
-    """
-
-    @pytest.mark.skipif(
-        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
-    )
-    def test_null_bound_comparison(self):
-        super().test_null_bound_comparison()
-
-    @pytest.mark.skipif(
-        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
-    )
-    def test_null(self):
-        super().test_null()
 
 
 @pytest.mark.skip("Spanner doesn't support Time data type.")
@@ -1039,7 +1102,7 @@ class IntegerTest(_IntegerTest):
             assert isinstance(row[0], (long, int))  # noqa
 
 
-class UnicodeFixtureTest(_UnicodeFixtureTest):
+class _UnicodeFixture(__UnicodeFixture):
     @classmethod
     def define_tables(cls, metadata):
         """
@@ -1087,11 +1150,11 @@ class UnicodeFixtureTest(_UnicodeFixtureTest):
         pass
 
 
-class UnicodeVarcharTest(UnicodeFixtureTest, _UnicodeVarcharTest):
+class UnicodeVarcharTest(_UnicodeFixture, _UnicodeVarcharTest):
     """
     SPANNER OVERRIDE:
 
-    UnicodeVarcharTest class inherits the _UnicodeFixtureTest class's tests,
+    UnicodeVarcharTest class inherits the __UnicodeFixture class's tests,
     so to avoid those failures and maintain DRY concept just inherit the class to run
     tests successfully.
     """
@@ -1099,11 +1162,11 @@ class UnicodeVarcharTest(UnicodeFixtureTest, _UnicodeVarcharTest):
     pass
 
 
-class UnicodeTextTest(UnicodeFixtureTest, _UnicodeTextTest):
+class UnicodeTextTest(_UnicodeFixture, _UnicodeTextTest):
     """
     SPANNER OVERRIDE:
 
-    UnicodeTextTest class inherits the _UnicodeFixtureTest class's tests,
+    UnicodeTextTest class inherits the __UnicodeFixture class's tests,
     so to avoid those failures and maintain DRY concept just inherit the class to run
     tests successfully.
     """
@@ -1128,7 +1191,7 @@ class RowFetchTest(_RowFetchTest):
         backends that may have unusual behavior with scalar selects.)
         """
         datetable = self.tables.has_dates
-        s = select([datetable.alias("x").c.today]).as_scalar()
+        s = select([datetable.alias("x").c.today]).scalar_subquery()
         s2 = select([datetable.c.id, s.label("somelabel")])
         row = config.db.execute(s2).first()
 
@@ -1141,6 +1204,10 @@ class RowFetchTest(_RowFetchTest):
 class InsertBehaviorTest(_InsertBehaviorTest):
     @pytest.mark.skip("Spanner doesn't support empty inserts")
     def test_empty_insert(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support empty inserts")
+    def test_empty_insert_multiple(self):
         pass
 
     @pytest.mark.skip("Spanner doesn't support auto increment")
@@ -1217,10 +1284,49 @@ class TextTest(_TextTest):
     def test_literal_non_ascii(self):
         pass
 
+    @pytest.mark.skip("Not supported by Spanner")
+    def test_text_roundtrip(self, connection):
+        pass
+
+    @pytest.mark.skip("Not supported by Spanner")
+    def test_text_empty_strings(self, connection):
+        pass
+
+    @pytest.mark.skip("Not supported by Spanner")
+    def test_text_null_strings(self, connection):
+        pass
+
 
 class NumericTest(_NumericTest):
+    @testing.fixture
+    def do_numeric_test(self, metadata, connection):
+        @testing.emits_warning(r".*does \*not\* support Decimal objects natively")
+        def run(type_, input_, output, filter_=None, check_scale=False):
+            t = Table(
+                "t",
+                metadata,
+                Column("x", type_),
+                Column("id", Integer, primary_key=True),
+            )
+            t.create(connection)
+            connection.connection.commit()
+            connection.execute(
+                t.insert(), [{"x": x, "id": i} for i, x in enumerate(input_)]
+            )
+
+            result = {row[0] for row in connection.execute(t.select())}
+            output = set(output)
+            if filter_:
+                result = set(filter_(x) for x in result)
+                output = set(filter_(x) for x in output)
+            eq_(result, output)
+            if check_scale:
+                eq_([str(x) for x in result], [str(x) for x in output])
+
+        return run
+
     @emits_warning(r".*does \*not\* support Decimal objects natively")
-    def test_render_literal_numeric(self):
+    def test_render_literal_numeric(self, literal_round_trip):
         """
         SPANNER OVERRIDE:
 
@@ -1229,17 +1335,14 @@ class NumericTest(_NumericTest):
         following insertions will fail with `Row [] already exists".
         Overriding the test to avoid the same failure.
         """
-        self._literal_round_trip(
-            Numeric(precision=8, scale=4), [15.7563], [decimal.Decimal("15.7563")],
-        )
-        self._literal_round_trip(
+        literal_round_trip(
             Numeric(precision=8, scale=4),
             [decimal.Decimal("15.7563")],
             [decimal.Decimal("15.7563")],
         )
 
     @emits_warning(r".*does \*not\* support Decimal objects natively")
-    def test_render_literal_numeric_asfloat(self):
+    def test_render_literal_numeric_asfloat(self, literal_round_trip):
         """
         SPANNER OVERRIDE:
 
@@ -1248,16 +1351,13 @@ class NumericTest(_NumericTest):
         following insertions will fail with `Row [] already exists".
         Overriding the test to avoid the same failure.
         """
-        self._literal_round_trip(
-            Numeric(precision=8, scale=4, asdecimal=False), [15.7563], [15.7563],
-        )
-        self._literal_round_trip(
+        literal_round_trip(
             Numeric(precision=8, scale=4, asdecimal=False),
             [decimal.Decimal("15.7563")],
             [15.7563],
         )
 
-    def test_render_literal_float(self):
+    def test_render_literal_float(self, literal_round_trip):
         """
         SPANNER OVERRIDE:
 
@@ -1266,14 +1366,7 @@ class NumericTest(_NumericTest):
         following insertions will fail with `Row [] already exists".
         Overriding the test to avoid the same failure.
         """
-        self._literal_round_trip(
-            Float(4),
-            [decimal.Decimal("15.7563")],
-            [15.7563],
-            filter_=lambda n: n is not None and round(n, 5) or None,
-        )
-
-        self._literal_round_trip(
+        literal_round_trip(
             Float(4),
             [decimal.Decimal("15.7563")],
             [15.7563],
@@ -1281,7 +1374,7 @@ class NumericTest(_NumericTest):
         )
 
     @requires.precision_generic_float_type
-    def test_float_custom_scale(self):
+    def test_float_custom_scale(self, do_numeric_test):
         """
         SPANNER OVERRIDE:
 
@@ -1290,21 +1383,14 @@ class NumericTest(_NumericTest):
         following insertions will fail with `Row [] already exists".
         Overriding the test to avoid the same failure.
         """
-        self._do_test(
+        do_numeric_test(
             Float(None, decimal_return_scale=7, asdecimal=True),
-            [15.7563827],
+            [decimal.Decimal("15.7563827"), decimal.Decimal("15.7563827")],
             [decimal.Decimal("15.7563827")],
             check_scale=True,
         )
 
-        self._do_test(
-            Float(None, decimal_return_scale=7, asdecimal=True),
-            [15.7563827],
-            [decimal.Decimal("15.7563827")],
-            check_scale=True,
-        )
-
-    def test_numeric_as_decimal(self):
+    def test_numeric_as_decimal(self, do_numeric_test):
         """
         SPANNER OVERRIDE:
 
@@ -1312,13 +1398,13 @@ class NumericTest(_NumericTest):
         inserted into column x, which has type NUMERIC for value 15.7563.
         Overriding the test to remove the failure case.
         """
-        self._do_test(
+        do_numeric_test(
             Numeric(precision=8, scale=4),
-            [decimal.Decimal("15.7563")],
+            [decimal.Decimal("15.7563"), decimal.Decimal("15.7563")],
             [decimal.Decimal("15.7563")],
         )
 
-    def test_numeric_as_float(self):
+    def test_numeric_as_float(self, do_numeric_test):
         """
         SPANNER OVERRIDE:
 
@@ -1326,15 +1412,14 @@ class NumericTest(_NumericTest):
         inserted into column x, which has type NUMERIC for value 15.7563.
         Overriding the test to remove the failure case.
         """
-
-        self._do_test(
+        do_numeric_test(
             Numeric(precision=8, scale=4, asdecimal=False),
-            [decimal.Decimal("15.7563")],
+            [decimal.Decimal("15.7563"), decimal.Decimal("15.7563")],
             [15.7563],
         )
 
     @requires.floats_to_four_decimals
-    def test_float_as_decimal(self):
+    def test_float_as_decimal(self, do_numeric_test):
         """
         SPANNER OVERRIDE:
 
@@ -1343,17 +1428,14 @@ class NumericTest(_NumericTest):
         following insertions will fail with `Row [] already exists".
         Overriding the test to avoid the same failure.
         """
-        self._do_test(
-            Float(precision=8, asdecimal=True), [15.7563], [decimal.Decimal("15.7563")],
-        )
-
-        self._do_test(
+        do_numeric_test(
             Float(precision=8, asdecimal=True),
-            [decimal.Decimal("15.7563")],
-            [decimal.Decimal("15.7563")],
+            [decimal.Decimal("15.7563"), decimal.Decimal("15.7563"), None],
+            [decimal.Decimal("15.7563"), None],
+            filter_=lambda n: n is not None and round(n, 4) or None,
         )
 
-    def test_float_as_float(self):
+    def test_float_as_float(self, do_numeric_test):
         """
         SPANNER OVERRIDE:
 
@@ -1362,22 +1444,15 @@ class NumericTest(_NumericTest):
         following insertions will fail with `Row [] already exists".
         Overriding the test to avoid the same failure.
         """
-        self._do_test(
+        do_numeric_test(
             Float(precision=8),
-            [15.7563],
-            [15.7563],
-            filter_=lambda n: n is not None and round(n, 5) or None,
-        )
-
-        self._do_test(
-            Float(precision=8),
-            [decimal.Decimal("15.7563")],
+            [decimal.Decimal("15.7563"), decimal.Decimal("15.7563")],
             [15.7563],
             filter_=lambda n: n is not None and round(n, 5) or None,
         )
 
     @requires.precision_numerics_general
-    def test_precision_decimal(self):
+    def test_precision_decimal(self, do_numeric_test):
         """
         SPANNER OVERRIDE:
 
@@ -1390,26 +1465,17 @@ class NumericTest(_NumericTest):
         capable of representing an exact numeric value with a precision
         of 38 and scale of 9.
         """
-        self._do_test(
-            Numeric(precision=18, scale=9),
-            [decimal.Decimal("54.234246451")],
-            [decimal.Decimal("54.234246451")],
+        numbers = set(
+            [
+                decimal.Decimal("54.246451650"),
+                decimal.Decimal("0.004354"),
+                decimal.Decimal("900.0"),
+            ]
         )
-
-        self._do_test(
-            Numeric(precision=18, scale=9),
-            [decimal.Decimal("0.004354")],
-            [decimal.Decimal("0.004354")],
-        )
-
-        self._do_test(
-            Numeric(precision=18, scale=9),
-            [decimal.Decimal("900.0")],
-            [decimal.Decimal("900.0")],
-        )
+        do_numeric_test(Numeric(precision=18, scale=9), numbers, numbers)
 
     @testing.requires.precision_numerics_enotation_large
-    def test_enotation_decimal_large(self):
+    def test_enotation_decimal_large(self, do_numeric_test):
         """test exceedingly large decimals.
 
         SPANNER OVERRIDE:
@@ -1419,33 +1485,18 @@ class NumericTest(_NumericTest):
         following insertions will fail with `Row [] already exists".
         Overriding the test to avoid the same failure.
         """
-
-        self._do_test(
-            Numeric(precision=25, scale=2),
-            [decimal.Decimal("4E+8")],
-            [decimal.Decimal("4E+8")],
+        numbers = set(
+            [
+                decimal.Decimal("4E+8"),
+                decimal.Decimal("5748E+15"),
+                decimal.Decimal("1.521E+15"),
+                decimal.Decimal("000000000.1E+9"),
+            ]
         )
-
-        self._do_test(
-            Numeric(precision=25, scale=2),
-            [decimal.Decimal("5748E+15")],
-            [decimal.Decimal("5748E+15")],
-        )
-
-        self._do_test(
-            Numeric(precision=25, scale=2),
-            [decimal.Decimal("1.521E+15")],
-            [decimal.Decimal("1.521E+15")],
-        )
-
-        self._do_test(
-            Numeric(precision=25, scale=2),
-            [decimal.Decimal("00000000000000.1E+12")],
-            [decimal.Decimal("00000000000000.1E+12")],
-        )
+        do_numeric_test(Numeric(precision=25, scale=2), numbers, numbers)
 
     @testing.requires.precision_numerics_enotation_large
-    def test_enotation_decimal(self):
+    def test_enotation_decimal(self, do_numeric_test):
         """test exceedingly small decimals.
 
         Decimal reports values with E notation when the exponent
@@ -1453,86 +1504,27 @@ class NumericTest(_NumericTest):
 
         SPANNER OVERRIDE:
 
-        Cloud Spanner supports tables with an empty primary key, but
-        only a single row can be inserted into such a table -
-        following insertions will fail with `Row [] already exists".
-        Overriding the test to avoid the same failure.
-
-        Remove extra digits after decimal point as cloud spanner is
+        Remove extra digits after decimal point as Cloud Spanner is
         capable of representing an exact numeric value with a precision
         of 38 and scale of 9.
         """
-        self._do_test(
-            Numeric(precision=18, scale=9),
-            [decimal.Decimal("1E-2")],
-            [decimal.Decimal("1E-2")],
+        numbers = set(
+            [
+                decimal.Decimal("1E-2"),
+                decimal.Decimal("1E-3"),
+                decimal.Decimal("1E-4"),
+                decimal.Decimal("1E-5"),
+                decimal.Decimal("1E-6"),
+                decimal.Decimal("1E-7"),
+                decimal.Decimal("1E-8"),
+                decimal.Decimal("0.105940696"),
+                decimal.Decimal("0.005940696"),
+                decimal.Decimal("0.000000696"),
+                decimal.Decimal("0.700000696"),
+                decimal.Decimal("696E-9"),
+            ]
         )
-
-        self._do_test(
-            Numeric(precision=18, scale=9),
-            [decimal.Decimal("1E-3")],
-            [decimal.Decimal("1E-3")],
-        )
-
-        self._do_test(
-            Numeric(precision=18, scale=9),
-            [decimal.Decimal("1E-4")],
-            [decimal.Decimal("1E-4")],
-        )
-
-        self._do_test(
-            Numeric(precision=18, scale=9),
-            [decimal.Decimal("1E-5")],
-            [decimal.Decimal("1E-5")],
-        )
-
-        self._do_test(
-            Numeric(precision=18, scale=14),
-            [decimal.Decimal("1E-6")],
-            [decimal.Decimal("1E-6")],
-        )
-
-        self._do_test(
-            Numeric(precision=18, scale=9),
-            [decimal.Decimal("1E-7")],
-            [decimal.Decimal("1E-7")],
-        )
-
-        self._do_test(
-            Numeric(precision=18, scale=9),
-            [decimal.Decimal("1E-8")],
-            [decimal.Decimal("1E-8")],
-        )
-
-        self._do_test(
-            Numeric(precision=18, scale=9),
-            [decimal.Decimal("0.010000059")],
-            [decimal.Decimal("0.010000059")],
-        )
-
-        self._do_test(
-            Numeric(precision=18, scale=9),
-            [decimal.Decimal("0.000000059")],
-            [decimal.Decimal("0.000000059")],
-        )
-
-        self._do_test(
-            Numeric(precision=18, scale=9),
-            [decimal.Decimal("0.000000696")],
-            [decimal.Decimal("0.000000696")],
-        )
-
-        self._do_test(
-            Numeric(precision=18, scale=9),
-            [decimal.Decimal("0.700000696")],
-            [decimal.Decimal("0.700000696")],
-        )
-
-        self._do_test(
-            Numeric(precision=18, scale=9),
-            [decimal.Decimal("696E-9")],
-            [decimal.Decimal("696E-9")],
-        )
+        do_numeric_test(Numeric(precision=38, scale=9), numbers, numbers)
 
 
 class LikeFunctionsTest(_LikeFunctionsTest):
@@ -1623,7 +1615,7 @@ class TestQueryHints(fixtures.TablesTest):
         EXPECTED_QUERY = (
             "SELECT users.id, users.name \nFROM users @{FORCE_INDEX=table_1_by_int_idx}"
             " JOIN addresses ON users.id = addresses.user_id "
-            "\nWHERE users.name IN (%s, %s)"
+            "\nWHERE users.name IN ([POSTCOMPILE_name_1])"
         )
 
         Base = declarative_base()
@@ -1729,3 +1721,153 @@ class UserAgentTest(fixtures.TestBase):
                 connection.connection.instance._client._client_info.user_agent
                 == dist.project_name + "/" + dist.version
             )
+
+
+class SimpleUpdateDeleteTest(_SimpleUpdateDeleteTest):
+    """
+    SPANNER OVERRIDE:
+
+    Spanner doesn't support `rowcount` property. These
+    test cases overrides omit `rowcount` checks.
+    """
+
+    def test_delete(self, connection):
+        t = self.tables.plain_pk
+        r = connection.execute(t.delete().where(t.c.id == 2))
+        assert not r.is_insert
+        assert not r.returns_rows
+        eq_(
+            connection.execute(t.select().order_by(t.c.id)).fetchall(),
+            [(1, "d1"), (3, "d3")],
+        )
+
+    def test_update(self, connection):
+        t = self.tables.plain_pk
+        r = connection.execute(t.update().where(t.c.id == 2), dict(data="d2_new"))
+        assert not r.is_insert
+        assert not r.returns_rows
+
+        eq_(
+            connection.execute(t.select().order_by(t.c.id)).fetchall(),
+            [(1, "d1"), (2, "d2_new"), (3, "d3")],
+        )
+
+
+class HasIndexTest(_HasIndexTest):
+    @classmethod
+    def define_tables(cls, metadata):
+        tt = Table(
+            "test_table",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("data", String(50)),
+        )
+        sqlalchemy.Index("my_idx", tt.c.data)
+
+    @pytest.mark.skip("Not supported by Cloud Spanner")
+    def test_has_index_schema(self):
+        pass
+
+
+class HasTableTest(_HasTableTest):
+    @classmethod
+    def define_tables(cls, metadata):
+        Table(
+            "test_table",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("data", String(50)),
+        )
+
+    @pytest.mark.skip("Not supported by Cloud Spanner")
+    def test_has_table_schema(self):
+        pass
+
+
+class PostCompileParamsTest(_PostCompileParamsTest):
+    def test_execute(self):
+        table = self.tables.some_table
+
+        stmt = select(table.c.id).where(
+            table.c.x == sqlalchemy.bindparam("q", literal_execute=True)
+        )
+
+        with self.sql_execution_asserter() as asserter:
+            with config.db.connect() as conn:
+                conn.execute(stmt, dict(q=10))
+
+        asserter.assert_(
+            sqlalchemy.testing.assertsql.CursorSQL(
+                "SELECT some_table.id \nFROM some_table " "\nWHERE some_table.x = 10",
+                [] if config.db.dialect.positional else {},
+            )
+        )
+
+    def test_execute_expanding_plus_literal_execute(self):
+        table = self.tables.some_table
+
+        stmt = select(table.c.id).where(
+            table.c.x.in_(
+                sqlalchemy.bindparam("q", expanding=True, literal_execute=True)
+            )
+        )
+
+        with self.sql_execution_asserter() as asserter:
+            with config.db.connect() as conn:
+                conn.execute(stmt, dict(q=[5, 6, 7]))
+
+        asserter.assert_(
+            sqlalchemy.testing.assertsql.CursorSQL(
+                "SELECT some_table.id \nFROM some_table "
+                "\nWHERE some_table.x IN (5, 6, 7)",
+                [] if config.db.dialect.positional else {},
+            )
+        )
+
+    @testing.requires.tuple_in
+    def test_execute_tuple_expanding_plus_literal_execute(self):
+        table = self.tables.some_table
+
+        stmt = select(table.c.id).where(
+            sqlalchemy.tuple_(table.c.x, table.c.y).in_(
+                sqlalchemy.bindparam("q", expanding=True, literal_execute=True)
+            )
+        )
+
+        with self.sql_execution_asserter() as asserter:
+            with config.db.connect() as conn:
+                conn.execute(stmt, dict(q=[(5, 10), (12, 18)]))
+
+        asserter.assert_(
+            sqlalchemy.testing.assertsql.CursorSQL(
+                "SELECT some_table.id \nFROM some_table "
+                "\nWHERE (some_table.x, some_table.y) "
+                "IN (%s(5, 10), (12, 18))"
+                % ("VALUES " if config.db.dialect.tuple_in_values else ""),
+                () if config.db.dialect.positional else {},
+            )
+        )
+
+    @testing.requires.tuple_in
+    def test_execute_tuple_expanding_plus_literal_heterogeneous_execute(self):
+        table = self.tables.some_table
+
+        stmt = select(table.c.id).where(
+            sqlalchemy.tuple_(table.c.x, table.c.z).in_(
+                sqlalchemy.bindparam("q", expanding=True, literal_execute=True)
+            )
+        )
+
+        with self.sql_execution_asserter() as asserter:
+            with config.db.connect() as conn:
+                conn.execute(stmt, dict(q=[(5, "z1"), (12, "z3")]))
+
+        asserter.assert_(
+            sqlalchemy.testing.assertsql.CursorSQL(
+                "SELECT some_table.id \nFROM some_table "
+                "\nWHERE (some_table.x, some_table.z) "
+                "IN (%s(5, 'z1'), (12, 'z3'))"
+                % ("VALUES " if config.db.dialect.tuple_in_values else ""),
+                () if config.db.dialect.positional else {},
+            )
+        )
