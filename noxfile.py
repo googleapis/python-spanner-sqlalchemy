@@ -118,7 +118,6 @@ def compliance_test(session):
     """Run SQLAlchemy dialect compliance test suite."""
     session.install("pytest")
     session.install("mock")
-    session.install("alembic")
     session.install("-e", ".")
     session.run("python", "create_test_database.py")
     session.run("pytest", "-v")
@@ -130,7 +129,6 @@ def unit(session):
     # Run SQLAlchemy dialect compliance test suite with OpenTelemetry.
     session.install("pytest")
     session.install("mock")
-    session.install("alembic")
     session.install("-e", ".")
     session.install("opentelemetry-api==1.1.0")
     session.install("opentelemetry-sdk==1.1.0")
