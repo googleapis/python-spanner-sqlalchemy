@@ -12,12 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pkg_resources
 import re
 
-from sqlalchemy import types, ForeignKeyConstraint
+from alembic.ddl.base import (
+    ColumnNullable,
+    ColumnType,
+    alter_column,
+    alter_table,
+    format_type,
+)
+from sqlalchemy import ForeignKeyConstraint, types, util
 from sqlalchemy.engine.base import Engine
-from sqlalchemy.engine.default import DefaultDialect
-from sqlalchemy import util
+from sqlalchemy.engine.default import DefaultDialect, DefaultExecutionContext
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.compiler import (
     selectable,
     DDLCompiler,
@@ -26,6 +34,7 @@ from sqlalchemy.sql.compiler import (
     SQLCompiler,
     RESERVED_WORDS,
 )
+
 from google.cloud import spanner_dbapi
 from google.cloud.sqlalchemy_spanner._opentelemetry_tracing import trace_call
 
@@ -41,6 +50,7 @@ _type_map = {
     "STRING": types.String,
     "TIME": types.TIME,
     "TIMESTAMP": types.TIMESTAMP,
+    "ARRAY": types.ARRAY,
 }
 
 _type_map_inv = {
@@ -104,6 +114,19 @@ def engine_to_connection(function):
         return function(self, connection, *args, **kwargs)
 
     return wrapper
+
+
+class SpannerExecutionContext(DefaultExecutionContext):
+    def pre_exec(self):
+        """
+        Apply execution options to the DB API connection before
+        executing the next SQL operation.
+        """
+        super(SpannerExecutionContext, self).pre_exec()
+
+        read_only = self.execution_options.get("read_only", None)
+        if read_only is not None:
+            self._dbapi_connection.connection.read_only = read_only
 
 
 class SpannerIdentifierPreparer(IdentifierPreparer):
@@ -383,6 +406,7 @@ class SpannerDialect(DefaultDialect):
     preparer = SpannerIdentifierPreparer
     statement_compiler = SpannerSQLCompiler
     type_compiler = SpannerTypeCompiler
+    execution_ctx_cls = SpannerExecutionContext
 
     @classmethod
     def dbapi(cls):
@@ -433,9 +457,10 @@ class SpannerDialect(DefaultDialect):
             ),
             url.database,
         )
+        dist = pkg_resources.get_distribution("sqlalchemy-spanner")
         return (
             [match.group("instance"), match.group("database"), match.group("project")],
-            {},
+            {"user_agent": dist.project_name + "/" + dist.version},
         )
 
     @engine_to_connection
@@ -474,27 +499,42 @@ ORDER BY
             columns = snap.execute_sql(sql)
 
             for col in columns:
-                if col[1].startswith("STRING"):
-                    end = col[1].index(")")
-                    size = int_from_size(col[1][7:end])
-                    type_ = _type_map["STRING"](length=size)
-                # add test creating a table with bytes
-                elif col[1].startswith("BYTES"):
-                    end = col[1].index(")")
-                    size = int_from_size(col[1][6:end])
-                    type_ = _type_map["BYTES"](length=size)
-                else:
-                    type_ = _type_map[col[1]]
-
                 cols_desc.append(
                     {
                         "name": col[0],
-                        "type": type_,
+                        "type": self._designate_type(col[1]),
                         "nullable": col[2] == "YES",
                         "default": None,
                     }
                 )
         return cols_desc
+
+    def _designate_type(self, str_repr):
+        """
+        Designate an SQLAlchemy data type from a Spanner
+        string representation.
+
+        Args:
+            str_repr (str): String representation of a type.
+
+        Returns:
+            An SQLAlchemy data type.
+        """
+        if str_repr.startswith("STRING"):
+            end = str_repr.index(")")
+            size = int_from_size(str_repr[7:end])
+            return _type_map["STRING"](length=size)
+        # add test creating a table with bytes
+        elif str_repr.startswith("BYTES"):
+            end = str_repr.index(")")
+            size = int_from_size(str_repr[6:end])
+            return _type_map["BYTES"](length=size)
+        elif str_repr.startswith("ARRAY"):
+            inner_type_str = str_repr[6:-1]
+            inner_type = self._designate_type(inner_type_str)
+            return _type_map["ARRAY"](inner_type)
+        else:
+            return _type_map[str_repr]
 
     @engine_to_connection
     def get_indexes(self, connection, table_name, schema=None, **kw):
@@ -798,13 +838,12 @@ LIMIT 1
         To prevent rollback exception, don't rollback
         committed/rolled back transactions.
         """
-        if (
-            not isinstance(dbapi_connection, spanner_dbapi.Connection)
-            and dbapi_connection.connection._transaction
-            and (
-                dbapi_connection.connection._transaction.rolled_back
-                or dbapi_connection.connection._transaction.committed
-            )
+        if not isinstance(dbapi_connection, spanner_dbapi.Connection):
+            dbapi_connection = dbapi_connection.connection
+
+        if dbapi_connection._transaction and (
+            dbapi_connection._transaction.rolled_back
+            or dbapi_connection._transaction.committed
         ):
             pass
         else:
@@ -847,3 +886,28 @@ LIMIT 1
         }
         with trace_call("SpannerSqlAlchemy.ExecuteNoParams", trace_attributes):
             cursor.execute(statement)
+
+
+# Alembic ALTER operation override
+@compiles(ColumnNullable, "spanner")
+def visit_column_nullable(
+    element: "ColumnNullable", compiler: "SpannerDDLCompiler", **kw
+) -> str:
+    return "%s %s %s %s" % (
+        alter_table(compiler, element.table_name, element.schema),
+        alter_column(compiler, element.column_name),
+        format_type(compiler, element.existing_type),
+        "" if element.nullable else "NOT NULL",
+    )
+
+
+# Alembic ALTER operation override
+@compiles(ColumnType, "spanner")
+def visit_column_type(
+    element: "ColumnType", compiler: "SpannerDDLCompiler", **kw
+) -> str:
+    return "%s %s %s" % (
+        alter_table(compiler, element.table_name, element.schema),
+        alter_column(compiler, element.column_name),
+        "%s" % format_type(compiler, element.type_),
+    )
