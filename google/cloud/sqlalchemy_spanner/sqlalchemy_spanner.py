@@ -25,8 +25,8 @@ from alembic.ddl.base import (
 from sqlalchemy import ForeignKeyConstraint, types, util
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.engine.default import DefaultDialect, DefaultExecutionContext
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.compiler import (
-    compiles,
     selectable,
     DDLCompiler,
     GenericTypeCompiler,
