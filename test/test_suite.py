@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import configparser
 from datetime import timezone
 import decimal
 import operator
@@ -113,6 +114,24 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
 )
 
 config.test_schema = ""
+
+
+PROJECT = os.getenv(
+    "GOOGLE_CLOUD_PROJECT", os.getenv("PROJECT_ID", "emulator-test-project"),
+)
+DB_URL = (
+    f"spanner:///projects/{PROJECT}/instances/"
+    "sqlalchemy-dialect-test/databases/compliance-test"
+)
+
+
+def get_db_url():
+    config = configparser.ConfigParser()
+    if os.path.exists("test.cfg"):
+        config.read("test.cfg")
+    else:
+        config.read("setup.cfg")
+    return config.get("db", "default", fallback=DB_URL)
 
 
 class EscapingTest(_EscapingTest):
@@ -678,7 +697,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             Column("foo", sqlalchemy.INT),
             sqlalchemy.Index("user_tmp_uq", "name", unique=True),
             sqlalchemy.Index("user_tmp_ix", "foo"),
-            **kw
+            **kw,
         )
         if (
             testing.requires.view_reflection.enabled
@@ -1508,10 +1527,7 @@ class InterleavedTablesTest(fixtures.TestBase):
     """
 
     def setUp(self):
-        self._engine = create_engine(
-            "spanner:///projects/appdev-soda-spanner-staging/instances/"
-            "sqlalchemy-dialect-test/databases/compliance-test"
-        )
+        self._engine = create_engine(get_db_url())
         self._metadata = MetaData(bind=self._engine)
 
     def test_interleave(self):
@@ -1560,10 +1576,7 @@ class UserAgentTest(fixtures.TestBase):
     """Check that SQLAlchemy dialect uses correct user agent."""
 
     def setUp(self):
-        self._engine = create_engine(
-            "spanner:///projects/appdev-soda-spanner-staging/instances/"
-            "sqlalchemy-dialect-test/databases/compliance-test"
-        )
+        self._engine = create_engine(get_db_url())
         self._metadata = MetaData(bind=self._engine)
 
     def test_user_agent(self):
@@ -1583,10 +1596,7 @@ class ExecutionOptionsTest(fixtures.TestBase):
     """
 
     def setUp(self):
-        self._engine = create_engine(
-            "spanner:///projects/appdev-soda-spanner-staging/instances/"
-            "sqlalchemy-dialect-test/databases/compliance-test"
-        )
+        self._engine = create_engine(get_db_url())
         self._metadata = MetaData(bind=self._engine)
 
         self._table = Table(
