@@ -226,7 +226,7 @@ class SpannerSQLCompiler(SQLCompiler):
         text = (
             binary.left._compiler_dispatch(self, eager_grouping=eager_grouping, **kw)
             + """, "$."""
-            + right_value
+            + str(right_value)
             + '"'
         )
         return "JSON_VALUE(%s)" % text
