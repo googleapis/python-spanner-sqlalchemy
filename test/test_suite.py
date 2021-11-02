@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import configparser
 from datetime import timezone
 import decimal
 import operator
@@ -112,26 +111,9 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     UnicodeTextTest as _UnicodeTextTest,
     _UnicodeFixture as _UnicodeFixtureTest,
 )
+from test._helpers import get_db_url
 
 config.test_schema = ""
-
-
-PROJECT = os.getenv(
-    "GOOGLE_CLOUD_PROJECT", os.getenv("PROJECT_ID", "emulator-test-project"),
-)
-DB_URL = (
-    f"spanner:///projects/{PROJECT}/instances/"
-    "sqlalchemy-dialect-test/databases/compliance-test"
-)
-
-
-def get_db_url():
-    config = configparser.ConfigParser()
-    if os.path.exists("test.cfg"):
-        config.read("test.cfg")
-    else:
-        config.read("setup.cfg")
-    return config.get("db", "default", fallback=DB_URL)
 
 
 class EscapingTest(_EscapingTest):

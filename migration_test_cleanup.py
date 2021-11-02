@@ -14,33 +14,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import configparser
-import os
 import re
+import sys
 
 from google.cloud import spanner
 
-project = os.getenv(
-    "GOOGLE_CLOUD_PROJECT",
-    os.getenv("PROJECT_ID", "emulator-test-project"),
-)
-db_url = (
-    f"spanner:///projects/{project}/instances/"
-    "sqlalchemy-dialect-test/databases/compliance-test"
-)
 
-config = configparser.ConfigParser()
-if os.path.exists("test.cfg"):
-    config.read("test.cfg")
-else:
-    config.read("setup.cfg")
-db_url = config.get("db", "default", fallback=db_url)
+def main(argv):
+  db_url = argv[0]
 
-project = re.findall(r"projects(.*?)instances", db_url)
-instance_id = re.findall(r"instances(.*?)databases", db_url)
+  project = re.findall(r"projects(.*?)instances", db_url)
+  instance_id = re.findall(r"instances(.*?)databases", db_url)
 
-client = spanner.Client(project="".join(project).replace("/", ""))
-instance = client.instance(instance_id="".join(instance_id).replace("/", ""))
-database = instance.database("compliance-test")
+  client = spanner.Client(project="".join(project).replace("/", ""))
+  instance = client.instance(instance_id="".join(instance_id).replace("/", ""))
+  database = instance.database("compliance-test")
 
-database.update_ddl(["DROP TABLE account", "DROP TABLE alembic_version"]).result(120)
+  database.update_ddl(["DROP TABLE account", "DROP TABLE alembic_version"]).result(120)
+
+
+if __name__ == "__main__":
+   main(sys.argv[1:])
