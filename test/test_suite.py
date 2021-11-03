@@ -29,6 +29,7 @@ from sqlalchemy import testing
 from sqlalchemy import ForeignKey
 from sqlalchemy import MetaData
 from sqlalchemy.schema import DDL
+from sqlalchemy.schema import Computed
 from sqlalchemy.testing import config
 from sqlalchemy.testing import engines
 from sqlalchemy.testing import eq_
@@ -1615,12 +1616,6 @@ class ComputedReflectionFixtureTest(_ComputedReflectionFixtureTest):
 
         Avoid using default values for computed columns.
         """
-        from .. import Integer
-        from .. import testing
-        from ..schema import Column
-        from ..schema import Computed
-        from ..schema import Table
-
         Table(
             "computed_default_table",
             metadata,
