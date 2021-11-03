@@ -1692,3 +1692,12 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
         is_true("computed" in compData)
         is_true("sqltext" in compData["computed"])
         eq_(self.normalize(compData["computed"]["sqltext"]), "normal+42")
+        eq_(
+            "persisted" in compData["computed"],
+            testing.requires.computed_columns_reflect_persisted.enabled,
+        )
+        if testing.requires.computed_columns_reflect_persisted.enabled:
+            eq_(
+                compData["computed"]["persisted"],
+                testing.requires.computed_columns_default_persisted.enabled,
+            )

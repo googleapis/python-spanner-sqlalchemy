@@ -22,6 +22,10 @@ class Requirements(SuiteRequirements):
         return exclusions.open()
 
     @property
+    def computed_columns_default_persisted(self):
+        return exclusions.open()
+
+    @property
     def computed_columns_stored(self):
         return exclusions.open()
 
