@@ -18,6 +18,14 @@ from sqlalchemy.testing.requirements import SuiteRequirements
 
 class Requirements(SuiteRequirements):
     @property
+    def computed_columns(self):
+        return exclusions.open()
+
+    @property
+    def computed_columns_stored(self):
+        return exclusions.open()
+
+    @property
     def foreign_key_constraint_name_reflection(self):
         return exclusions.open()
 

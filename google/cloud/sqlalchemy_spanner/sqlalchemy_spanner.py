@@ -254,6 +254,13 @@ class SpannerSQLCompiler(SQLCompiler):
 class SpannerDDLCompiler(DDLCompiler):
     """Spanner DDL statements compiler."""
 
+    def visit_computed_column(self, generated, **kw):
+        """Computed column operator."""
+        text = "AS (%s) STORED" % self.sql_compiler.process(
+            generated.sqltext, include_table=False, literal_binds=True
+        )
+        return text
+
     def visit_drop_table(self, drop_table):
         """
         Cloud Spanner doesn't drop tables which have indexes
