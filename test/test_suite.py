@@ -54,6 +54,9 @@ from sqlalchemy.types import Integer
 from sqlalchemy.types import Numeric
 from sqlalchemy.types import Text
 from sqlalchemy.testing import requires
+from sqlalchemy.testing.fixtures import (
+    ComputedReflectionFixtureTest as _ComputedReflectionFixtureTest,
+)
 
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
@@ -1604,7 +1607,7 @@ class ExecutionOptionsTest(fixtures.TestBase):
             assert connection.connection.read_only is True
 
 
-class ComputedReflectionFixtureTest(fixtures.ComputedReflectionFixtureTest):
+class ComputedReflectionFixtureTest(_ComputedReflectionFixtureTest):
     @classmethod
     def define_tables(cls, metadata):
         """SPANNER OVERRIDE:
