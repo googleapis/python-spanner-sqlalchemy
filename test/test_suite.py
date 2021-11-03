@@ -35,6 +35,7 @@ from sqlalchemy.testing import engines
 from sqlalchemy.testing import eq_
 from sqlalchemy.testing import provide_metadata, emits_warning
 from sqlalchemy.testing import fixtures
+from sqlalchemy.testing import is_true
 from sqlalchemy.testing.provision import temp_table_keyword_args
 from sqlalchemy.testing.schema import Column
 from sqlalchemy.testing.schema import Table
