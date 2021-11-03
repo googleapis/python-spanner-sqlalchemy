@@ -1676,4 +1676,6 @@ class ComputedReflectionFixtureTest(_ComputedReflectionFixtureTest):
 
 
 class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureTest):
-    pass
+    @pytest.mark.skip("Default values are not supported.")
+    def test_computed_col_default_not_set(self):
+        pass
