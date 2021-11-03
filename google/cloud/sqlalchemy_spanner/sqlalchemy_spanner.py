@@ -486,7 +486,7 @@ class SpannerDialect(DefaultDialect):
             list: The table every column dict-like description.
         """
         sql = """
-SELECT column_name, spanner_type, is_nullable
+SELECT column_name, spanner_type, is_nullable, is_generated
 FROM information_schema.columns
 WHERE
     table_catalog = ''
@@ -512,6 +512,7 @@ ORDER BY
                         "type": self._designate_type(col[1]),
                         "nullable": col[2] == "YES",
                         "default": None,
+                        "computed": col[3] == "GENERATED",
                     }
                 )
         return cols_desc
