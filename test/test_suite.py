@@ -1679,3 +1679,19 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
     @pytest.mark.skip("Default values are not supported.")
     def test_computed_col_default_not_set(self):
         pass
+
+    def test_get_column_returns_computed(self):
+        insp = inspect(config.db)
+
+        cols = insp.get_columns("computed_default_table")
+        data = {c["name"]: c for c in cols}
+        for key in ("id", "normal", "with_default"):
+            is_true("computed" not in data[key])
+        compData = data["computed_col"]
+        is_true("computed" in compData)
+        is_true("sqltext" in compData["computed"])
+        eq_(self.normalize(compData["computed"]["sqltext"]), "normal+42")
+        eq_(
+            "persisted" in compData["computed"],
+            testing.requires.computed_columns_reflect_persisted.enabled,
+        )
