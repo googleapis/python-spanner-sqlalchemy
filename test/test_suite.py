@@ -92,6 +92,7 @@ from sqlalchemy.testing.suite.test_reflection import (
     QuotedNameArgumentTest as _QuotedNameArgumentTest,
     ComponentReflectionTest as _ComponentReflectionTest,
     CompositeKeyReflectionTest as _CompositeKeyReflectionTest,
+    ComputedReflectionTest as _ComputedReflectionTest,
 )
 from sqlalchemy.testing.suite.test_results import RowFetchTest as _RowFetchTest
 from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
@@ -1677,3 +1678,7 @@ class ComputedReflectionFixtureTest(_ComputedReflectionFixtureTest):
                         Computed("normal * 42", persisted=True),
                     )
                 )
+
+
+class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureTest):
+    pass
