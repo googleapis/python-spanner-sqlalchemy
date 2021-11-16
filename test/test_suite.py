@@ -1578,7 +1578,7 @@ class ExecutionOptionsTest(fixtures.TestBase):
     """
 
     def setUp(self):
-        self._engine = create_engine(get_db_url())
+        self._engine = create_engine(get_db_url(), pool_size=1)
         self._metadata = MetaData(bind=self._engine)
 
         self._table = Table(
@@ -1594,3 +1594,13 @@ class ExecutionOptionsTest(fixtures.TestBase):
         with self._engine.connect().execution_options(read_only=True) as connection:
             connection.execute(select(["*"], from_obj=self._table)).fetchall()
             assert connection.connection.read_only is True
+
+    def test_staleness(self):
+        with self._engine.connect().execution_options(
+            staleness={"max_staleness": 5}
+        ) as connection:
+            connection.execute(select(["*"], from_obj=self._table)).fetchall()
+            assert connection.connection.staleness == {"max_staleness": 5}
+
+        with self._engine.connect() as connection:
+            assert connection.connection.staleness is None
