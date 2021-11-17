@@ -1682,6 +1682,14 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
         pass
 
     def test_get_column_returns_computed(self):
+        """
+        SPANNER OVERRIDE:
+
+        In Spanner all the generated columns are STORED,
+        meaning there are no persisted and not persisted
+        (in the terms of the SQLAlchemy) columns. The
+        method override omits the persistence reflection checks.
+        """
         insp = inspect(config.db)
 
         cols = insp.get_columns("computed_default_table")
