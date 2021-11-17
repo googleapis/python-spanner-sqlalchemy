@@ -170,7 +170,38 @@ ReadOnly/ReadWrite mode of a connection can't be changed while a transaction is 
 ### Stale reads 
 To use the Spanner [Stale Reads](https://cloud.google.com/spanner/docs/reads#perform-stale-read) with SQLAlchemy you can tweak the connection execution options with a wanted staleness value. For example:
 ```python
-with engine.connect().execution_options(staleness={"max_staleness": 5}) as connection:
+# maximum staleness
+with engine.connect().execution_options(
+    read_only=True,
+    staleness={"max_staleness": datetime.timedelta(seconds=5)}
+) as connection:
+    connection.execute(select(["*"], from_obj=table)).fetchall()
+```
+
+```python
+# exact staleness
+with engine.connect().execution_options(
+    read_only=True,
+    staleness={"exact_staleness": datetime.timedelta(seconds=5)}
+) as connection:
+    connection.execute(select(["*"], from_obj=table)).fetchall()
+```
+
+```python
+# min read timestamp
+with engine.connect().execution_options(
+    read_only=True,
+    staleness={"min_read_timestamp": datetime.datetime(2021, 11, 17, 12, 55, 30)}
+) as connection:
+    connection.execute(select(["*"], from_obj=table)).fetchall()
+```
+
+```python
+# read timestamp
+with engine.connect().execution_options(
+    read_only=True,
+    staleness={"read_timestamp": datetime.datetime(2021, 11, 17, 12, 55, 30)}
+) as connection:
     connection.execute(select(["*"], from_obj=table)).fetchall()
 ```
 Note that the set option will be dropped when the connection is returned back to the pool.
