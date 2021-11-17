@@ -167,6 +167,14 @@ Note that execution options are applied lazily - on the `execute()` method call,
 
 ReadOnly/ReadWrite mode of a connection can't be changed while a transaction is in progress - first you must commit or rollback it.
 
+### Stale reads 
+To use the Spanner [Stale Reads](https://cloud.google.com/spanner/docs/reads#perform-stale-read) with SQLAlchemy you can tweak the connection execution options with a wanted staleness value. For example:
+```python
+with engine.connect().execution_options(staleness={"max_staleness": 5}) as connection:
+    connection.execute(select(["*"], from_obj=table)).fetchall()
+```
+Note that the set option will be dropped when the connection is returned back to the pool.
+
 ### DDL and transactions  
 DDL statements are executed outside the regular transactions mechanism, which means DDL statements will not be rolled back on normal transaction rollback.
 
