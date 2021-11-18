@@ -158,7 +158,7 @@ autocommit_engine = eng.execution_options(isolation_level="AUTOCOMMIT")
 ```
 
 ### Query hints  
-Spanner dialect supports query hints, which give an ability to set additional query execution parameters ([see for more info](https://cloud.google.com/spanner/docs/query-syntax#table_hints)). Usage example:
+Spanner dialect supports [query hints](https://cloud.google.com/spanner/docs/query-syntax#table_hints), which give the ability to set additional query execution parameters. Usage example:
 ```python
 session = Session(engine)
 
