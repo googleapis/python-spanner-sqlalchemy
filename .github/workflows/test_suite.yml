@@ -23,12 +23,6 @@ jobs:
   unit:
     runs-on: ubuntu-latest
 
-    services:
-      emulator-0:
-        image: gcr.io/cloud-spanner-emulator/emulator:latest
-        ports:
-          - 9010:9010
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
