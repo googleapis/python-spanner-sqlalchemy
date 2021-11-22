@@ -133,6 +133,7 @@ def unit(session):
     session.install("opentelemetry-api==1.1.0")
     session.install("opentelemetry-sdk==1.1.0")
     session.install("opentelemetry-instrumentation==0.20b0")
+    session.run("python", "create_test_config.py", "my-project", "my-instance")
     session.run("py.test", "--quiet", os.path.join("test/unit"), *session.posargs)
 
 
@@ -147,12 +148,22 @@ def migration_test(session):
     session.install("-e", ".")
     session.install("alembic")
 
+    session.run("python", "create_test_database.py")
+
+    project = os.getenv(
+        "GOOGLE_CLOUD_PROJECT", os.getenv("PROJECT_ID", "emulator-test-project"),
+    )
+    db_url = (
+        f"spanner:///projects/{project}/instances/"
+        "sqlalchemy-dialect-test/databases/compliance-test"
+    )
+
     config = configparser.ConfigParser()
     if os.path.exists("test.cfg"):
         config.read("test.cfg")
     else:
         config.read("setup.cfg")
-    db_url = config.get("db", "default")
+    db_url = config.get("db", "default", fallback=db_url)
 
     session.run("alembic", "init", "test_migration")
 
@@ -181,7 +192,7 @@ def migration_test(session):
     # clearing the migration data
     os.remove("alembic.ini")
     shutil.rmtree("test_migration")
-    session.run("python", "migration_test_cleanup.py")
+    session.run("python", "migration_test_cleanup.py", db_url)
     if os.path.exists("test.cfg"):
         os.remove("test.cfg")
 

@@ -14,23 +14,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
+import configparser
 import sys
 
-from google.cloud import spanner
+
+def set_test_config(project, instance):
+    config = configparser.ConfigParser()
+    url = (
+        f"spanner:///projects/{project}/instances/{instance}/"
+        "databases/compliance-test"
+    )
+    config.add_section("db")
+    config["db"]["default"] = url
+
+    with open("test.cfg", "w") as configfile:
+        config.write(configfile)
 
 
 def main(argv):
-  db_url = argv[0]
-
-  project = re.findall(r"projects(.*?)instances", db_url)
-  instance_id = re.findall(r"instances(.*?)databases", db_url)
-
-  client = spanner.Client(project="".join(project).replace("/", ""))
-  instance = client.instance(instance_id="".join(instance_id).replace("/", ""))
-  database = instance.database("compliance-test")
-
-  database.update_ddl(["DROP TABLE account", "DROP TABLE alembic_version"]).result(120)
+    project = argv[0]
+    instance = argv[1]
+    set_test_config(project, instance)
 
 
 if __name__ == "__main__":

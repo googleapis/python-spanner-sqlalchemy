@@ -22,6 +22,21 @@ class Requirements(SuiteRequirements):
         return exclusions.open()
 
     @property
+    def computed_columns(self):
+        return exclusions.open()
+
+    @property
+    def computed_columns_stored(self):
+        return exclusions.open()
+
+    def sane_rowcount(self):
+        return exclusions.closed()
+
+    @property
+    def sane_multi_rowcount(self):
+        return exclusions.closed()
+
+    @property
     def foreign_key_constraint_name_reflection(self):
         return exclusions.open()
 
