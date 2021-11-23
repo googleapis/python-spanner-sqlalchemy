@@ -1581,31 +1581,6 @@ class UserAgentTest(fixtures.TestBase):
 
 
 class JSONTest(_JSONTest):
-    def _index_fixtures(fn):
-        fn = testing.combinations(
-            ("boolean", True),
-            ("boolean", False),
-            ("boolean", None),
-            ("string", "some string"),
-            ("string", None),
-            ("string", util.u("réve illé")),
-            (
-                "string",
-                util.u("réve🐍 illé"),
-                testing.requires.json_index_supplementary_unicode_element,
-            ),
-            ("integer", 15),
-            ("integer", 1),
-            ("integer", 0),
-            ("integer", None),
-            ("float", 28.5),
-            ("float", None),
-            # TODO: how to test for comaprison
-            #        ("json", {"foo": "bar"}),
-            id_="sa",
-        )(fn)
-        return fn
-
     @pytest.mark.skip("Values without keys are not supported.")
     def test_single_element_round_trip(self, element):
         pass
