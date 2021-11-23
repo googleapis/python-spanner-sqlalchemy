@@ -1622,29 +1622,6 @@ class JSONTest(_JSONTest):
 
         eq_(row, (data_element,))
 
-    @_index_fixtures
-    def test_path_typed_comparison(self, datatype, value):
-        data_table = self.tables.data_table
-        data_element = {"key1": {"subkey1": value}}
-        with config.db.connect() as conn:
-            conn.execute(
-                data_table.insert(),
-                {
-                    "id": random.randint(1, 100000000),
-                    "name": "row1",
-                    "data": data_element,
-                    "nulldata": data_element,
-                },
-            )
-
-            expr = data_table.c.data[("key1", "subkey1")]
-            expr = getattr(expr, "as_%s" % datatype)()
-
-            row = conn.execute(select([expr]).where(expr == value)).first()
-
-            # make sure we get a row even if value is None
-            eq_(row, (value,))
-
     def test_unicode_round_trip(self):
         # note we include Unicode supplementary characters as well
         with config.db.connect() as conn:
