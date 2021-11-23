@@ -50,7 +50,7 @@ def reset_connection(dbapi_conn, connection_record):
     """An event of returning a connection back to a pool."""
     dbapi_conn.connection.staleness = None
 
-    
+
 # register a method to get a single value of a JSON object
 OPERATORS[json_getitem_op] = operator_lookup["json_getitem_op"]
 
@@ -228,21 +228,6 @@ class SpannerSQLCompiler(SQLCompiler):
             self.process(binary.left, **kw),
             self.process(binary.right, **kw),
         )
-
-    def _generate_generic_binary(self, binary, opstring, eager_grouping=False, **kw):
-        """Build a JSON_VALUE() function arguments."""
-        kw["_in_binary"] = True
-        right_value = getattr(
-            binary.right, "value", None
-        ) or binary.right._compiler_dispatch(self, eager_grouping=eager_grouping, **kw)
-
-        text = (
-            binary.left._compiler_dispatch(self, eager_grouping=eager_grouping, **kw)
-            + """, "$."""
-            + str(right_value)
-            + '"'
-        )
-        return "JSON_VALUE(%s)" % text
 
     def render_literal_value(self, value, type_):
         """Render the value of a bind parameter as a quoted literal.
