@@ -220,6 +220,44 @@ class SpannerSQLCompiler(SQLCompiler):
             binary.right._compiler_dispatch(self, **kw),
         )
 
+    def _generate_generic_binary(self, binary, opstring, eager_grouping=False, **kw):
+        """The method is overriden to process JSON data type cases."""
+        _in_binary = kw.get("_in_binary", False)
+
+        kw["_in_binary"] = True
+
+        if isinstance(opstring, str):
+            text = (
+                binary.left._compiler_dispatch(
+                    self, eager_grouping=eager_grouping, **kw
+                )
+                + opstring
+                + binary.right._compiler_dispatch(
+                    self, eager_grouping=eager_grouping, **kw
+                )
+            )
+            if _in_binary and eager_grouping:
+                text = "(%s)" % text
+        else:
+            # got JSON data
+            right_value = getattr(
+                binary.right, "value", None
+            ) or binary.right._compiler_dispatch(
+                self, eager_grouping=eager_grouping, **kw
+            )
+
+            text = (
+                binary.left._compiler_dispatch(
+                    self, eager_grouping=eager_grouping, **kw
+                )
+                + """, "$."""
+                + str(right_value)
+                + '"'
+            )
+            text = "JSON_VALUE(%s)" % text
+
+        return text
+
     def visit_json_path_getitem_op_binary(self, binary, operator, **kw):
         """Build a JSON_VALUE() function call."""
         expr = """JSON_VALUE(%s, "$.%s")"""

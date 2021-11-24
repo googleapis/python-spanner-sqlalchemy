@@ -1580,6 +1580,9 @@ class UserAgentTest(fixtures.TestBase):
             )
 
 
+@pytest.mark.skipif(
+    bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+)
 class JSONTest(_JSONTest):
     @pytest.mark.skip("Values without keys are not supported.")
     def test_single_element_round_trip(self, element):
