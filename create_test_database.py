@@ -18,7 +18,8 @@ import configparser
 import os
 import time
 
-from google.api_core.exceptions import ResourceExhausted
+from create_test_config import set_test_config
+from google.api_core.exceptions import AlreadyExists, ResourceExhausted
 from google.cloud.spanner_v1 import Client
 from google.cloud.spanner_v1.instance import Instance
 
@@ -80,25 +81,22 @@ def create_test_instance():
     labels = {"python-spanner-sqlalchemy-systest": "true", "created": create_time}
 
     instance = CLIENT.instance(instance_id, instance_config, labels=labels)
-    if not instance.exists():
-        created_op = instance.create()
-        created_op.result(1800)  # block until completion
 
-    database = instance.database("compliance-test")
-    if database.exists():
-        database.drop()
-    created_op = database.create()
-    created_op.result(1800)
 
-    config = configparser.ConfigParser()
-    url = "spanner:///projects/{project}/instances/{instance_id}/databases/compliance-test".format(
-        project=PROJECT, instance_id=instance_id
-    )
-    config.add_section("db")
-    config["db"]["default"] = url
+    try:
+      created_op = instance.create()
+      created_op.result(1800)  # block until completion
+    except AlreadyExists:
+      pass  # instance was already created
 
-    with open("test.cfg", "w") as configfile:
-        config.write(configfile)
+    try:
+      database = instance.database("compliance-test")
+      created_op = database.create()
+      created_op.result(1800)
+    except AlreadyExists:
+      pass  # instance was already created
+
+    set_test_config(PROJECT, instance_id)
 
 
 delete_stale_test_instances()

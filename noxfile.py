@@ -116,6 +116,18 @@ def lint_setup_py(session):
 @nox.session(python=DEFAULT_PYTHON_VERSION)
 def compliance_test(session):
     """Run SQLAlchemy dialect compliance test suite."""
+
+    # Check the value of `RUN_COMPLIANCE_TESTS` env var. It defaults to true.
+    if os.environ.get("RUN_COMPLIANCE_TESTS", "true") == "false":
+        session.skip("RUN_COMPLIANCE_TESTS is set to false, skipping")
+    # Sanity check: Only run tests if the environment variable is set.
+    if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "") and not os.environ.get(
+        "SPANNER_EMULATOR_HOST", ""
+    ):
+        session.skip(
+            "Credentials or emulator host must be set via environment variable"
+        )
+
     session.install("pytest")
     session.install("mock")
     session.install("-e", ".")
@@ -133,6 +145,7 @@ def unit(session):
     session.install("opentelemetry-api==1.1.0")
     session.install("opentelemetry-sdk==1.1.0")
     session.install("opentelemetry-instrumentation==0.20b0")
+    session.run("python", "create_test_config.py", "my-project", "my-instance")
     session.run("py.test", "--quiet", os.path.join("test/unit"), *session.posargs)
 
 
@@ -146,6 +159,8 @@ def migration_test(session):
     session.install("pytest")
     session.install("-e", ".")
     session.install("alembic")
+
+    session.run("python", "create_test_database.py")
 
     project = os.getenv(
         "GOOGLE_CLOUD_PROJECT", os.getenv("PROJECT_ID", "emulator-test-project"),

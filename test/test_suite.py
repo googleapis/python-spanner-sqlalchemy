@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import timezone
+import datetime
 import decimal
 import operator
 import os
@@ -29,11 +29,13 @@ from sqlalchemy import testing
 from sqlalchemy import ForeignKey
 from sqlalchemy import MetaData
 from sqlalchemy.schema import DDL
+from sqlalchemy.schema import Computed
 from sqlalchemy.testing import config
 from sqlalchemy.testing import engines
 from sqlalchemy.testing import eq_
 from sqlalchemy.testing import provide_metadata, emits_warning
 from sqlalchemy.testing import fixtures
+from sqlalchemy.testing import is_true
 from sqlalchemy.testing.provision import temp_table_keyword_args
 from sqlalchemy.testing.schema import Column
 from sqlalchemy.testing.schema import Table
@@ -54,6 +56,9 @@ from sqlalchemy.types import Integer
 from sqlalchemy.types import Numeric
 from sqlalchemy.types import Text
 from sqlalchemy.testing import requires
+from sqlalchemy.testing.fixtures import (
+    ComputedReflectionFixtureTest as _ComputedReflectionFixtureTest,
+)
 
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
@@ -89,6 +94,7 @@ from sqlalchemy.testing.suite.test_reflection import (
     QuotedNameArgumentTest as _QuotedNameArgumentTest,
     ComponentReflectionTest as _ComponentReflectionTest,
     CompositeKeyReflectionTest as _CompositeKeyReflectionTest,
+    ComputedReflectionTest as _ComputedReflectionTest,
 )
 from sqlalchemy.testing.suite.test_results import RowFetchTest as _RowFetchTest
 from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
@@ -975,7 +981,9 @@ class RowFetchTest(_RowFetchTest):
 
         eq_(
             row["somelabel"],
-            DatetimeWithNanoseconds(2006, 5, 12, 12, 0, 0, tzinfo=timezone.utc),
+            DatetimeWithNanoseconds(
+                2006, 5, 12, 12, 0, 0, tzinfo=datetime.timezone.utc
+            ),
         )
 
 
@@ -1578,7 +1586,7 @@ class ExecutionOptionsTest(fixtures.TestBase):
     """
 
     def setUp(self):
-        self._engine = create_engine(get_db_url())
+        self._engine = create_engine(get_db_url(), pool_size=1)
         self._metadata = MetaData(bind=self._engine)
 
         self._table = Table(
@@ -1594,3 +1602,107 @@ class ExecutionOptionsTest(fixtures.TestBase):
         with self._engine.connect().execution_options(read_only=True) as connection:
             connection.execute(select(["*"], from_obj=self._table)).fetchall()
             assert connection.connection.read_only is True
+
+    def test_staleness(self):
+        with self._engine.connect().execution_options(
+            read_only=True, staleness={"max_staleness": datetime.timedelta(seconds=5)}
+        ) as connection:
+            connection.execute(select(["*"], from_obj=self._table)).fetchall()
+            assert connection.connection.staleness == {
+                "max_staleness": datetime.timedelta(seconds=5)
+            }
+
+        with self._engine.connect() as connection:
+            assert connection.connection.staleness is None
+
+
+class ComputedReflectionFixtureTest(_ComputedReflectionFixtureTest):
+    @classmethod
+    def define_tables(cls, metadata):
+        """SPANNER OVERRIDE:
+
+        Avoid using default values for computed columns.
+        """
+        Table(
+            "computed_default_table",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("normal", Integer),
+            Column("computed_col", Integer, Computed("normal + 42")),
+            Column("with_default", Integer),
+        )
+
+        t = Table(
+            "computed_column_table",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("normal", Integer),
+            Column("computed_no_flag", Integer, Computed("normal + 42")),
+        )
+
+        if testing.requires.schemas.enabled:
+            t2 = Table(
+                "computed_column_table",
+                metadata,
+                Column("id", Integer, primary_key=True),
+                Column("normal", Integer),
+                Column("computed_no_flag", Integer, Computed("normal / 42")),
+                schema=config.test_schema,
+            )
+
+        if testing.requires.computed_columns_virtual.enabled:
+            t.append_column(
+                Column(
+                    "computed_virtual",
+                    Integer,
+                    Computed("normal + 2", persisted=False),
+                )
+            )
+            if testing.requires.schemas.enabled:
+                t2.append_column(
+                    Column(
+                        "computed_virtual",
+                        Integer,
+                        Computed("normal / 2", persisted=False),
+                    )
+                )
+        if testing.requires.computed_columns_stored.enabled:
+            t.append_column(
+                Column(
+                    "computed_stored", Integer, Computed("normal - 42", persisted=True),
+                )
+            )
+            if testing.requires.schemas.enabled:
+                t2.append_column(
+                    Column(
+                        "computed_stored",
+                        Integer,
+                        Computed("normal * 42", persisted=True),
+                    )
+                )
+
+
+class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureTest):
+    @pytest.mark.skip("Default values are not supported.")
+    def test_computed_col_default_not_set(self):
+        pass
+
+    def test_get_column_returns_computed(self):
+        """
+        SPANNER OVERRIDE:
+
+        In Spanner all the generated columns are STORED,
+        meaning there are no persisted and not persisted
+        (in the terms of the SQLAlchemy) columns. The
+        method override omits the persistence reflection checks.
+        """
+        insp = inspect(config.db)
+
+        cols = insp.get_columns("computed_default_table")
+        data = {c["name"]: c for c in cols}
+        for key in ("id", "normal", "with_default"):
+            is_true("computed" not in data[key])
+        compData = data["computed_col"]
+        is_true("computed" in compData)
+        is_true("sqltext" in compData["computed"])
+        eq_(self.normalize(compData["computed"]["sqltext"]), "normal+42")
