@@ -66,6 +66,7 @@ class BenchmarkTestBase:
 
     Organizes testing data preparation and cleanup.
     """
+
     _many_rows_ids = []
     _many_rows2_ids = []
 
@@ -85,7 +86,6 @@ class BenchmarkTestBase:
             for i in range(99):
                 self._many_rows_ids.append(self._generate_id())
                 self._many_rows2_ids.append(self._generate_id())
-
 
     def _cleanup(self):
         """Drop the test table."""
@@ -297,7 +297,7 @@ def insert_one_row(transaction, one_row):
             "last_name": spanner.param_types.STRING,
             "birth_date": spanner.param_types.DATE,
             "picture": spanner.param_types.BYTES,
-        }
+        },
     )
     last_name = transaction.execute_sql(
         "SELECT last_name FROM Singers WHERE id=1"
@@ -315,8 +315,8 @@ def insert_many_rows(transaction, many_rows):
     for row in many_rows:
         statements.append(
             (
-                "INSERT INTO `Singers` (id, first_name, last_name, birth_date, picture) "
-                "VALUES (@id, @first_name, @last_name, @birth_date, @picture)",
+                "INSERT INTO `Singers` (id, first_name, last_name, birth_date, picture)"
+                " VALUES (@id, @first_name, @last_name, @birth_date, @picture)",
                 row,
                 {
                     "id": spanner.param_types.INT64,
@@ -324,7 +324,7 @@ def insert_many_rows(transaction, many_rows):
                     "last_name": spanner.param_types.STRING,
                     "birth_date": spanner.param_types.DATE,
                     "picture": spanner.param_types.BYTES,
-                }
+                },
             )
         )
     _, count = transaction.batch_update(statements)
