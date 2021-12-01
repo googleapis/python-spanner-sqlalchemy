@@ -341,6 +341,9 @@ class SpannerDDLCompiler(DDLCompiler):
         cols = [col.name for col in table.primary_key.columns]
         post_cmds = " PRIMARY KEY ({})".format(", ".join(cols))
 
+        if table._prefixes == ["TEMPORARY"]:
+            raise NotImplementedError("Temporary tables are not supported.")
+
         if table.kwargs.get("spanner_interleave_in"):
             post_cmds += ",\nINTERLEAVE IN PARENT {}".format(
                 table.kwargs["spanner_interleave_in"]

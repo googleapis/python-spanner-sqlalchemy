@@ -676,7 +676,6 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         creating unique constraints. Overriding the test to replace
         constraints with indexes in testing data.
         """
-        kw = temp_table_keyword_args(config, config.db)
         user_tmp = Table(
             "user_tmp",
             metadata,
@@ -685,7 +684,6 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             Column("foo", sqlalchemy.INT),
             sqlalchemy.Index("user_tmp_uq", "name", unique=True),
             sqlalchemy.Index("user_tmp_ix", "foo"),
-            **kw,
         )
         if (
             testing.requires.view_reflection.enabled
