@@ -70,7 +70,7 @@ class Requirements(SuiteRequirements):
 
     @property
     def temporary_tables(self):
-        """target database supports temporary tables"""
+        """Target database supports temporary tables."""
         return exclusions.closed()
 
     def get_order_by_collation(self, _):
