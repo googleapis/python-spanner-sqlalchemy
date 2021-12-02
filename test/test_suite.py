@@ -20,6 +20,7 @@ import operator
 import os
 import pkg_resources
 import pytest
+import unittest
 from unittest import mock
 
 import sqlalchemy
@@ -1601,15 +1602,11 @@ class TemporaryTableTest(fixtures.TestBase):
             self._metadata.create_all(self._engine)
 
 
-class ExecutionOptionsTest(fixtures.TestBase):
+class ExecutionOptionsTest(fixtures.TestBase, unittest.TestCase):
     """
     Check that `execution_options()` method correctly
     sets parameters on the underlying DB API connection.
     """
-
-    _engine = None
-    _metadata = None
-    _table = None
 
     @classmethod
     def setUpClass(cls):
