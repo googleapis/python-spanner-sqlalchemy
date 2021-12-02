@@ -30,6 +30,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy import MetaData
 from sqlalchemy.schema import DDL
 from sqlalchemy.schema import Computed
+from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.testing import config
 from sqlalchemy.testing import engines
 from sqlalchemy.testing import eq_
@@ -1636,6 +1637,26 @@ class LimitOffsetTest(fixtures.TestBase):
 
             with self._engine.connect().execution_options(read_only=True) as connection:
                 list(connection.execute(self._table.select().offset(offset)).fetchall())
+
+
+class TemporaryTableTest(fixtures.TestBase):
+    """
+    Check that temporary tables raise an error on creation.
+    """
+
+    def setUp(self):
+        self._engine = create_engine(get_db_url(), pool_size=1)
+        self._metadata = MetaData(bind=self._engine)
+
+    def test_temporary_prefix(self):
+        with pytest.raises(NotImplementedError):
+            Table(
+                "users",
+                self._metadata,
+                Column("user_id", Integer, primary_key=True),
+                Column("user_name", String(16), nullable=False),
+                prefixes=["TEMPORARY"]
+            ).create()
 
 
 class ComputedReflectionFixtureTest(_ComputedReflectionFixtureTest):
