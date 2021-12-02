@@ -259,7 +259,8 @@ class SpannerSQLCompiler(SQLCompiler):
             text += "\n LIMIT " + self.process(select._limit_clause, **kw)
         if select._offset_clause is not None:
             if select._limit_clause is None:
-                text += "\n LIMIT 9223372036854775805"
+                offset = int(self.process(select._offset_clause, **kw))
+                text += f"\n LIMIT {9223372036854775807-offset}"
             text += " OFFSET " + self.process(select._offset_clause, **kw)
         return text
 
