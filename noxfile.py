@@ -128,11 +128,25 @@ def compliance_test(session):
             "Credentials or emulator host must be set via environment variable"
         )
 
+    session.install(
+        "pytest", "pytest-cov", "pytest-asyncio",
+    )
+
     session.install("pytest")
     session.install("mock")
     session.install("-e", ".")
     session.run("python", "create_test_database.py")
-    session.run("pytest", "-v")
+
+    session.run(
+        "py.test",
+        "--cov=google.cloud.sqlalchemy_spanner",
+        "--cov=tests",
+        "--cov-append",
+        "--cov-config=.coveragerc",
+        "--cov-report=",
+        "--cov-fail-under=0",
+        "test",
+    )
 
 
 @nox.session(python=DEFAULT_PYTHON_VERSION)
@@ -230,3 +244,16 @@ def snippets(session):
         os.path.join("samples", "snippets_test.py"),
         *session.posargs,
     )
+
+
+@nox.session(python=DEFAULT_PYTHON_VERSION)
+def cover(session):
+    """Run the final coverage report.
+
+    This outputs the coverage report aggregating coverage from the unit
+    test runs (not system test runs), and then erases coverage data.
+    """
+    session.install("coverage", "pytest-cov")
+    session.run("coverage", "report", "--show-missing", "--fail-under=99")
+
+    session.run("coverage", "erase")
