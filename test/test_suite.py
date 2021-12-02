@@ -1607,18 +1607,19 @@ class ExecutionOptionsTest(fixtures.TestBase):
     sets parameters on the underlying DB API connection.
     """
 
-    def setUp(self):
-        self._engine = create_engine(get_db_url(), pool_size=1)
-        self._metadata = MetaData(bind=self._engine)
+    @classmethod
+    def setUpClass(cls):
+        cls._engine = create_engine(get_db_url(), pool_size=1)
+        cls._metadata = MetaData(bind=cls._engine)
 
-        self._table = Table(
+        cls._table = Table(
             "execution_options",
-            self._metadata,
+            cls._metadata,
             Column("opt_id", Integer, primary_key=True),
             Column("opt_name", String(16), nullable=False),
         )
 
-        self._metadata.create_all(self._engine)
+        cls._metadata.create_all(cls._engine)
 
     def test_read_only(self):
         with self._engine.connect().execution_options(read_only=True) as connection:
