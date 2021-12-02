@@ -1607,6 +1607,10 @@ class ExecutionOptionsTest(fixtures.TestBase):
     sets parameters on the underlying DB API connection.
     """
 
+    _engine = None
+    _metadata = None
+    _table = None
+
     @classmethod
     def setUpClass(cls):
         cls._engine = create_engine(get_db_url(), pool_size=1)
