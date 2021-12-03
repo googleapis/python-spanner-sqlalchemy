@@ -1657,7 +1657,7 @@ class TemporaryTableTest(fixtures.TestBase):
                 self._metadata,
                 Column("user_id", Integer, primary_key=True),
                 Column("user_name", String(16), nullable=False),
-                prefixes=["TEMPORARY"]
+                prefixes=["TEMPORARY"],
             ).create()
 
 
