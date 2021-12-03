@@ -31,7 +31,6 @@ from sqlalchemy import ForeignKey
 from sqlalchemy import MetaData
 from sqlalchemy.schema import DDL
 from sqlalchemy.schema import Computed
-from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.testing import config
 from sqlalchemy.testing import engines
 from sqlalchemy.testing import eq_
@@ -1577,29 +1576,6 @@ class UserAgentTest(fixtures.TestBase):
                 connection.connection.instance._client._client_info.user_agent
                 == dist.project_name + "/" + dist.version
             )
-
-
-class TemporaryTableTest(fixtures.TestBase):
-    """
-    Check that SQLAlchemy dialect raises a correct "Not
-    implemented" exception while temporary table creation.
-    """
-
-    def setUp(self):
-        self._engine = create_engine(get_db_url())
-        self._metadata = MetaData(bind=self._engine)
-
-    def test_not_implemented_raised(self):
-        Table(
-            "temp_table",
-            self._metadata,
-            Column("id", Integer, primary_key=True),
-            Column("name", String(16), nullable=False),
-            prefixes=["TEMPORARY"],
-        )
-
-        with pytest.raises(NotImplementedError):
-            self._metadata.create_all(self._engine)
 
 
 class ExecutionOptionsTest(fixtures.TestBase, unittest.TestCase):
