@@ -134,7 +134,7 @@ def compliance_test(session):
 
     session.install("pytest")
     session.install("mock")
-    session.install("-e", ".")
+    session.install("-e", ".[tracing]")
     session.run("python", "create_test_database.py")
 
     session.run(
