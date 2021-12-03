@@ -21,6 +21,7 @@ import os
 import pkg_resources
 import pytest
 import random
+import unittest
 from unittest import mock
 
 import sqlalchemy
@@ -727,6 +728,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         self.metadata.create_all()
 
         Table("bytes_table", MetaData(bind=self.bind), autoload=True)
+        inspect(config.db).get_columns("bytes_table")
 
     @testing.provide_metadata
     def _test_get_unique_constraints(self, schema=None):
@@ -1577,6 +1579,181 @@ class UserAgentTest(fixtures.TestBase):
             )
 
 
+class ExecutionOptionsTest(fixtures.TestBase, unittest.TestCase):
+    """
+    Check that `execution_options()` method correctly
+    sets parameters on the underlying DB API connection.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls._engine = create_engine(get_db_url(), pool_size=1)
+        cls._metadata = MetaData(bind=cls._engine)
+
+        cls._table = Table(
+            "execution_options",
+            cls._metadata,
+            Column("opt_id", Integer, primary_key=True),
+            Column("opt_name", String(16), nullable=False),
+        )
+
+        cls._metadata.create_all(cls._engine)
+
+    def test_read_only(self):
+        with self._engine.connect().execution_options(read_only=True) as connection:
+            connection.execute(select(["*"], from_obj=self._table)).fetchall()
+            assert connection.connection.read_only is True
+
+    def test_staleness(self):
+        with self._engine.connect().execution_options(
+            read_only=True, staleness={"exact_staleness": datetime.timedelta(seconds=5)}
+        ) as connection:
+            connection.execute(select(["*"], from_obj=self._table)).fetchall()
+            assert connection.connection.staleness == {
+                "exact_staleness": datetime.timedelta(seconds=5)
+            }
+
+        with self._engine.connect() as connection:
+            assert connection.connection.staleness is None
+
+
+class LimitOffsetTest(fixtures.TestBase):
+    """
+    Check that SQL with an offset and no limit is being generated correctly.
+    """
+
+    def setUp(self):
+        self._engine = create_engine(get_db_url(), pool_size=1)
+        self._metadata = MetaData(bind=self._engine)
+
+        self._table = Table(
+            "users",
+            self._metadata,
+            Column("user_id", Integer, primary_key=True),
+            Column("user_name", String(16), nullable=False),
+        )
+
+        self._metadata.create_all(self._engine)
+
+    def test_offset_only(self):
+        for offset in [1, 7, 10, 100, 1000, 10000]:
+
+            with self._engine.connect().execution_options(read_only=True) as connection:
+                list(connection.execute(self._table.select().offset(offset)).fetchall())
+
+
+class TemporaryTableTest(fixtures.TestBase):
+    """
+    Check that temporary tables raise an error on creation.
+    """
+
+    def setUp(self):
+        self._engine = create_engine(get_db_url(), pool_size=1)
+        self._metadata = MetaData(bind=self._engine)
+
+    def test_temporary_prefix(self):
+        with pytest.raises(NotImplementedError):
+            Table(
+                "users",
+                self._metadata,
+                Column("user_id", Integer, primary_key=True),
+                Column("user_name", String(16), nullable=False),
+                prefixes=["TEMPORARY"],
+            ).create()
+
+
+class ComputedReflectionFixtureTest(_ComputedReflectionFixtureTest):
+    @classmethod
+    def define_tables(cls, metadata):
+        """SPANNER OVERRIDE:
+
+        Avoid using default values for computed columns.
+        """
+        Table(
+            "computed_default_table",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("normal", Integer),
+            Column("computed_col", Integer, Computed("normal + 42")),
+            Column("with_default", Integer),
+        )
+
+        t = Table(
+            "computed_column_table",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("normal", Integer),
+            Column("computed_no_flag", Integer, Computed("normal + 42")),
+        )
+
+        if testing.requires.schemas.enabled:
+            t2 = Table(
+                "computed_column_table",
+                metadata,
+                Column("id", Integer, primary_key=True),
+                Column("normal", Integer),
+                Column("computed_no_flag", Integer, Computed("normal / 42")),
+                schema=config.test_schema,
+            )
+
+        if testing.requires.computed_columns_virtual.enabled:
+            t.append_column(
+                Column(
+                    "computed_virtual",
+                    Integer,
+                    Computed("normal + 2", persisted=False),
+                )
+            )
+            if testing.requires.schemas.enabled:
+                t2.append_column(
+                    Column(
+                        "computed_virtual",
+                        Integer,
+                        Computed("normal / 2", persisted=False),
+                    )
+                )
+        if testing.requires.computed_columns_stored.enabled:
+            t.append_column(
+                Column(
+                    "computed_stored", Integer, Computed("normal - 42", persisted=True),
+                )
+            )
+            if testing.requires.schemas.enabled:
+                t2.append_column(
+                    Column(
+                        "computed_stored",
+                        Integer,
+                        Computed("normal * 42", persisted=True),
+                    )
+                )
+
+
+class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureTest):
+    @pytest.mark.skip("Default values are not supported.")
+    def test_computed_col_default_not_set(self):
+        pass
+
+    def test_get_column_returns_computed(self):
+        """
+        SPANNER OVERRIDE:
+
+        In Spanner all the generated columns are STORED,
+        meaning there are no persisted and not persisted
+        (in the terms of the SQLAlchemy) columns. The
+        method override omits the persistence reflection checks.
+        """
+        insp = inspect(config.db)
+
+        cols = insp.get_columns("computed_default_table")
+        data = {c["name"]: c for c in cols}
+        for key in ("id", "normal", "with_default"):
+            is_true("computed" not in data[key])
+        compData = data["computed_col"]
+        is_true("computed" in compData)
+        is_true("sqltext" in compData["computed"])
+        eq_(self.normalize(compData["computed"]["sqltext"]), "normal+42")
+
+
 @pytest.mark.skipif(
     bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
 )
@@ -1700,157 +1877,3 @@ class JSONTest(_JSONTest):
     )
     def test_round_trip_none_as_sql_null(self):
         pass
-
-
-class ExecutionOptionsTest(fixtures.TestBase):
-    """
-    Check that `execution_options()` method correctly
-    sets parameters on the underlying DB API connection.
-    """
-
-    def setUp(self):
-        self._engine = create_engine(get_db_url(), pool_size=1)
-        self._metadata = MetaData(bind=self._engine)
-
-        self._table = Table(
-            "execution_options",
-            self._metadata,
-            Column("opt_id", Integer, primary_key=True),
-            Column("opt_name", String(16), nullable=False),
-        )
-
-        self._metadata.create_all(self._engine)
-
-    def test_read_only(self):
-        with self._engine.connect().execution_options(read_only=True) as connection:
-            connection.execute(select(["*"], from_obj=self._table)).fetchall()
-            assert connection.connection.read_only is True
-
-    def test_staleness(self):
-        with self._engine.connect().execution_options(
-            read_only=True, staleness={"max_staleness": datetime.timedelta(seconds=5)}
-        ) as connection:
-            connection.execute(select(["*"], from_obj=self._table)).fetchall()
-            assert connection.connection.staleness == {
-                "max_staleness": datetime.timedelta(seconds=5)
-            }
-
-        with self._engine.connect() as connection:
-            assert connection.connection.staleness is None
-
-
-class LimitOffsetTest(fixtures.TestBase):
-    """
-    Check that SQL with an offset and no limit is being generated correctly.
-    """
-
-    def setUp(self):
-        self._engine = create_engine(get_db_url(), pool_size=1)
-        self._metadata = MetaData(bind=self._engine)
-
-        self._table = Table(
-            "users",
-            self._metadata,
-            Column("user_id", Integer, primary_key=True),
-            Column("user_name", String(16), nullable=False),
-        )
-
-        self._metadata.create_all(self._engine)
-
-    def test_offset_only(self):
-        for offset in [1, 7, 10, 100, 1000, 10000]:
-
-            with self._engine.connect().execution_options(read_only=True) as connection:
-                list(connection.execute(self._table.select().offset(offset)).fetchall())
-
-
-class ComputedReflectionFixtureTest(_ComputedReflectionFixtureTest):
-    @classmethod
-    def define_tables(cls, metadata):
-        """SPANNER OVERRIDE:
-
-        Avoid using default values for computed columns.
-        """
-        Table(
-            "computed_default_table",
-            metadata,
-            Column("id", Integer, primary_key=True),
-            Column("normal", Integer),
-            Column("computed_col", Integer, Computed("normal + 42")),
-            Column("with_default", Integer),
-        )
-
-        t = Table(
-            "computed_column_table",
-            metadata,
-            Column("id", Integer, primary_key=True),
-            Column("normal", Integer),
-            Column("computed_no_flag", Integer, Computed("normal + 42")),
-        )
-
-        if testing.requires.schemas.enabled:
-            t2 = Table(
-                "computed_column_table",
-                metadata,
-                Column("id", Integer, primary_key=True),
-                Column("normal", Integer),
-                Column("computed_no_flag", Integer, Computed("normal / 42")),
-                schema=config.test_schema,
-            )
-
-        if testing.requires.computed_columns_virtual.enabled:
-            t.append_column(
-                Column(
-                    "computed_virtual",
-                    Integer,
-                    Computed("normal + 2", persisted=False),
-                )
-            )
-            if testing.requires.schemas.enabled:
-                t2.append_column(
-                    Column(
-                        "computed_virtual",
-                        Integer,
-                        Computed("normal / 2", persisted=False),
-                    )
-                )
-        if testing.requires.computed_columns_stored.enabled:
-            t.append_column(
-                Column(
-                    "computed_stored", Integer, Computed("normal - 42", persisted=True),
-                )
-            )
-            if testing.requires.schemas.enabled:
-                t2.append_column(
-                    Column(
-                        "computed_stored",
-                        Integer,
-                        Computed("normal * 42", persisted=True),
-                    )
-                )
-
-
-class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureTest):
-    @pytest.mark.skip("Default values are not supported.")
-    def test_computed_col_default_not_set(self):
-        pass
-
-    def test_get_column_returns_computed(self):
-        """
-        SPANNER OVERRIDE:
-
-        In Spanner all the generated columns are STORED,
-        meaning there are no persisted and not persisted
-        (in the terms of the SQLAlchemy) columns. The
-        method override omits the persistence reflection checks.
-        """
-        insp = inspect(config.db)
-
-        cols = insp.get_columns("computed_default_table")
-        data = {c["name"]: c for c in cols}
-        for key in ("id", "normal", "with_default"):
-            is_true("computed" not in data[key])
-        compData = data["computed_col"]
-        is_true("computed" in compData)
-        is_true("sqltext" in compData["computed"])
-        eq_(self.normalize(compData["computed"]["sqltext"]), "normal+42")

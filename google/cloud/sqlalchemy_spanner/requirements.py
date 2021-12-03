@@ -16,7 +16,7 @@ from sqlalchemy.testing import exclusions
 from sqlalchemy.testing.requirements import SuiteRequirements
 
 
-class Requirements(SuiteRequirements):
+class Requirements(SuiteRequirements):  # pragma: no cover
     @property
     def json_type(self):
         return exclusions.open()
