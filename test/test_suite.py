@@ -20,6 +20,8 @@ import operator
 import os
 import pkg_resources
 import pytest
+import random
+import unittest
 from unittest import mock
 
 import sqlalchemy
@@ -36,7 +38,6 @@ from sqlalchemy.testing import eq_
 from sqlalchemy.testing import provide_metadata, emits_warning
 from sqlalchemy.testing import fixtures
 from sqlalchemy.testing import is_true
-from sqlalchemy.testing.provision import temp_table_keyword_args
 from sqlalchemy.testing.schema import Column
 from sqlalchemy.testing.schema import Table
 from sqlalchemy import literal_column
@@ -61,7 +62,6 @@ from sqlalchemy.testing.fixtures import (
 )
 
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
-
 from google.cloud import spanner_dbapi
 
 from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
@@ -98,15 +98,17 @@ from sqlalchemy.testing.suite.test_reflection import (
 )
 from sqlalchemy.testing.suite.test_results import RowFetchTest as _RowFetchTest
 from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
+    _DateFixture as _DateFixtureTest,
+    _LiteralRoundTripFixture,
+    _UnicodeFixture as _UnicodeFixtureTest,
     BooleanTest as _BooleanTest,
     DateTest as _DateTest,
-    _DateFixture as _DateFixtureTest,
     DateTimeHistoricTest,
     DateTimeCoercedToDateTimeTest as _DateTimeCoercedToDateTimeTest,
     DateTimeMicrosecondsTest as _DateTimeMicrosecondsTest,
     DateTimeTest as _DateTimeTest,
     IntegerTest as _IntegerTest,
-    _LiteralRoundTripFixture,
+    JSONTest as _JSONTest,
     NumericTest as _NumericTest,
     StringTest as _StringTest,
     TextTest as _TextTest,
@@ -115,7 +117,6 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     TimestampMicrosecondsTest,
     UnicodeVarcharTest as _UnicodeVarcharTest,
     UnicodeTextTest as _UnicodeTextTest,
-    _UnicodeFixture as _UnicodeFixtureTest,
 )
 from test._helpers import get_db_url
 
@@ -676,7 +677,6 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         creating unique constraints. Overriding the test to replace
         constraints with indexes in testing data.
         """
-        kw = temp_table_keyword_args(config, config.db)
         user_tmp = Table(
             "user_tmp",
             metadata,
@@ -685,7 +685,6 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             Column("foo", sqlalchemy.INT),
             sqlalchemy.Index("user_tmp_uq", "name", unique=True),
             sqlalchemy.Index("user_tmp_ix", "foo"),
-            **kw,
         )
         if (
             testing.requires.view_reflection.enabled
@@ -729,6 +728,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         self.metadata.create_all()
 
         Table("bytes_table", MetaData(bind=self.bind), autoload=True)
+        inspect(config.db).get_columns("bytes_table")
 
     @testing.provide_metadata
     def _test_get_unique_constraints(self, schema=None):
@@ -1510,15 +1510,19 @@ class TestQueryHints(fixtures.TablesTest):
         assert str(query.statement.compile(session.bind)) == EXPECTED_QUERY
 
 
-class InterleavedTablesTest(fixtures.TestBase):
-    """
-    Check that CREATE TABLE statements for interleaved tables are correctly
-    generated.
-    """
+class SpannerSpecificTestBase(fixtures.TestBase):
+    """Base class for the Cloud Spanner related tests."""
 
     def setUp(self):
         self._engine = create_engine(get_db_url())
         self._metadata = MetaData(bind=self._engine)
+
+
+class InterleavedTablesTest(SpannerSpecificTestBase):
+    """
+    Check that CREATE TABLE statements for interleaved tables are correctly
+    generated.
+    """
 
     def test_interleave(self):
         EXP_QUERY = (
@@ -1562,12 +1566,8 @@ class InterleavedTablesTest(fixtures.TestBase):
             execute.assert_called_once_with(EXP_QUERY, [])
 
 
-class UserAgentTest(fixtures.TestBase):
+class UserAgentTest(SpannerSpecificTestBase):
     """Check that SQLAlchemy dialect uses correct user agent."""
-
-    def setUp(self):
-        self._engine = create_engine(get_db_url())
-        self._metadata = MetaData(bind=self._engine)
 
     def test_user_agent(self):
         dist = pkg_resources.get_distribution("sqlalchemy-spanner")
@@ -1579,24 +1579,25 @@ class UserAgentTest(fixtures.TestBase):
             )
 
 
-class ExecutionOptionsTest(fixtures.TestBase):
+class ExecutionOptionsTest(fixtures.TestBase, unittest.TestCase):
     """
     Check that `execution_options()` method correctly
     sets parameters on the underlying DB API connection.
     """
 
-    def setUp(self):
-        self._engine = create_engine(get_db_url(), pool_size=1)
-        self._metadata = MetaData(bind=self._engine)
+    @classmethod
+    def setUpClass(cls):
+        cls._engine = create_engine(get_db_url(), pool_size=1)
+        cls._metadata = MetaData(bind=cls._engine)
 
-        self._table = Table(
+        cls._table = Table(
             "execution_options",
-            self._metadata,
+            cls._metadata,
             Column("opt_id", Integer, primary_key=True),
             Column("opt_name", String(16), nullable=False),
         )
 
-        self._metadata.create_all(self._engine)
+        cls._metadata.create_all(cls._engine)
 
     def test_read_only(self):
         with self._engine.connect().execution_options(read_only=True) as connection:
@@ -1605,15 +1606,60 @@ class ExecutionOptionsTest(fixtures.TestBase):
 
     def test_staleness(self):
         with self._engine.connect().execution_options(
-            read_only=True, staleness={"max_staleness": datetime.timedelta(seconds=5)}
+            read_only=True, staleness={"exact_staleness": datetime.timedelta(seconds=5)}
         ) as connection:
             connection.execute(select(["*"], from_obj=self._table)).fetchall()
             assert connection.connection.staleness == {
-                "max_staleness": datetime.timedelta(seconds=5)
+                "exact_staleness": datetime.timedelta(seconds=5)
             }
 
         with self._engine.connect() as connection:
             assert connection.connection.staleness is None
+
+
+class LimitOffsetTest(fixtures.TestBase):
+    """
+    Check that SQL with an offset and no limit is being generated correctly.
+    """
+
+    def setUp(self):
+        self._engine = create_engine(get_db_url(), pool_size=1)
+        self._metadata = MetaData(bind=self._engine)
+
+        self._table = Table(
+            "users",
+            self._metadata,
+            Column("user_id", Integer, primary_key=True),
+            Column("user_name", String(16), nullable=False),
+        )
+
+        self._metadata.create_all(self._engine)
+
+    def test_offset_only(self):
+        for offset in [1, 7, 10, 100, 1000, 10000]:
+
+            with self._engine.connect().execution_options(read_only=True) as connection:
+                list(connection.execute(self._table.select().offset(offset)).fetchall())
+
+
+class TemporaryTableTest(fixtures.TestBase):
+    """
+    Check that temporary tables raise an error on creation.
+    """
+
+    def setUp(self):
+        self._engine = create_engine(get_db_url(), pool_size=1)
+        self._metadata = MetaData(bind=self._engine)
+
+    def test_temporary_prefix(self):
+        with pytest.raises(NotImplementedError):
+            Table(
+                "users",
+                self._metadata,
+                Column("user_id", Integer, primary_key=True),
+                Column("user_name", String(16), nullable=False),
+                prefixes=["TEMPORARY"],
+            ).create()
 
 
 class ComputedReflectionFixtureTest(_ComputedReflectionFixtureTest):
@@ -1706,3 +1752,128 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
         is_true("computed" in compData)
         is_true("sqltext" in compData["computed"])
         eq_(self.normalize(compData["computed"]["sqltext"]), "normal+42")
+
+
+@pytest.mark.skipif(
+    bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+)
+class JSONTest(_JSONTest):
+    @pytest.mark.skip("Values without keys are not supported.")
+    def test_single_element_round_trip(self, element):
+        pass
+
+    def _test_round_trip(self, data_element):
+        data_table = self.tables.data_table
+
+        config.db.execute(
+            data_table.insert(),
+            {"id": random.randint(1, 100000000), "name": "row1", "data": data_element},
+        )
+
+        row = config.db.execute(select([data_table.c.data])).first()
+
+        eq_(row, (data_element,))
+
+    def test_unicode_round_trip(self):
+        # note we include Unicode supplementary characters as well
+        with config.db.connect() as conn:
+            conn.execute(
+                self.tables.data_table.insert(),
+                {
+                    "id": random.randint(1, 100000000),
+                    "name": "r1",
+                    "data": {
+                        util.u("réve🐍 illé"): util.u("réve🐍 illé"),
+                        "data": {"k1": util.u("drôl🐍e")},
+                    },
+                },
+            )
+
+            eq_(
+                conn.scalar(select([self.tables.data_table.c.data])),
+                {
+                    util.u("réve🐍 illé"): util.u("réve🐍 illé"),
+                    "data": {"k1": util.u("drôl🐍e")},
+                },
+            )
+
+    @pytest.mark.skip("Parameterized types are not supported.")
+    def test_eval_none_flag_orm(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner JSON_VALUE() always returns STRING,"
+        "thus, this test case can't be executed."
+    )
+    def test_index_typed_comparison(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner JSON_VALUE() always returns STRING,"
+        "thus, this test case can't be executed."
+    )
+    def test_path_typed_comparison(self):
+        pass
+
+    @pytest.mark.skip("Custom JSON de-/serializers are not supported.")
+    def test_round_trip_custom_json(self):
+        pass
+
+    def _index_fixtures(fn):
+        fn = testing.combinations(
+            ("boolean", True),
+            ("boolean", False),
+            ("boolean", None),
+            ("string", "some string"),
+            ("string", None),
+            ("integer", 15),
+            ("integer", 1),
+            ("integer", 0),
+            ("integer", None),
+            ("float", 28.5),
+            ("float", None),
+            id_="sa",
+        )(fn)
+        return fn
+
+    @_index_fixtures
+    def test_index_typed_access(self, datatype, value):
+        data_table = self.tables.data_table
+        data_element = {"key1": value}
+        with config.db.connect() as conn:
+            conn.execute(
+                data_table.insert(),
+                {
+                    "id": random.randint(1, 100000000),
+                    "name": "row1",
+                    "data": data_element,
+                    "nulldata": data_element,
+                },
+            )
+
+            expr = data_table.c.data["key1"]
+            expr = getattr(expr, "as_%s" % datatype)()
+
+            roundtrip = conn.scalar(select([expr]))
+            if roundtrip in ("true", "false", None):
+                roundtrip = str(roundtrip).capitalize()
+
+            eq_(str(roundtrip), str(value))
+
+    @pytest.mark.skip(
+        "Spanner doesn't support type casts inside JSON_VALUE() function."
+    )
+    def test_round_trip_json_null_as_json_null(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner doesn't support type casts inside JSON_VALUE() function."
+    )
+    def test_round_trip_none_as_json_null(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner doesn't support type casts inside JSON_VALUE() function."
+    )
+    def test_round_trip_none_as_sql_null(self):
+        pass

@@ -16,7 +16,11 @@ from sqlalchemy.testing import exclusions
 from sqlalchemy.testing.requirements import SuiteRequirements
 
 
-class Requirements(SuiteRequirements):
+class Requirements(SuiteRequirements):  # pragma: no cover
+    @property
+    def json_type(self):
+        return exclusions.open()
+
     @property
     def computed_columns(self):
         return exclusions.open()
@@ -66,6 +70,11 @@ class Requirements(SuiteRequirements):
 
     @property
     def sequences(self):
+        return exclusions.closed()
+
+    @property
+    def temporary_tables(self):
+        """Target database supports temporary tables."""
         return exclusions.closed()
 
     def get_order_by_collation(self, _):
