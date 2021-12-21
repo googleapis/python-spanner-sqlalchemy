@@ -123,7 +123,7 @@ client.add_is_dependent_on(team)
 
 client.create(engine)
 ```
-**Note**: interleaved tables has a dependency between them, which means they must be created in the particular order. If you're creating all the tables at once, use `add_is_dependent_on()` method to set the correct creation order.
+**Note**: Interleaved tables have a dependency between them, so the parent table must be created before the child table. When creating tables with this feature, make sure to call `add_is_dependent_on()` on the child table to request SQLAlchemy to create the parent table before the child table.
 
 ### Unique constraints  
 Cloud Spanner doesn't support direct UNIQUE constraints creation. In order to achieve column values uniqueness UNIQUE indexes should be used.
