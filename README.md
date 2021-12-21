@@ -119,9 +119,11 @@ client = Table(
     spanner_interleave_in="team",
     spanner_interleave_on_delete_cascade=True,
 )
+client.add_is_dependent_on(team)
 
 client.create(engine)
 ```
+**Note**: interleaved tables has a dependency between them, which means they must be created in the particular order. If you're creating all the tables at once, use `add_is_dependent_on()` method to set the correct creation order.
 
 ### Unique constraints  
 Cloud Spanner doesn't support direct UNIQUE constraints creation. In order to achieve column values uniqueness UNIQUE indexes should be used.
