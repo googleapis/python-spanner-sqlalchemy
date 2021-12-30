@@ -58,6 +58,8 @@ metadata.create_all(engine)
 
 ### Insert a row
 ```python
+import uuid
+
 from sqlalchemy import (
     MetaData,
     Table,
@@ -68,9 +70,10 @@ engine = create_engine(
     "spanner:///projects/project-id/instances/instance-id/databases/database-id"
 )
 user = Table("users", MetaData(bind=engine), autoload=True)
+user_id = uuid.uuid4().hex[:6].lower()
 
 with engine.begin() as connection:
-    connection.execute(user.insert(), {"user_id": 1, "user_name": "Full Name"})
+    connection.execute(user.insert(), {"user_id": user_id, "user_name": "Full Name"})
 ```
 
 ### Read
@@ -119,9 +122,11 @@ client = Table(
     spanner_interleave_in="team",
     spanner_interleave_on_delete_cascade=True,
 )
+client.add_is_dependent_on(team)
 
 client.create(engine)
 ```
+**Note**: Interleaved tables have a dependency between them, so the parent table must be created before the child table. When creating tables with this feature, make sure to call `add_is_dependent_on()` on the child table to request SQLAlchemy to create the parent table before the child table.
 
 ### Unique constraints  
 Cloud Spanner doesn't support direct UNIQUE constraints creation. In order to achieve column values uniqueness UNIQUE indexes should be used.
@@ -153,6 +158,20 @@ from sqlalchemy import create_engine
 
 eng = create_engine("spanner:///projects/project-id/instances/instance-id/databases/database-id")
 autocommit_engine = eng.execution_options(isolation_level="AUTOCOMMIT")
+```
+
+### Autoincremented IDs  
+Cloud Spanner doesn't support autoincremented IDs mechanism due to performance reasons ([see for more details](https://cloud.google.com/spanner/docs/schema-design#primary-key-prevent-hotspots)). We recommend that you use the Python [uuid](https://docs.python.org/3/library/uuid.html) module to generate primary key fields to avoid creating monotonically increasing keys.
+
+Though it's not encouraged to do so, in case you *need* the feature, you can simulate it manually as follows:
+```python
+with engine.begin() as connection:
+    top_id = connection.execute(
+        select([user.c.user_id]).order_by(user.c.user_id.desc()).limit(1)
+    ).fetchone()
+    next_id = top_id[0] + 1 if top_id else 1
+
+    connection.execute(user.insert(), {"user_id": next_id})
 ```
 
 ### Query hints  
