@@ -1578,7 +1578,7 @@ class UserAgentTest(SpannerSpecificTestBase):
             )
 
 
-class ExecutionOptionsTest(fixtures.TestBase):
+class ExecutionOptionsTest(fixtures.TestBase, unittest.TestCase):
     """
     Check that `execution_options()` method correctly
     sets parameters on the underlying DB API connection.
