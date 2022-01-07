@@ -21,7 +21,6 @@ import os
 import pkg_resources
 import pytest
 import random
-import unittest
 from unittest import mock
 
 import sqlalchemy
@@ -1579,25 +1578,24 @@ class UserAgentTest(SpannerSpecificTestBase):
             )
 
 
-class ExecutionOptionsTest(fixtures.TestBase, unittest.TestCase):
+class ExecutionOptionsTest(fixtures.TestBase):
     """
     Check that `execution_options()` method correctly
     sets parameters on the underlying DB API connection.
     """
 
-    @classmethod
-    def setUpClass(cls):
-        cls._engine = create_engine(get_db_url(), pool_size=1)
-        cls._metadata = MetaData(bind=cls._engine)
+    def setUp(self):
+        self._engine = create_engine(get_db_url(), pool_size=1)
+        self._metadata = MetaData(bind=self._engine)
 
-        cls._table = Table(
+        self._table = Table(
             "execution_options",
-            cls._metadata,
+            self._metadata,
             Column("opt_id", Integer, primary_key=True),
             Column("opt_name", String(16), nullable=False),
         )
 
-        cls._metadata.create_all(cls._engine)
+        self._metadata.create_all(self._engine)
 
     def test_read_only(self):
         with self._engine.connect().execution_options(read_only=True) as connection:
@@ -1614,10 +1612,7 @@ class ExecutionOptionsTest(fixtures.TestBase, unittest.TestCase):
             }
 
         with self._engine.connect() as connection:
-            assert connection.connection.staleness is None
-
-        with self._engine.connect() as connection:
-            del connection.staleness
+            assert connection.connection.staleness == {}
 
 
 class LimitOffsetTest(fixtures.TestBase):
