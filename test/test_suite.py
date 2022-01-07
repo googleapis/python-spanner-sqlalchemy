@@ -1614,7 +1614,7 @@ class ExecutionOptionsStalenessTest(fixtures.TestBase):
         self._metadata = MetaData(bind=self._engine)
 
         self._table = Table(
-            "execution_options",
+            "execution_options2",
             self._metadata,
             Column("opt_id", Integer, primary_key=True),
             Column("opt_name", String(16), nullable=False),
