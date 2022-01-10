@@ -21,7 +21,6 @@ import os
 import pkg_resources
 import pytest
 import random
-import unittest
 from unittest import mock
 
 import sqlalchemy
