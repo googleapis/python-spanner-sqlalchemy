@@ -1579,14 +1579,13 @@ class UserAgentTest(SpannerSpecificTestBase):
             )
 
 
-class ExecutionOptionsTest(fixtures.TestBase, unittest.TestCase):
+class ExecutionOptionsReadOnlyTest(fixtures.TestBase):
     """
     Check that `execution_options()` method correctly
     sets parameters on the underlying DB API connection.
     """
 
-    @classmethod
-    def setUpClass(cls):
+    def setUp(cls):
         cls._engine = create_engine(get_db_url(), pool_size=1)
         cls._metadata = MetaData(bind=cls._engine)
 
@@ -1604,6 +1603,29 @@ class ExecutionOptionsTest(fixtures.TestBase, unittest.TestCase):
             connection.execute(select(["*"], from_obj=self._table)).fetchall()
             assert connection.connection.read_only is True
 
+        with self._engine.connect() as connection:
+            assert connection.connection.read_only is False
+
+
+class ExecutionOptionsStalenessTest(fixtures.TestBase):
+    """
+    Check that `execution_options()` method correctly
+    sets parameters on the underlying DB API connection.
+    """
+
+    def setUp(cls):
+        cls._engine = create_engine(get_db_url(), pool_size=1)
+        cls._metadata = MetaData(bind=cls._engine)
+
+        cls._table = Table(
+            "execution_options",
+            cls._metadata,
+            Column("opt_id", Integer, primary_key=True),
+            Column("opt_name", String(16), nullable=False),
+        )
+
+        cls._metadata.create_all(cls._engine)
+
     def test_staleness(self):
         with self._engine.connect().execution_options(
             read_only=True, staleness={"exact_staleness": datetime.timedelta(seconds=5)}
@@ -1614,10 +1636,11 @@ class ExecutionOptionsTest(fixtures.TestBase, unittest.TestCase):
             }
 
         with self._engine.connect() as connection:
-            assert connection.connection.staleness is None
+            assert connection.connection.staleness == {}
 
-        with self._engine.connect() as connection:
-            del connection.staleness
+        engine = create_engine("sqlite:///database")
+        with engine.connect() as connection:
+            pass
 
 
 class LimitOffsetTest(fixtures.TestBase):
