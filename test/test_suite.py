@@ -1639,16 +1639,16 @@ class ExecutionOptionsStalenessTest(fixtures.TestBase):
 
     def setUp(self):
         self._engine = create_engine(get_db_url(), pool_size=1)
-        metadata = MetaData(bind=self._engine)
+        self._metadata = MetaData(bind=self._engine)
 
         self._table = Table(
-            "options_tab",
-            metadata,
-            Column("opt_id", Integer, primary_key=True),
-            Column("opt_name", String(16), nullable=False),
+            "users",
+            self._metadata,
+            Column("user_id", Integer, primary_key=True),
+            Column("user_name", String(16), nullable=False),
         )
 
-        metadata.create_all(self._engine)
+        self._metadata.create_all(self._engine)
 
     def test_staleness(self):
         with self._engine.connect().execution_options(
