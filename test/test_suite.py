@@ -1606,41 +1606,6 @@ class ExecutionOptionsReadOnlyTest(fixtures.TestBase):
             assert connection.connection.read_only is False
 
 
-class ExecutionOptionsStalenessTest(fixtures.TestBase):
-    """
-    Check that `execution_options()` method correctly
-    sets parameters on the underlying DB API connection.
-    """
-
-    def setUp(self):
-        self._engine = create_engine(get_db_url(), pool_size=1)
-        metadata = MetaData(bind=self._engine)
-
-        self._table = Table(
-            "execution_options_tab",
-            metadata,
-            Column("opt_id", Integer, primary_key=True),
-        )
-
-        metadata.create_all(self._engine)
-
-    def test_staleness(self):
-        with self._engine.connect().execution_options(
-            read_only=True, staleness={"exact_staleness": datetime.timedelta(seconds=5)}
-        ) as connection:
-            connection.execute(select(["*"], from_obj=self._table)).fetchall()
-            assert connection.connection.staleness == {
-                "exact_staleness": datetime.timedelta(seconds=5)
-            }
-
-        with self._engine.connect() as connection:
-            assert connection.connection.staleness == {}
-
-        engine = create_engine("sqlite:///database")
-        with engine.connect() as connection:
-            pass
-
-
 class LimitOffsetTest(fixtures.TestBase):
     """
     Check that SQL with an offset and no limit is being generated correctly.
@@ -1664,6 +1629,42 @@ class LimitOffsetTest(fixtures.TestBase):
 
             with self._engine.connect().execution_options(read_only=True) as connection:
                 list(connection.execute(self._table.select().offset(offset)).fetchall())
+
+
+class ExecutionOptionsStalenessTest(fixtures.TestBase):
+    """
+    Check that `execution_options()` method correctly
+    sets parameters on the underlying DB API connection.
+    """
+
+    def setUp(self):
+        self._engine = create_engine(get_db_url(), pool_size=1)
+        metadata = MetaData(bind=self._engine)
+
+        self._table = Table(
+            "options_tab",
+            metadata,
+            Column("opt_id", Integer, primary_key=True),
+            Column("opt_name", String(16), nullable=False),
+        )
+
+        metadata.create_all(self._engine)
+
+    def test_staleness(self):
+        with self._engine.connect().execution_options(
+            read_only=True, staleness={"exact_staleness": datetime.timedelta(seconds=5)}
+        ) as connection:
+            connection.execute(select(["*"], from_obj=self._table)).fetchall()
+            assert connection.connection.staleness == {
+                "exact_staleness": datetime.timedelta(seconds=5)
+            }
+
+        with self._engine.connect() as connection:
+            assert connection.connection.staleness == {}
+
+        engine = create_engine("sqlite:///database")
+        with engine.connect() as connection:
+            pass
 
 
 class TemporaryTableTest(fixtures.TestBase):
