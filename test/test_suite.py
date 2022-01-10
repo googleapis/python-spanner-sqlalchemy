@@ -1584,18 +1584,18 @@ class ExecutionOptionsReadOnlyTest(fixtures.TestBase):
     sets parameters on the underlying DB API connection.
     """
 
-    def setUp(cls):
-        cls._engine = create_engine(get_db_url(), pool_size=1)
-        metadata = MetaData(bind=cls._engine)
+    def setUp(self):
+        self._engine = create_engine(get_db_url(), pool_size=1)
+        metadata = MetaData(bind=self._engine)
 
-        cls._table = Table(
+        self._table = Table(
             "execution_options",
             metadata,
             Column("opt_id", Integer, primary_key=True),
             Column("opt_name", String(16), nullable=False),
         )
 
-        metadata.create_all(cls._engine)
+        metadata.create_all(self._engine)
 
     def test_read_only(self):
         with self._engine.connect().execution_options(read_only=True) as connection:
@@ -1612,18 +1612,17 @@ class ExecutionOptionsStalenessTest(fixtures.TestBase):
     sets parameters on the underlying DB API connection.
     """
 
-    def setUp(cls):
-        cls._engine = create_engine(get_db_url(), pool_size=1)
-        metadata = MetaData(bind=cls._engine)
+    def setUp(self):
+        self._engine = create_engine(get_db_url(), pool_size=1)
+        metadata = MetaData(bind=self._engine)
 
-        cls._table = Table(
+        self._table = Table(
             "execution_options_tab",
             metadata,
             Column("opt_id", Integer, primary_key=True),
-            Column("opt_name", String(16), nullable=False),
         )
 
-        metadata.create_all(cls._engine)
+        metadata.create_all(self._engine)
 
     def test_staleness(self):
         with self._engine.connect().execution_options(
