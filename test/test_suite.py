@@ -1586,16 +1586,16 @@ class ExecutionOptionsReadOnlyTest(fixtures.TestBase):
 
     def setUp(cls):
         cls._engine = create_engine(get_db_url(), pool_size=1)
-        cls._metadata = MetaData(bind=cls._engine)
+        metadata = MetaData(bind=cls._engine)
 
         cls._table = Table(
             "execution_options",
-            cls._metadata,
+            metadata,
             Column("opt_id", Integer, primary_key=True),
             Column("opt_name", String(16), nullable=False),
         )
 
-        cls._metadata.create_all(cls._engine)
+        metadata.create_all(cls._engine)
 
     def test_read_only(self):
         with self._engine.connect().execution_options(read_only=True) as connection:
@@ -1614,16 +1614,16 @@ class ExecutionOptionsStalenessTest(fixtures.TestBase):
 
     def setUp(cls):
         cls._engine = create_engine(get_db_url(), pool_size=1)
-        cls._metadata = MetaData(bind=cls._engine)
+        metadata = MetaData(bind=cls._engine)
 
         cls._table = Table(
-            "execution_options",
-            cls._metadata,
+            "execution_options2",
+            metadata,
             Column("opt_id", Integer, primary_key=True),
             Column("opt_name", String(16), nullable=False),
         )
 
-        cls._metadata.create_all(cls._engine)
+        metadata.create_all(cls._engine)
 
     def test_staleness(self):
         with self._engine.connect().execution_options(
