@@ -1649,14 +1649,17 @@ class ExecutionOptionsStalenessTest(fixtures.TestBase):
         )
 
         metadata.create_all(self._engine)
+        import time
+
+        time.sleep(1)
 
     def test_staleness(self):
         with self._engine.connect().execution_options(
-            read_only=True, staleness={"exact_staleness": datetime.timedelta(seconds=5)}
+            read_only=True, staleness={"exact_staleness": datetime.timedelta(seconds=1)}
         ) as connection:
             connection.execute(select(["*"], from_obj=self._table)).fetchall()
             assert connection.connection.staleness == {
-                "exact_staleness": datetime.timedelta(seconds=5)
+                "exact_staleness": datetime.timedelta(seconds=1)
             }
 
         with self._engine.connect() as connection:
