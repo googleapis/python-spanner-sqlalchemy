@@ -1,5 +1,20 @@
 # Changelog
 
+### [1.0.1](https://www.github.com/googleapis/python-spanner-sqlalchemy/compare/v1.0.0...v1.0.1) (2022-01-10)
+
+
+### Bug Fixes
+
+* bump up google-cloud-spanner required version ([#171](https://www.github.com/googleapis/python-spanner-sqlalchemy/issues/171)) ([33c86e8](https://www.github.com/googleapis/python-spanner-sqlalchemy/commit/33c86e8fdeac4fd65569c438e8613dcb86e15edc))
+* connection reset fails when an additional dialect is used ([#188](https://www.github.com/googleapis/python-spanner-sqlalchemy/issues/188)) ([417b8b8](https://www.github.com/googleapis/python-spanner-sqlalchemy/commit/417b8b81911417ee3a1f826c37a9e490641944ac))
+* NOT NULL computed column creation failure ([#173](https://www.github.com/googleapis/python-spanner-sqlalchemy/issues/173)) ([e336735](https://www.github.com/googleapis/python-spanner-sqlalchemy/commit/e3367354d3b24328d7162fd2ccc778f23c630cd2))
+
+
+### Documentation
+
+* add a README section for the autoincremented ids ([#180](https://www.github.com/googleapis/python-spanner-sqlalchemy/issues/180)) ([4c610ea](https://www.github.com/googleapis/python-spanner-sqlalchemy/commit/4c610eaecd32679f23cae2f70d299d3c3d33d024))
+* explicitly recommend uuid to generate PKs ([#182](https://www.github.com/googleapis/python-spanner-sqlalchemy/issues/182)) ([b10f2ca](https://www.github.com/googleapis/python-spanner-sqlalchemy/commit/b10f2cae0eb13eb5496d08cbeae77a626b4ad6f1)), closes [#181](https://www.github.com/googleapis/python-spanner-sqlalchemy/issues/181)
+
 ## [1.0.0](https://www.github.com/googleapis/python-spanner-sqlalchemy/compare/v0.1.0...v1.0.0) (2021-12-08)
 
 
