@@ -21,6 +21,7 @@ import os
 import pkg_resources
 import pytest
 import random
+import time
 from unittest import mock
 
 import sqlalchemy
@@ -1649,8 +1650,6 @@ class ExecutionOptionsStalenessTest(fixtures.TestBase):
         )
 
         metadata.create_all(self._engine)
-        import time
-
         time.sleep(1)
 
     def test_staleness(self):
