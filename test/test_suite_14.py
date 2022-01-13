@@ -363,8 +363,6 @@ class ComponentReflectionTest(_ComponentReflectionTest):
 
         if testing.requires.view_column_reflection.enabled:
             cls.define_views(metadata, schema)
-        if not schema and testing.requires.temp_table_reflection.enabled:
-            cls.define_temp_tables(metadata)
 
     @testing.combinations((False,), argnames="use_schema")
     @testing.requires.foreign_key_constraint_reflection
