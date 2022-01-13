@@ -132,7 +132,6 @@ def compliance_test_13(session):
         "pytest", "pytest-cov", "pytest-asyncio",
     )
 
-    session.install("pytest")
     session.install("mock")
     session.install("-e", ".[tracing]")
     session.run("python", "create_test_database.py")
@@ -168,10 +167,11 @@ def compliance_test_14(session):
         "pytest", "pytest-cov", "pytest-asyncio",
     )
 
-    session.install("pytest")
     session.install("mock")
     session.install("-e", ".[tracing]")
     session.run("python", "create_test_database.py")
+
+    session.install("sqlalchemy>=1.4")
 
     session.run(
         "py.test",
