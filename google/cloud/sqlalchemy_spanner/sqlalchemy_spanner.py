@@ -512,6 +512,7 @@ class SpannerDialect(DefaultDialect):
     supports_native_enum = True
     supports_native_boolean = True
     supports_native_decimal = True
+    supports_statement_cache = True
 
     ddl_compiler = SpannerDDLCompiler
     preparer = SpannerIdentifierPreparer
