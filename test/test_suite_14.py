@@ -1904,16 +1904,6 @@ class ComputedReflectionFixtureTest(_ComputedReflectionFixtureTest):
             Column("computed_no_flag", Integer, Computed("normal + 42")),
         )
 
-        if testing.requires.schemas.enabled:
-            t2 = Table(
-                "computed_column_table",
-                metadata,
-                Column("id", Integer, primary_key=True),
-                Column("normal", Integer),
-                Column("computed_no_flag", Integer, Computed("normal / 42")),
-                schema=config.test_schema,
-            )
-
         if testing.requires.computed_columns_virtual.enabled:
             t.append_column(
                 Column(
@@ -1922,28 +1912,12 @@ class ComputedReflectionFixtureTest(_ComputedReflectionFixtureTest):
                     Computed("normal + 2", persisted=False),
                 )
             )
-            if testing.requires.schemas.enabled:
-                t2.append_column(
-                    Column(
-                        "computed_virtual",
-                        Integer,
-                        Computed("normal / 2", persisted=False),
-                    )
-                )
         if testing.requires.computed_columns_stored.enabled:
             t.append_column(
                 Column(
                     "computed_stored", Integer, Computed("normal - 42", persisted=True),
                 )
             )
-            if testing.requires.schemas.enabled:
-                t2.append_column(
-                    Column(
-                        "computed_stored",
-                        Integer,
-                        Computed("normal * 42", persisted=True),
-                    )
-                )
 
 
 class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureTest):
