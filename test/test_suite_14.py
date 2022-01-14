@@ -20,6 +20,7 @@ import operator
 import os
 import pkg_resources
 import pytest
+import random
 from unittest import mock
 
 import sqlalchemy
@@ -29,6 +30,7 @@ from sqlalchemy import testing
 from sqlalchemy import ForeignKey
 from sqlalchemy import MetaData
 from sqlalchemy.schema import DDL
+from sqlalchemy.schema import Computed
 from sqlalchemy.testing import config
 from sqlalchemy.testing import engines
 from sqlalchemy.testing import eq_
@@ -53,6 +55,10 @@ from sqlalchemy.types import Integer
 from sqlalchemy.types import Numeric
 from sqlalchemy.types import Text
 from sqlalchemy.testing import requires
+from sqlalchemy.testing import is_true
+from sqlalchemy.testing.fixtures import (
+    ComputedReflectionFixtureTest as _ComputedReflectionFixtureTest,
+)
 
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
@@ -98,6 +104,7 @@ from sqlalchemy.testing.suite.test_reflection import (
     QuotedNameArgumentTest as _QuotedNameArgumentTest,
     ComponentReflectionTest as _ComponentReflectionTest,
     CompositeKeyReflectionTest as _CompositeKeyReflectionTest,
+    ComputedReflectionTest as _ComputedReflectionTest,
     HasIndexTest as _HasIndexTest,
     HasTableTest as _HasTableTest,
 )
@@ -111,6 +118,7 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     DateTimeMicrosecondsTest as _DateTimeMicrosecondsTest,
     DateTimeTest as _DateTimeTest,
     IntegerTest as _IntegerTest,
+    JSONTest as _JSONTest,
     _LiteralRoundTripFixture,
     NumericTest as _NumericTest,
     StringTest as _StringTest,
@@ -122,6 +130,7 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     UnicodeTextTest as _UnicodeTextTest,
     _UnicodeFixture as __UnicodeFixture,
 )
+from test._helpers import get_db_url
 
 config.test_schema = ""
 
@@ -1869,3 +1878,247 @@ class PostCompileParamsTest(_PostCompileParamsTest):
                 () if config.db.dialect.positional else {},
             )
         )
+
+
+class ComputedReflectionFixtureTest(_ComputedReflectionFixtureTest):
+    @classmethod
+    def define_tables(cls, metadata):
+        """SPANNER OVERRIDE:
+
+        Avoid using default values for computed columns.
+        """
+        Table(
+            "computed_default_table",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("normal", Integer),
+            Column("computed_col", Integer, Computed("normal + 42")),
+            Column("with_default", Integer),
+        )
+
+        t = Table(
+            "computed_column_table",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("normal", Integer),
+            Column("computed_no_flag", Integer, Computed("normal + 42")),
+        )
+
+        if testing.requires.schemas.enabled:
+            t2 = Table(
+                "computed_column_table",
+                metadata,
+                Column("id", Integer, primary_key=True),
+                Column("normal", Integer),
+                Column("computed_no_flag", Integer, Computed("normal / 42")),
+                schema=config.test_schema,
+            )
+
+        if testing.requires.computed_columns_virtual.enabled:
+            t.append_column(
+                Column(
+                    "computed_virtual",
+                    Integer,
+                    Computed("normal + 2", persisted=False),
+                )
+            )
+            if testing.requires.schemas.enabled:
+                t2.append_column(
+                    Column(
+                        "computed_virtual",
+                        Integer,
+                        Computed("normal / 2", persisted=False),
+                    )
+                )
+        if testing.requires.computed_columns_stored.enabled:
+            t.append_column(
+                Column(
+                    "computed_stored", Integer, Computed("normal - 42", persisted=True),
+                )
+            )
+            if testing.requires.schemas.enabled:
+                t2.append_column(
+                    Column(
+                        "computed_stored",
+                        Integer,
+                        Computed("normal * 42", persisted=True),
+                    )
+                )
+
+
+class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureTest):
+    @pytest.mark.skip("Default values are not supported.")
+    def test_computed_col_default_not_set(self):
+        pass
+
+    def test_get_column_returns_computed(self):
+        """
+        SPANNER OVERRIDE:
+
+        In Spanner all the generated columns are STORED,
+        meaning there are no persisted and not persisted
+        (in the terms of the SQLAlchemy) columns. The
+        method override omits the persistence reflection checks.
+        """
+        insp = inspect(config.db)
+
+        cols = insp.get_columns("computed_default_table")
+        data = {c["name"]: c for c in cols}
+        for key in ("id", "normal", "with_default"):
+            is_true("computed" not in data[key])
+        compData = data["computed_col"]
+        is_true("computed" in compData)
+        is_true("sqltext" in compData["computed"])
+        eq_(self.normalize(compData["computed"]["sqltext"]), "normal+42")
+
+    def test_create_not_null_computed_column(self):
+        """
+        SPANNER TEST:
+
+        Check that on creating a computed column with a NOT NULL
+        clause the clause is set in front of the computed column
+        statement definition and doesn't cause failures.
+        """
+        engine = create_engine(get_db_url())
+        metadata = MetaData(bind=engine)
+
+        Table(
+            "Singers",
+            metadata,
+            Column("SingerId", String(36), primary_key=True, nullable=False),
+            Column("FirstName", String(200)),
+            Column("LastName", String(200), nullable=False),
+            Column(
+                "FullName",
+                String(400),
+                Computed("COALESCE(FirstName || ' ', '') || LastName"),
+                nullable=False,
+            ),
+        )
+
+        metadata.create_all(engine)
+
+
+@pytest.mark.skipif(
+    bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+)
+class JSONTest(_JSONTest):
+    @pytest.mark.skip("Values without keys are not supported.")
+    def test_single_element_round_trip(self, element):
+        pass
+
+    def _test_round_trip(self, data_element):
+        data_table = self.tables.data_table
+
+        config.db.execute(
+            data_table.insert(),
+            {"id": random.randint(1, 100000000), "name": "row1", "data": data_element},
+        )
+
+        row = config.db.execute(select([data_table.c.data])).first()
+
+        eq_(row, (data_element,))
+
+    def test_unicode_round_trip(self):
+        # note we include Unicode supplementary characters as well
+        with config.db.connect() as conn:
+            conn.execute(
+                self.tables.data_table.insert(),
+                {
+                    "id": random.randint(1, 100000000),
+                    "name": "r1",
+                    "data": {
+                        util.u("réve🐍 illé"): util.u("réve🐍 illé"),
+                        "data": {"k1": util.u("drôl🐍e")},
+                    },
+                },
+            )
+
+            eq_(
+                conn.scalar(select([self.tables.data_table.c.data])),
+                {
+                    util.u("réve🐍 illé"): util.u("réve🐍 illé"),
+                    "data": {"k1": util.u("drôl🐍e")},
+                },
+            )
+
+    @pytest.mark.skip("Parameterized types are not supported.")
+    def test_eval_none_flag_orm(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner JSON_VALUE() always returns STRING,"
+        "thus, this test case can't be executed."
+    )
+    def test_index_typed_comparison(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner JSON_VALUE() always returns STRING,"
+        "thus, this test case can't be executed."
+    )
+    def test_path_typed_comparison(self):
+        pass
+
+    @pytest.mark.skip("Custom JSON de-/serializers are not supported.")
+    def test_round_trip_custom_json(self):
+        pass
+
+    def _index_fixtures(fn):
+        fn = testing.combinations(
+            ("boolean", True),
+            ("boolean", False),
+            ("boolean", None),
+            ("string", "some string"),
+            ("string", None),
+            ("integer", 15),
+            ("integer", 1),
+            ("integer", 0),
+            ("integer", None),
+            ("float", 28.5),
+            ("float", None),
+            id_="sa",
+        )(fn)
+        return fn
+
+    @_index_fixtures
+    def test_index_typed_access(self, datatype, value):
+        data_table = self.tables.data_table
+        data_element = {"key1": value}
+        with config.db.connect() as conn:
+            conn.execute(
+                data_table.insert(),
+                {
+                    "id": random.randint(1, 100000000),
+                    "name": "row1",
+                    "data": data_element,
+                    "nulldata": data_element,
+                },
+            )
+
+            expr = data_table.c.data["key1"]
+            expr = getattr(expr, "as_%s" % datatype)()
+
+            roundtrip = conn.scalar(select([expr]))
+            if roundtrip in ("true", "false", None):
+                roundtrip = str(roundtrip).capitalize()
+
+            eq_(str(roundtrip), str(value))
+
+    @pytest.mark.skip(
+        "Spanner doesn't support type casts inside JSON_VALUE() function."
+    )
+    def test_round_trip_json_null_as_json_null(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner doesn't support type casts inside JSON_VALUE() function."
+    )
+    def test_round_trip_none_as_json_null(self):
+        pass
+
+    @pytest.mark.skip(
+        "Spanner doesn't support type casts inside JSON_VALUE() function."
+    )
+    def test_round_trip_none_as_sql_null(self):
+        pass
