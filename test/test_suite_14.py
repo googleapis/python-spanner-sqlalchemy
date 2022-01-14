@@ -1941,7 +1941,7 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
             )
         if testing.requires.computed_columns_stored.enabled:
             self.check_column(
-                data, "computed_stored", "normal*42", True,
+                data, "computed_stored", "normal-42", True,
             )
 
     @pytest.mark.skip("Default values are not supported.")
