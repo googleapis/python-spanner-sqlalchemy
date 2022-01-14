@@ -144,6 +144,7 @@ def compliance_test_13(session):
         "--cov-config=.coveragerc",
         "--cov-report=",
         "--cov-fail-under=0",
+        "--asyncio-mode=auto",
         "test/test_suite_13.py",
     )
 
@@ -181,6 +182,7 @@ def compliance_test_14(session):
         "--cov-config=.coveragerc",
         "--cov-report=",
         "--cov-fail-under=0",
+        "--asyncio-mode=auto",
         "test/test_suite_14.py",
     )
 
