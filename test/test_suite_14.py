@@ -1922,6 +1922,28 @@ class ComputedReflectionFixtureTest(_ComputedReflectionFixtureTest):
 
 
 class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureTest):
+    @testing.requires.schemas
+    def test_get_column_returns_persisted_with_schema(self):
+        insp = inspect(config.db)
+
+        cols = insp.get_columns("computed_column_table", schema=config.test_schema)
+        data = {c["name"]: c for c in cols}
+
+        self.check_column(
+            data,
+            "computed_no_flag",
+            "normal+42",
+            testing.requires.computed_columns_default_persisted.enabled,
+        )
+        if testing.requires.computed_columns_virtual.enabled:
+            self.check_column(
+                data, "computed_virtual", "normal/2", False,
+            )
+        if testing.requires.computed_columns_stored.enabled:
+            self.check_column(
+                data, "computed_stored", "normal*42", True,
+            )
+
     @pytest.mark.skip("Default values are not supported.")
     def test_computed_col_default_not_set(self):
         pass
