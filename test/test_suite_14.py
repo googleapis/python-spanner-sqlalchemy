@@ -565,6 +565,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         table = Table(
             "testtbl",
             metadata,
+            Column("id", sqlalchemy.INT, primary_key=True),
             Column("a", String(20)),
             Column("b", String(30)),
             Column("c", Integer),
