@@ -945,6 +945,10 @@ class FetchLimitOffsetTest(_FetchLimitOffsetTest):
     def test_simple_limit_expr_offset(self, connection):
         pass
 
+    @pytest.mark.skip("Spanner doesn't support composite LIMIT and OFFSET clauses")
+    def test_bound_offset(self, connection):
+        pass
+
     def test_limit_render_multiple_times(self, connection):
         table = self.tables.some_table
         stmt = select(table.c.id).limit(1).scalar_subquery()
