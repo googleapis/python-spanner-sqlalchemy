@@ -218,7 +218,7 @@ def migration_test(session):
         "GOOGLE_CLOUD_PROJECT", os.getenv("PROJECT_ID", "emulator-test-project"),
     )
     db_url = (
-        f"spanner:///projects/{project}/instances/"
+        f"spanner+spanner:///projects/{project}/instances/"
         "sqlalchemy-dialect-test/databases/compliance-test"
     )
 
