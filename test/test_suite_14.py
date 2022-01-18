@@ -952,7 +952,7 @@ class FetchLimitOffsetTest(_FetchLimitOffsetTest):
         u = union(select(stmt), select(stmt)).subquery().select()
 
         self._assert_result(
-            connection, u, [(2,),],
+            connection, u, [(2,)],
         )
 
 
