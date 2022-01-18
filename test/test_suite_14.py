@@ -42,6 +42,7 @@ from sqlalchemy.testing.schema import Table
 from sqlalchemy import literal_column
 from sqlalchemy import select
 from sqlalchemy import util
+from sqlalchemy import union
 from sqlalchemy import event
 from sqlalchemy import exists
 from sqlalchemy import Boolean
@@ -944,6 +945,16 @@ class FetchLimitOffsetTest(_FetchLimitOffsetTest):
     def test_simple_limit_expr_offset(self, connection):
         pass
 
+    def test_limit_render_multiple_times(self, connection):
+        table = self.tables.some_table
+        stmt = select(table.c.id).limit(1).scalar_subquery()
+
+        u = union(select(stmt), select(stmt)).subquery().select()
+
+        self._assert_result(
+            connection, u, [(2,),],
+        )
+
 
 @pytest.mark.skip("Spanner doesn't support autoincrement")
 class IdentityAutoincrementTest(_IdentityAutoincrementTest):
@@ -1623,7 +1634,7 @@ class TestQueryHints(fixtures.TablesTest):
         EXPECTED_QUERY = (
             "SELECT users.id, users.name \nFROM users @{FORCE_INDEX=table_1_by_int_idx}"
             " JOIN addresses ON users.id = addresses.user_id "
-            "\nWHERE users.name IN ([POSTCOMPILE_name_1])"
+            "\nWHERE users.name IN (__[POSTCOMPILE_name_1])"
         )
 
         Base = declarative_base()
