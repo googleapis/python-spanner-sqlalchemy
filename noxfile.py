@@ -214,6 +214,14 @@ def migration_test(session):
 
     session.run("python", "create_test_database.py")
 
+    project = os.getenv(
+        "GOOGLE_CLOUD_PROJECT", os.getenv("PROJECT_ID", "emulator-test-project"),
+    )
+    db_url = (
+        f"spanner+spanner:///projects/{project}/instances/"
+        "sqlalchemy-dialect-test/databases/compliance-test"
+    )
+
     config = configparser.ConfigParser()
     if os.path.exists("test.cfg"):
         config.read("test.cfg")
