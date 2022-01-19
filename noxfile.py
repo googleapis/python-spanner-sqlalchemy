@@ -64,14 +64,13 @@ UPGRADE_CODE = """def upgrade():
     op.alter_column(
         'account',
         'name',
-        existing_type=sa.String(50),
-        nullable=True,
+        existing_type=sa.String(70),
     )"""
 
 
 BLACK_VERSION = "black==19.10b0"
 BLACK_PATHS = ["google", "test", "noxfile.py", "setup.py", "samples"]
-DEFAULT_PYTHON_VERSION = "3.8"
+DEFAULT_PYTHON_VERSION = "3.7"
 
 
 @nox.session(python=DEFAULT_PYTHON_VERSION)
