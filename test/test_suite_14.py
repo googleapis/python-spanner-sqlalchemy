@@ -848,6 +848,10 @@ class CTETest(_CTETest):
 
 
 class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest, DateTest):
+    @pytest.mark.skip("Spanner dates are time zone independent")
+    def test_select_direct(self):
+        pass
+
     def test_round_trip(self):
         """
         SPANNER OVERRIDE:
@@ -917,6 +921,10 @@ class DateTimeTest(_DateTimeTest, DateTimeMicrosecondsTest):
     )
     def test_null(self, connection):
         super().test_null(connection)
+
+    @pytest.mark.skip("Spanner dates are time zone independent")
+    def test_select_direct(self):
+        pass
 
 
 @pytest.mark.skip("Not supported by Spanner")
