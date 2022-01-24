@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -138,7 +138,7 @@ config.test_schema = ""
 
 class BooleanTest(_BooleanTest):
     @pytest.mark.skip(
-        "The original test case was splitted to: "
+        "The original test case was split into 2 parts: "
         "test_render_literal_bool_true and test_render_literal_bool_false"
     )
     def test_render_literal_bool(self):
