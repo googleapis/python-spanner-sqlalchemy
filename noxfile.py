@@ -133,6 +133,7 @@ def compliance_test_13(session):
 
     session.install("mock")
     session.install("-e", ".[tracing]")
+    session.run("pip", "install", "sqlalchemy>=1.1.13,<=1.3.23", "--force-reinstall")
     session.run("python", "create_test_database.py")
 
     session.run(
