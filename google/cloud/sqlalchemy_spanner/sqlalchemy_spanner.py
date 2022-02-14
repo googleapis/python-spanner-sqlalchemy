@@ -48,8 +48,12 @@ from google.cloud.sqlalchemy_spanner._opentelemetry_tracing import trace_call
 @listens_for(Pool, "reset")
 def reset_connection(dbapi_conn, connection_record):
     """An event of returning a connection back to a pool."""
+    dbapi_conn.connection.rollback()
     if getattr(dbapi_conn.connection, "staleness", None) is not None:
         dbapi_conn.connection.staleness = None
+
+    if getattr(dbapi_conn.connection, "read_only", None) is not None:
+        dbapi_conn.connection.read_only = False
 
 
 # register a method to get a single value of a JSON object
@@ -495,7 +499,7 @@ class SpannerDialect(DefaultDialect):
     Represents an API layer to control Cloud Spanner database with SQLAlchemy API.
     """
 
-    name = "spanner"
+    name = "spanner+spanner"
     driver = "spanner"
     positional = False
     paramstyle = "format"
@@ -512,6 +516,7 @@ class SpannerDialect(DefaultDialect):
     supports_native_enum = True
     supports_native_boolean = True
     supports_native_decimal = True
+    supports_statement_cache = True
 
     ddl_compiler = SpannerDDLCompiler
     preparer = SpannerIdentifierPreparer
