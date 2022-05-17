@@ -82,10 +82,15 @@ def lint(session):
     """
     session.install("flake8", BLACK_VERSION)
     session.run(
-        "black", "--check", *BLACK_PATHS,
+        "black",
+        "--check",
+        *BLACK_PATHS,
     )
     session.run(
-        "flake8", "google", "test", "--max-line-length=88",
+        "flake8",
+        "google",
+        "test",
+        "--max-line-length=88",
     )
 
 
@@ -101,7 +106,8 @@ def blacken(session):
     """
     session.install(BLACK_VERSION)
     session.run(
-        "black", *BLACK_PATHS,
+        "black",
+        *BLACK_PATHS,
     )
 
 
@@ -128,7 +134,9 @@ def compliance_test_13(session):
         )
 
     session.install(
-        "pytest", "pytest-cov", "pytest-asyncio",
+        "pytest",
+        "pytest-cov",
+        "pytest-asyncio",
     )
 
     session.install("mock")
@@ -165,7 +173,9 @@ def compliance_test_14(session):
         )
 
     session.install(
-        "pytest", "pytest-cov", "pytest-asyncio",
+        "pytest",
+        "pytest-cov",
+        "pytest-asyncio",
     )
 
     session.install("mock")
@@ -215,7 +225,8 @@ def migration_test(session):
     session.run("python", "create_test_database.py")
 
     project = os.getenv(
-        "GOOGLE_CLOUD_PROJECT", os.getenv("PROJECT_ID", "emulator-test-project"),
+        "GOOGLE_CLOUD_PROJECT",
+        os.getenv("PROJECT_ID", "emulator-test-project"),
     )
     db_url = (
         f"spanner+spanner:///projects/{project}/instances/"

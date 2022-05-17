@@ -96,7 +96,8 @@ if HAS_OPENTELEMETRY_INSTALLED:
 
             with pytest.raises(GoogleAPICallError):
                 with _opentelemetry_tracing.trace_call(
-                    "CloudSpannerSqlAlchemy.Test", extra_attributes,
+                    "CloudSpannerSqlAlchemy.Test",
+                    extra_attributes,
                 ) as span:
                     from google.api_core.exceptions import InvalidArgument
 
