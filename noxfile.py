@@ -68,7 +68,7 @@ UPGRADE_CODE = """def upgrade():
     )"""
 
 
-BLACK_VERSION = "black==19.10b0"
+BLACK_VERSION = "black==22.3.0"
 BLACK_PATHS = ["google", "test", "noxfile.py", "setup.py", "samples"]
 DEFAULT_PYTHON_VERSION = "3.8"
 
