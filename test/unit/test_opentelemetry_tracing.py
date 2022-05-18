@@ -32,7 +32,7 @@ def _make_rpc_error(error_cls, trailing_metadata=None):
 # Skip all of these tests if we don't have OpenTelemetry
 if HAS_OPENTELEMETRY_INSTALLED:
 
-    class NoTracingTest(OpenTelemetryBase):
+    class TestNoTracing(OpenTelemetryBase):
         def setup(self):
             self._temp_opentelemetry = sys.modules["opentelemetry"]
 
@@ -47,7 +47,7 @@ if HAS_OPENTELEMETRY_INSTALLED:
             with _opentelemetry_tracing.trace_call("Test") as no_span:
                 assert no_span is None
 
-    class TracingTest(OpenTelemetryBase):
+    class TestTracing(OpenTelemetryBase):
         def test_trace_call(self):
             extra_attributes = {
                 "attribute1": "value1",
