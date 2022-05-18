@@ -147,7 +147,7 @@ def compliance_test_13(session):
     session.run(
         "py.test",
         "--cov=google.cloud.sqlalchemy_spanner",
-        "--cov=tests",
+        "--cov=test",
         "--cov-append",
         "--cov-config=.coveragerc",
         "--cov-report=",
@@ -187,7 +187,7 @@ def compliance_test_14(session):
     session.run(
         "py.test",
         "--cov=google.cloud.sqlalchemy_spanner",
-        "--cov=tests",
+        "--cov=test",
         "--cov-append",
         "--cov-config=.coveragerc",
         "--cov-report=",
