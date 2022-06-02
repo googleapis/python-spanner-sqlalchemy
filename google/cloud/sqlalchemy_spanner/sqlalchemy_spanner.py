@@ -48,7 +48,7 @@ from google.cloud.sqlalchemy_spanner._opentelemetry_tracing import trace_call
 @listens_for(Pool, "reset")
 def reset_connection(dbapi_conn, connection_record):
     """An event of returning a connection back to a pool."""
-    if not dbapi_conn.connection.inside_transaction:
+    if dbapi_conn.connection.inside_transaction:
         dbapi_conn.connection.rollback()
 
     if getattr(dbapi_conn.connection, "staleness", None) is not None:
