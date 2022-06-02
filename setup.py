@@ -21,7 +21,7 @@ import setuptools
 name = "sqlalchemy-spanner"
 description = "SQLAlchemy dialect integrated into Cloud Spanner database"
 dependencies = [
-    "sqlalchemy>=1.1.13",
+    "sqlalchemy>=1.1.13, <=1.3.24",
     "google-cloud-spanner>=3.12.0",
     "alembic",
 ]
