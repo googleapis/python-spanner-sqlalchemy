@@ -257,7 +257,9 @@ def migration_test(session):
     with open(files[0], "r") as f:
         script_code = f.read()
 
-    script_code = script_code.replace("""def upgrade():\n    pass""", UPGRADE_CODE)
+    script_code = script_code.replace(
+        """def upgrade() -> None:\n    pass""", UPGRADE_CODE
+    )
     with open(files[0], "w") as f:
         f.write(script_code)
 
