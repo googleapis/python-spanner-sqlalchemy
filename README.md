@@ -30,6 +30,16 @@ During setup the dialect will be registered with entry points.
 
 ## A Minimal App
 
+### Database URL
+In order to connect to a database one have to use its URL on connection creation step. SQLAlchemy 1.3 and 1.4 versions have a bit of difference on this step in a dialect prefix part:
+```python
+# for SQLAlchemy 1.3:
+spanner:///projects/project-id/instances/instance-id/databases/database-id
+
+# for SQLAlchemy 1.4:
+spanner+spanner:///projects/project-id/instances/instance-id/databases/database-id
+```
+
 ### Create a table
 ```python
 from sqlalchemy import (
@@ -94,8 +104,20 @@ with engine.begin() as connection:
 
 SQLAlchemy uses [Alembic](https://alembic.sqlalchemy.org/en/latest/#) tool to organize database migrations.
 
+Spanner dialect doesn't provide a default migration environment, it's up to user to write it. One thing to be noted here - one should explicitly set `alembic_version` table not to use migration revision id as a primary key:
+```python
+with connectable.connect() as connection:
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        version_table_pk=False,  # don't use primary key in the versions table
+    )
+```
+As Spanner restricts changing a primary key value, not setting the flag to `False` can cause migration problems.
+
 **Warning!**  
 A migration script can produce a lot of DDL statements. If each of the statements are executed separately, performance issues can occur. To avoid these, it's highly recommended to use the [Alembic batch context](https://alembic.sqlalchemy.org/en/latest/batch.html) feature to pack DDL statements into groups of statements.
+
 
 ## Features and limitations
 
