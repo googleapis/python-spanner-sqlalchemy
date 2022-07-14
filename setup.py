@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import os
+import pkg_resources
 import setuptools
-from pkgutil import extend_path
 
 
 # Package metadata.
@@ -50,9 +50,7 @@ packages = [
 ]
 
 # Determine which namespaces are needed.
-__path__ = extend_path(__path__, "google")
-if "google.cloud" in packages:
-    __path__ = extend_path(__path__, "google.cloud")
+pkg_resources.declare_namespace("google")
 
 setuptools.setup(
     author="Google LLC",
