@@ -50,8 +50,7 @@ packages = [
 ]
 
 # Determine which namespaces are needed.
-pkg_resources.declare_namespace("google")
-pkg_resources.declare_namespace("google.cloud")
+pkg_resources.declare_namespace("google.cloud.sqlalchemy_spanner")
 
 setuptools.setup(
     author="Google LLC",
