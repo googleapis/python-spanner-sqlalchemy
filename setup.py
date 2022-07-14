@@ -51,6 +51,7 @@ packages = [
 
 # Determine which namespaces are needed.
 pkg_resources.declare_namespace("google")
+pkg_resources.declare_namespace("google.cloud")
 
 setuptools.setup(
     author="Google LLC",
