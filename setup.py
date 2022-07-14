@@ -51,7 +51,7 @@ packages = [
 # Determine which namespaces are needed.
 namespaces = ["google"]
 if "google.cloud" in packages:
-    namespaces.append("google.cloud"
+    namespaces.append("google.cloud")
 
 setuptools.setup(
     author="Google LLC",
