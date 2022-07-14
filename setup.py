@@ -49,7 +49,9 @@ packages = [
 ]
 
 # Determine which namespaces are needed.
-__import__("pkg_resources").declare_namespace(__name__)
+namespaces = ["google"]
+if "google.cloud" in packages:
+    namespaces.append("google.cloud"
 
 setuptools.setup(
     author="Google LLC",
@@ -64,6 +66,7 @@ setuptools.setup(
     install_requires=dependencies,
     extras_require=extras,
     name=name,
+    namespace_packages=namespaces,
     packages=packages,
     url="https://github.com/cloudspannerecosystem/python-spanner-sqlalchemy",
     version=version,
