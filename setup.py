@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import os
-import pkg_resources
 import setuptools
 
 
@@ -50,7 +49,7 @@ packages = [
 ]
 
 # Determine which namespaces are needed.
-pkg_resources.declare_namespace("google.cloud.sqlalchemy_spanner")
+__import__("pkg_resources").declare_namespace(__name__)
 
 setuptools.setup(
     author="Google LLC",
