@@ -42,7 +42,7 @@ with open(VERSION_FILENAME) as f:
 version = PACKAGE_INFO["__version__"]
 
 package_root = os.path.abspath(os.path.dirname(__file__))
-readme_filename = os.path.join(package_root, "README.rst")
+readme_filename = os.path.join(package_root, "README.me")
 with io.open(readme_filename, encoding="utf-8") as readme_file:
     readme = readme_file.read()
 
