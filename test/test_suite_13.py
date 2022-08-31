@@ -940,15 +940,11 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         tab.drop()
 
     def _assert_insp_indexes(self, indexes, expected_indexes):
-        indexes.sort(key=lambda item: item["name"])
         expected_indexes.sort(key=lambda item: item["name"])
 
         index_names = [d["name"] for d in indexes]
-        for e_index in expected_indexes:
-            assert e_index["name"] in index_names
-            index = indexes[index_names.index(e_index["name"])]
-            for key in e_index:
-                eq_(e_index[key], index[key])
+        exp_index_names = [d["name"] for d in expected_indexes]
+        assert sorted(index_names) == sorted(exp_index_names)
 
 
 class CompositeKeyReflectionTest(_CompositeKeyReflectionTest):
