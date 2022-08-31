@@ -939,6 +939,16 @@ class ComponentReflectionTest(_ComponentReflectionTest):
 
         tab.drop()
 
+    def _assert_insp_indexes(self, indexes, expected_indexes):
+        indexes.sort()
+        expected_indexes.sort()
+        index_names = [d["name"] for d in indexes]
+        for e_index in expected_indexes:
+            assert e_index["name"] in index_names
+            index = indexes[index_names.index(e_index["name"])]
+            for key in e_index:
+                eq_(e_index[key], index[key])
+
 
 class CompositeKeyReflectionTest(_CompositeKeyReflectionTest):
     @testing.requires.foreign_key_constraint_reflection
