@@ -940,10 +940,8 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         tab.drop()
 
     def _assert_insp_indexes(self, indexes, expected_indexes):
-        indexes.sort(indexes.items(), key=lambda item: item[1]["name"])
-        expected_indexes.sort(
-            expected_indexes.items(), key=lambda item: item[1]["name"]
-        )
+        indexes.sort(key=lambda item: item[1]["name"])
+        expected_indexes.sort(key=lambda item: item[1]["name"])
 
         index_names = [d["name"] for d in indexes]
         for e_index in expected_indexes:
