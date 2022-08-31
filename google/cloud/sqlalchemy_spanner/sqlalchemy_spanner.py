@@ -691,6 +691,7 @@ WHERE
     AND i.index_type != 'PRIMARY_KEY'
     AND i.spanner_is_managed = FALSE
 GROUP BY i.index_name, i.is_unique
+ORDER BY i.index_name
 """.format(
             table_name=table_name
         )
