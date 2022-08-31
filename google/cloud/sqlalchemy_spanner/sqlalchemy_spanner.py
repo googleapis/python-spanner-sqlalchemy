@@ -689,6 +689,7 @@ JOIN information_schema.index_columns AS ic
 WHERE
     i.table_name="{table_name}"
     AND i.index_type != 'PRIMARY_KEY'
+    AND i.spanner_is_managed = FALSE
 GROUP BY i.index_name, i.is_unique
 """.format(
             table_name=table_name
