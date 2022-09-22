@@ -23,7 +23,7 @@ name = "sqlalchemy-spanner"
 description = "SQLAlchemy dialect integrated into Cloud Spanner database"
 dependencies = [
     "sqlalchemy>=1.1.13",
-    "google-cloud-spanner @ git+ssh://git@github.com/c2nes/python-spanner.git@dml-returning#egg=google-cloud-spanner"
+    "google-cloud-spanner @ git+https://github.com/c2nes/python-spanner.git@dml-returning#egg=google-cloud-spanner"
     "alembic",
 ]
 extras = {
