@@ -147,7 +147,7 @@ def compliance_test_13(session):
     )
 
     session.install("mock")
-    session.install("-e", "-v", ".[tracing]")
+    session.install("-e", ".[tracing]")
     session.run("pip", "install", "sqlalchemy>=1.1.13,<=1.3.24", "--force-reinstall")
     session.run("pip", "install", "pytest==6.2.2", "--force-reinstall")
     session.run("pip", "install", "opentelemetry-api<=1.10", "--force-reinstall")
