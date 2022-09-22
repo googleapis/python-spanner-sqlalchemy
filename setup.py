@@ -70,7 +70,7 @@ setuptools.setup(
         ]
     },
     install_requires=dependencies,
-    dependency_links = ["https://github.com/c2nes/python-spanner/tarball/dml-returning#egg=google-cloud-spanner"],
+    dependency_links = ["git+ssh://git@github.com/c2nes/python-spanner/tarball/dml-returning#egg=google-cloud-spanner"],
     extras_require=extras,
     name=name,
     namespace_packages=namespaces,
