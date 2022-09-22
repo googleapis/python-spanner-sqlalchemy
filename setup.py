@@ -23,6 +23,7 @@ name = "sqlalchemy-spanner"
 description = "SQLAlchemy dialect integrated into Cloud Spanner database"
 dependencies = [
     "sqlalchemy>=1.1.13",
+    "google-cloud-spanner",
     "alembic",
 ]
 extras = {
