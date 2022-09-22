@@ -23,7 +23,6 @@ name = "sqlalchemy-spanner"
 description = "SQLAlchemy dialect integrated into Cloud Spanner database"
 dependencies = [
     "sqlalchemy>=1.1.13",
-    "https://github.com/c2nes/python-spanner/tarball/dml-returning#egg=google-cloud-spanner",
     "alembic",
 ]
 extras = {
@@ -71,6 +70,7 @@ setuptools.setup(
         ]
     },
     install_requires=dependencies,
+    dependency_links = ["https://github.com/c2nes/python-spanner/tarball/dml-returning#egg=google-cloud-spanner"],
     extras_require=extras,
     name=name,
     namespace_packages=namespaces,
