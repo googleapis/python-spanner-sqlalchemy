@@ -42,9 +42,9 @@ google-api-core[grpc]==2.10.1 \
     # via
     #   google-cloud-core
     #   google-cloud-spanner
-google-auth==2.11.1 \
-    --hash=sha256:516e6623038b81430dd062a1a25ecd24f173d7c15cdf4e48a9e78bc87e97aeec \
-    --hash=sha256:53bdc0c2b4e25895575779caef4cfb3a6bdff1b7b32dc38a654d71aba35bb5f8
+google-auth==2.13.0 \
+    --hash=sha256:9352dd6394093169157e6971526bab9a2799244d68a94a4a609f0dd751ef6f5e \
+    --hash=sha256:99510e664155f1a3c0396a076b5deb6367c52ea04d280152c85ac7f51f50eb42
     # via
     #   google-api-core
     #   google-cloud-core
@@ -52,9 +52,9 @@ google-cloud-core==2.3.2 \
     --hash=sha256:8417acf6466be2fa85123441696c4badda48db314c607cf1e5d543fa8bdc22fe \
     --hash=sha256:b9529ee7047fd8d4bf4a2182de619154240df17fbe60ead399078c1ae152af9a
     # via google-cloud-spanner
-google-cloud-spanner==3.22.0 \
-    --hash=sha256:2a57d163521503b6cd41ae558a29ecea2d5e707dfaf6fe9c5530926194b0992f \
-    --hash=sha256:dc464c53217d49ef830f710ad3fb2b60e0d1268f0e42402be518a54db3131c8a
+google-cloud-spanner==3.22.1 \
+    --hash=sha256:87c950d18f8dcb49892ac24c28ea86d97c6ee2993e583383aee026f50323cbfe \
+    --hash=sha256:9499f5c7bec2d68898159a93450182a29ff50d0f0eb2ba911f8d9b9f127b5e2a
     # via -r requirements.in
 googleapis-common-protos[grpc]==1.56.4 \
     --hash=sha256:8eb2cbc91b69feaf23e32452a7ae60e791e09967d81d4fcc7fc388182d1bd394 \
@@ -182,9 +182,9 @@ idna==3.4 \
     --hash=sha256:814f528e8dead7d329833b91c5faa87d60bf71824cd12a7530b5526063d02cb4 \
     --hash=sha256:90b77e79eaa3eba6de819a0c442c0b4ceefc341a7a2ab77d7562bf49f425c5c2
     # via requests
-importlib-metadata==4.12.0 \
-    --hash=sha256:637245b8bab2b6502fcbc752cc4b7a6f6243bb02b31c5c26156ad103d3d45670 \
-    --hash=sha256:7401a975809ea1fdc658c3aa4f78cc2195a0e019c5cbc4c06122884e9ae80c23
+importlib-metadata==5.0.0 \
+    --hash=sha256:da31db32b304314d044d3c12c79bd59e307889b287ad12ff387b3500835fc2ab \
+    --hash=sha256:ddb0e35065e8938f867ed4928d0ae5bf2a53b7773871bfe6bcc7e4fcdc7dea43
     # via alembic
 importlib-resources==5.9.0 \
     --hash=sha256:5481e97fb45af8dcf2f798952625591c58fe599d0735d86b10f54de086a61681 \
