@@ -160,9 +160,9 @@ gcp-releasetool==1.8.8 \
     --hash=sha256:0e235a63b290e94554eac9906283275859816e8201bacb06c88870608f91515c \
     --hash=sha256:2e6ea4407a64bb4903b037a9fc63e01d09225a88be1097439535f5eda21aeea9
     # via -r requirements.in
-google-api-core==2.10.1 \
-    --hash=sha256:92d17123cfe399b5ef7e026c63babf978d8475e1ac877919eb7933e25dea2273 \
-    --hash=sha256:e16c15a11789bc5a3457afb2818a3540a03f341e6e710d7f9bbf6cde2ef4a7c8
+google-api-core==2.10.2 \
+    --hash=sha256:10c06f7739fe57781f87523375e8e1a3a4674bf6392cd6131a3222182b971320 \
+    --hash=sha256:34f24bd1d5f72a8c4519773d99ca6bf080a6c4e041b4e9f024fe230191dda62e
     # via
     #   google-cloud-core
     #   google-cloud-storage
@@ -467,9 +467,9 @@ twine==4.0.1 \
     --hash=sha256:42026c18e394eac3e06693ee52010baa5313e4811d5a11050e7d48436cf41b9e \
     --hash=sha256:96b1cf12f7ae611a4a40b6ae8e9570215daff0611828f5fe1f37a16255ab24a0
     # via -r requirements.in
-typing-extensions==4.3.0 \
-    --hash=sha256:25642c956049920a5aa49edcdd6ab1e06d7e5d467fc00e0506c44ac86fbfca02 \
-    --hash=sha256:e6d2677a32f47fc7eb2795db1dd15c1f34eff616bcaf2cfb5e997f854fa1c4a6
+typing-extensions==4.4.0 \
+    --hash=sha256:1511434bb92bf8dd198c12b1cc812e800d4181cfcb867674e0f8279cc93087aa \
+    --hash=sha256:16fa4864408f655d35ec496218b85f79b3437c829e93320c7c9215ccfd92489e
     # via -r requirements.in
 urllib3==1.26.12 \
     --hash=sha256:3fa96cf423e6987997fc326ae8df396db2a8b7c667747d47ddd8ecba91f4a74e \
