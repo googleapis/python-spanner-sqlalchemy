@@ -24,6 +24,8 @@ import random
 import time
 from unittest import mock
 
+from google.cloud.spanner_v1 import RequestOptions
+
 import sqlalchemy
 from sqlalchemy import create_engine
 from sqlalchemy import inspect
@@ -1697,7 +1699,7 @@ class ExecutionOptionsRequestPriorotyTest(fixtures.TestBase):
         time.sleep(1)
 
     def test_request_priority(self):
-        PRIORITY = 2
+        PRIORITY = RequestOptions.Priority.PRIORITY_MEDIUM
         with self._engine.connect().execution_options(
             request_priority=PRIORITY
         ) as connection:
