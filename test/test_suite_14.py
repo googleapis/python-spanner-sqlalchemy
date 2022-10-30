@@ -21,6 +21,7 @@ import os
 import pkg_resources
 import pytest
 import random
+import time
 from unittest import mock
 
 from google.cloud.spanner_v1 import RequestOptions
