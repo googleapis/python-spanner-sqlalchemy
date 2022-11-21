@@ -1703,8 +1703,8 @@ class ExecutionOptionsRequestPriorotyTest(fixtures.TestBase):
         with self._engine.connect().execution_options(
             request_priority=PRIORITY
         ) as connection:
-            connection.execute(select(["*"], from_obj=self._table)).fetchall()
             assert connection.connection.request_priority == PRIORITY
+            connection.execute(select(["*"], from_obj=self._table)).fetchall()
 
         with self._engine.connect() as connection:
             assert connection.connection.request_priority is None
