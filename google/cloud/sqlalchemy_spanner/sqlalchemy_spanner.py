@@ -158,7 +158,7 @@ class SpannerExecutionContext(DefaultExecutionContext):
         if staleness is not None:
             self._dbapi_connection.connection.staleness = staleness
 
-        priority = staleness = self.execution_options.get("request_priority")
+        priority = self.execution_options.get("request_priority")
         if priority is not None:
             self._dbapi_connection.connection.request_priority = priority
 
