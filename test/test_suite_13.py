@@ -1646,7 +1646,7 @@ class LimitOffsetTest(fixtures.TestBase):
                 list(connection.execute(self._table.select().offset(offset)).fetchall())
 
 
-class ExecutionOptionsStalenessTest(fixtures.TestBase):
+class ExecutionOptionsTest(fixtures.TestBase):
     """
     Check that `execution_options()` method correctly
     sets parameters on the underlying DB API connection.
@@ -1682,28 +1682,11 @@ class ExecutionOptionsStalenessTest(fixtures.TestBase):
         with engine.connect() as connection:
             pass
 
-
-class ExecutionOptionsRequestPriorotyTest(fixtures.TestBase):
-    def setUp(self):
-        self._engine = create_engine(get_db_url(), pool_size=1)
-        metadata = MetaData(bind=self._engine)
-
-        self._table = Table(
-            "execution_options2",
-            metadata,
-            Column("opt_id", Integer, primary_key=True),
-            Column("opt_name", String(16), nullable=False),
-        )
-
-        metadata.create_all(self._engine)
-        time.sleep(1)
-
     def test_request_priority(self):
         PRIORITY = RequestOptions.Priority.PRIORITY_MEDIUM
         with self._engine.connect().execution_options(
             request_priority=PRIORITY
         ) as connection:
-            assert connection.connection.request_priority == PRIORITY
             connection.execute(select(["*"], from_obj=self._table)).fetchall()
 
         with self._engine.connect() as connection:
