@@ -150,13 +150,17 @@ class SpannerExecutionContext(DefaultExecutionContext):
         """
         super(SpannerExecutionContext, self).pre_exec()
 
-        read_only = self.execution_options.get("read_only", None)
+        read_only = self.execution_options.get("read_only")
         if read_only is not None:
             self._dbapi_connection.connection.read_only = read_only
 
-        staleness = self.execution_options.get("staleness", None)
+        staleness = self.execution_options.get("staleness")
         if staleness is not None:
             self._dbapi_connection.connection.staleness = staleness
+
+        priority = self.execution_options.get("request_priority")
+        if priority is not None:
+            self._dbapi_connection.connection.request_priority = priority
 
 
 class SpannerIdentifierPreparer(IdentifierPreparer):
@@ -349,7 +353,7 @@ class SpannerDDLCompiler(DDLCompiler):
         if default is not None:
             colspec += " DEFAULT (" + default + ")"
 
-        if column.computed is not None:
+        if hasattr(column, "computed") and column.computed is not None:
             colspec += " " + self.process(column.computed)
 
         return colspec
@@ -790,7 +794,13 @@ SELECT
     ctu.table_name,
     ctu.table_schema,
     ARRAY_AGG(DISTINCT ccu.column_name),
-    ARRAY_AGG(kcu.column_name)
+    ARRAY_AGG(
+        DISTINCT CONCAT(
+            CAST(kcu.ordinal_position AS STRING),
+            '_____',
+            kcu.column_name
+        )
+    )
 FROM information_schema.table_constraints AS tc
 JOIN information_schema.constraint_column_usage AS ccu
     ON ccu.constraint_name = tc.constraint_name
@@ -811,6 +821,21 @@ GROUP BY tc.constraint_name, ctu.table_name, ctu.table_schema
             rows = snap.execute_sql(sql)
 
             for row in rows:
+                # Due to Spanner limitations, arrays order is not guaranteed during
+                # aggregation. Still, for constraints it's vital to keep the order
+                # of the referred columns, otherwise SQLAlchemy and Alembic may start
+                # to occasionally drop and recreate constraints. To avoid this, the
+                # method uses prefixes with the `key_column_usage.ordinal_position`
+                # values to ensure the columns are aggregated into an array in the
+                # correct order. Prefixes are only used under the hood. For more details
+                # see the issue:
+                # https://github.com/googleapis/python-spanner-sqlalchemy/issues/271
+                #
+                # The solution seem a bit clumsy, and should be improved as soon as a
+                # better approach found.
+                for index, value in enumerate(sorted(row[4])):
+                    row[4][index] = value.split("_____")[1]
+
                 keys.append(
                     {
                         "name": row[0],
@@ -820,6 +845,7 @@ GROUP BY tc.constraint_name, ctu.table_name, ctu.table_schema
                         "constrained_columns": row[4],
                     }
                 )
+
         return keys
 
     @engine_to_connection
