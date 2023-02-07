@@ -192,7 +192,7 @@ def compliance_test_14(session):
     session.install("-e", ".[tracing]")
     session.run("python", "create_test_database.py")
 
-    session.install("sqlalchemy>=1.4")
+    session.install("sqlalchemy>=1.4<2.0")
 
     session.run(
         "py.test",
