@@ -307,7 +307,7 @@ def snippets(session):
         session.skip("Credentials must be set via environment variable.")
 
     session.install("pytest")
-    session.install("sqlalchemy")
+    session.install("sqlalchemy>=1.4,<2.0")
     session.install(
         "git+https://github.com/googleapis/python-spanner.git#egg=google-cloud-spanner"
     )
