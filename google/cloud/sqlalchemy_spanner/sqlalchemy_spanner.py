@@ -186,7 +186,7 @@ class SpannerIdentifierPreparer(IdentifierPreparer):
         return (
             lc_value in self.reserved_words
             or value[0] in self.illegal_initial_characters
-            or not self.legal_characters.match(util.text_type(value))
+            or not self.legal_characters.match(str(value))
             or (lc_value != value)
         )
 
@@ -206,7 +206,7 @@ class SpannerSQLCompiler(SQLCompiler):
         """
         return text
 
-    def visit_empty_set_expr(self, type_):
+    def visit_empty_set_expr(self, type_, **kw):
         """Return an empty set expression of the given type.
 
         Args:
@@ -365,7 +365,7 @@ class SpannerDDLCompiler(DDLCompiler):
         )
         return text
 
-    def visit_drop_table(self, drop_table):
+    def visit_drop_table(self, drop_table, **kw):
         """
         Cloud Spanner doesn't drop tables which have indexes
         or foreign key constraints. This method builds several DDL
@@ -396,7 +396,7 @@ class SpannerDDLCompiler(DDLCompiler):
 
         return indexes + constrs + str(drop_table)
 
-    def visit_primary_key_constraint(self, constraint):
+    def visit_primary_key_constraint(self, constraint, **kw):
         """Build primary key definition.
 
         Primary key in Spanner is defined outside of a table columns definition, see:
@@ -406,7 +406,7 @@ class SpannerDDLCompiler(DDLCompiler):
         """
         return None
 
-    def visit_unique_constraint(self, constraint):
+    def visit_unique_constraint(self, constraint, **kw):
         """Unique constraints in Spanner are defined with indexes:
         https://cloud.google.com/spanner/docs/secondary-indexes#unique-indexes
 
