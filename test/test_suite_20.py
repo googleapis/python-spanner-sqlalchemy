@@ -311,6 +311,12 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             schema=schema,
             comment=r"""the test % ' " \ table comment""",
         )
+        Table(
+            "no_constraints",
+            metadata,
+            Column("data", sqlalchemy.String(20)),
+            schema=schema,
+        )
 
         if testing.requires.cross_schema_fk_reflection.enabled:
             if schema is None:
@@ -382,6 +388,42 @@ class ComponentReflectionTest(_ComponentReflectionTest):
 
         if testing.requires.view_column_reflection.enabled:
             cls.define_views(metadata, schema)
+
+    @pytest.mark.skip(
+        "Requires an introspection method to be implemented in SQLAlchemy first"
+    )
+    def test_get_multi_columns():
+        pass
+
+    @pytest.mark.skip(
+        "Requires an introspection method to be implemented in SQLAlchemy first"
+    )
+    def test_get_multi_pk_constraint():
+        pass
+
+    @pytest.mark.skip(
+        "Requires an introspection method to be implemented in SQLAlchemy first"
+    )
+    def test_get_multi_foreign_keys():
+        pass
+
+    @pytest.mark.skip(
+        "Requires an introspection method to be implemented in SQLAlchemy first"
+    )
+    def test_get_multi_indexes():
+        pass
+
+    @pytest.mark.skip(
+        "Requires an introspection method to be implemented in SQLAlchemy first"
+    )
+    def test_get_multi_unique_constraints():
+        pass
+
+    @pytest.mark.skip(
+        "Requires an introspection method to be implemented in SQLAlchemy first"
+    )
+    def test_get_multi_check_constraints():
+        pass
 
     @testing.combinations((False,), argnames="use_schema")
     @testing.requires.foreign_key_constraint_reflection
@@ -525,7 +567,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         """
         metadata = MetaData(self.bind)
         Table("text_table", metadata, Column("TestColumn", Text, nullable=False))
-        metadata.create_all()
+        metadata.create_all(self.bind)
 
         Table("text_table", metadata, autoload=True)
 
@@ -543,7 +585,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             metadata,
             Column("TestColumn", LargeBinary, nullable=False),
         )
-        metadata.create_all()
+        metadata.create_all(self.bind)
 
         Table("bytes_table", metadata, autoload=True)
 
@@ -651,7 +693,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         )
 
         with pytest.raises(spanner_dbapi.exceptions.ProgrammingError):
-            metadata.create_all()
+            metadata.create_all(self.bind)
 
     @testing.provide_metadata
     def _test_get_table_names(self, schema=None, table_type="table", order_by=None):
@@ -2027,7 +2069,7 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
         statement definition and doesn't cause failures.
         """
         engine = create_engine(get_db_url())
-        metadata = MetaData(bind=engine)
+        metadata = MetaData()
 
         Table(
             "Singers",
