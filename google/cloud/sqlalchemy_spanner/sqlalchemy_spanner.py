@@ -22,7 +22,7 @@ from alembic.ddl.base import (
     alter_table,
     format_type,
 )
-from sqlalchemy import ForeignKeyConstraint, types, util
+from sqlalchemy import ForeignKeyConstraint, types
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.engine.default import DefaultDialect, DefaultExecutionContext
 from sqlalchemy.event import listens_for

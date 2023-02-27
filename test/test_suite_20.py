@@ -231,6 +231,129 @@ class ComponentReflectionTestExtra(_ComponentReflectionTestExtra):
             eq_(typ.length, 20)
 
 
+class ComputedReflectionFixtureTest(_ComputedReflectionFixtureTest):
+    @classmethod
+    def define_tables(cls, metadata):
+        """SPANNER OVERRIDE:
+
+        Avoid using default values for computed columns.
+        """
+        Table(
+            "computed_default_table",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("normal", Integer),
+            Column("computed_col", Integer, Computed("normal + 42")),
+            Column("with_default", Integer),
+        )
+
+        t = Table(
+            "computed_column_table",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("normal", Integer),
+            Column("computed_no_flag", Integer, Computed("normal + 42")),
+        )
+
+        if testing.requires.computed_columns_virtual.enabled:
+            t.append_column(
+                Column(
+                    "computed_virtual",
+                    Integer,
+                    Computed("normal + 2", persisted=False),
+                )
+            )
+        if testing.requires.computed_columns_stored.enabled:
+            t.append_column(
+                Column(
+                    "computed_stored",
+                    Integer,
+                    Computed("normal - 42", persisted=True),
+                )
+            )
+
+
+class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureTest):
+    @testing.requires.schemas
+    def test_get_column_returns_persisted_with_schema(self):
+        insp = inspect(config.db)
+
+        cols = insp.get_columns("computed_column_table", schema=config.test_schema)
+        data = {c["name"]: c for c in cols}
+
+        self.check_column(
+            data,
+            "computed_no_flag",
+            "normal+42",
+            testing.requires.computed_columns_default_persisted.enabled,
+        )
+        if testing.requires.computed_columns_virtual.enabled:
+            self.check_column(
+                data,
+                "computed_virtual",
+                "normal/2",
+                False,
+            )
+        if testing.requires.computed_columns_stored.enabled:
+            self.check_column(
+                data,
+                "computed_stored",
+                "normal-42",
+                True,
+            )
+
+    @pytest.mark.skip("Default values are not supported.")
+    def test_computed_col_default_not_set(self):
+        pass
+
+    def test_get_column_returns_computed(self):
+        """
+        SPANNER OVERRIDE:
+
+        In Spanner all the generated columns are STORED,
+        meaning there are no persisted and not persisted
+        (in the terms of the SQLAlchemy) columns. The
+        method override omits the persistence reflection checks.
+        """
+        insp = inspect(config.db)
+
+        cols = insp.get_columns("computed_default_table")
+        data = {c["name"]: c for c in cols}
+        for key in ("id", "normal", "with_default"):
+            is_true("computed" not in data[key])
+        compData = data["computed_col"]
+        is_true("computed" in compData)
+        is_true("sqltext" in compData["computed"])
+        eq_(self.normalize(compData["computed"]["sqltext"]), "normal+42")
+
+    def test_create_not_null_computed_column(self):
+        """
+        SPANNER TEST:
+
+        Check that on creating a computed column with a NOT NULL
+        clause the clause is set in front of the computed column
+        statement definition and doesn't cause failures.
+        """
+        engine = create_engine(get_db_url())
+        metadata = MetaData()
+
+        Table(
+            "Singers",
+            metadata,
+            Column("SingerId", String(36), primary_key=True, nullable=False),
+            Column("FirstName", String(200)),
+            Column("LastName", String(200), nullable=False),
+            Column(
+                "FullName",
+                String(400),
+                Computed("COALESCE(FirstName || ' ', '') || LastName"),
+                nullable=False,
+            ),
+        )
+
+        metadata.create_all(engine)
+
+
 class ComponentReflectionTest(_ComponentReflectionTest):
     @classmethod
     def define_tables(cls, metadata):
@@ -923,9 +1046,11 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest, DateTest):
         assert failures convert datetime input to the desire timestamp format.
         """
         date_table = self.tables.date_table
-        config.db.execute(date_table.insert(), {"date_data": self.data, "id": 250})
 
-        row = config.db.execute(select([date_table.c.date_data])).first()
+        with config.db.connect() as connection:
+            connection.execute(date_table.insert(), {"date_data": self.data, "id": 250})
+            row = connection.execute(select(date_table.c.date_data)).first()
+
         compare = self.compare or self.data
         compare = compare.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         eq_(row[0].rfc3339(), compare)
@@ -1058,9 +1183,7 @@ class EscapingTest(_EscapingTest):
 
             eq_(
                 conn.scalar(
-                    select([t.c.data]).where(
-                        t.c.data == literal_column("'some % value'")
-                    )
+                    select(t.c.data).where(t.c.data == literal_column("'some % value'"))
                 ),
                 "some % value",
             )
@@ -1069,7 +1192,7 @@ class EscapingTest(_EscapingTest):
             conn.execute(t.insert(), dict(data="some %% other value"))
             eq_(
                 conn.scalar(
-                    select([t.c.data]).where(
+                    select(t.c.data).where(
                         t.c.data == literal_column("'some %% other value'")
                     )
                 ),
@@ -1095,7 +1218,7 @@ class ExistsTest(_ExistsTest):
         stuff = self.tables.stuff
         eq_(
             connection.execute(
-                select((exists().where(stuff.c.data == "some data"),))
+                select(exists().where(stuff.c.data == "some data"))
             ).fetchall(),
             [(True,)],
         )
@@ -1117,7 +1240,7 @@ class ExistsTest(_ExistsTest):
         stuff = self.tables.stuff
         eq_(
             connection.execute(
-                select((exists().where(stuff.c.data == "no data"),))
+                select(exists().where(stuff.c.data == "no data"))
             ).fetchall(),
             [(False,)],
         )
@@ -1963,129 +2086,6 @@ class PostCompileParamsTest(_PostCompileParamsTest):
                 () if config.db.dialect.positional else {},
             )
         )
-
-
-class ComputedReflectionFixtureTest(_ComputedReflectionFixtureTest):
-    @classmethod
-    def define_tables(cls, metadata):
-        """SPANNER OVERRIDE:
-
-        Avoid using default values for computed columns.
-        """
-        Table(
-            "computed_default_table",
-            metadata,
-            Column("id", Integer, primary_key=True),
-            Column("normal", Integer),
-            Column("computed_col", Integer, Computed("normal + 42")),
-            Column("with_default", Integer),
-        )
-
-        t = Table(
-            "computed_column_table",
-            metadata,
-            Column("id", Integer, primary_key=True),
-            Column("normal", Integer),
-            Column("computed_no_flag", Integer, Computed("normal + 42")),
-        )
-
-        if testing.requires.computed_columns_virtual.enabled:
-            t.append_column(
-                Column(
-                    "computed_virtual",
-                    Integer,
-                    Computed("normal + 2", persisted=False),
-                )
-            )
-        if testing.requires.computed_columns_stored.enabled:
-            t.append_column(
-                Column(
-                    "computed_stored",
-                    Integer,
-                    Computed("normal - 42", persisted=True),
-                )
-            )
-
-
-class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureTest):
-    @testing.requires.schemas
-    def test_get_column_returns_persisted_with_schema(self):
-        insp = inspect(config.db)
-
-        cols = insp.get_columns("computed_column_table", schema=config.test_schema)
-        data = {c["name"]: c for c in cols}
-
-        self.check_column(
-            data,
-            "computed_no_flag",
-            "normal+42",
-            testing.requires.computed_columns_default_persisted.enabled,
-        )
-        if testing.requires.computed_columns_virtual.enabled:
-            self.check_column(
-                data,
-                "computed_virtual",
-                "normal/2",
-                False,
-            )
-        if testing.requires.computed_columns_stored.enabled:
-            self.check_column(
-                data,
-                "computed_stored",
-                "normal-42",
-                True,
-            )
-
-    @pytest.mark.skip("Default values are not supported.")
-    def test_computed_col_default_not_set(self):
-        pass
-
-    def test_get_column_returns_computed(self):
-        """
-        SPANNER OVERRIDE:
-
-        In Spanner all the generated columns are STORED,
-        meaning there are no persisted and not persisted
-        (in the terms of the SQLAlchemy) columns. The
-        method override omits the persistence reflection checks.
-        """
-        insp = inspect(config.db)
-
-        cols = insp.get_columns("computed_default_table")
-        data = {c["name"]: c for c in cols}
-        for key in ("id", "normal", "with_default"):
-            is_true("computed" not in data[key])
-        compData = data["computed_col"]
-        is_true("computed" in compData)
-        is_true("sqltext" in compData["computed"])
-        eq_(self.normalize(compData["computed"]["sqltext"]), "normal+42")
-
-    def test_create_not_null_computed_column(self):
-        """
-        SPANNER TEST:
-
-        Check that on creating a computed column with a NOT NULL
-        clause the clause is set in front of the computed column
-        statement definition and doesn't cause failures.
-        """
-        engine = create_engine(get_db_url())
-        metadata = MetaData()
-
-        Table(
-            "Singers",
-            metadata,
-            Column("SingerId", String(36), primary_key=True, nullable=False),
-            Column("FirstName", String(200)),
-            Column("LastName", String(200), nullable=False),
-            Column(
-                "FullName",
-                String(400),
-                Computed("COALESCE(FirstName || ' ', '') || LastName"),
-                nullable=False,
-            ),
-        )
-
-        metadata.create_all(engine)
 
 
 @pytest.mark.skipif(
