@@ -548,6 +548,10 @@ class ComponentReflectionTest(_ComponentReflectionTest):
     def test_get_multi_check_constraints():
         pass
 
+    @pytest.mark.skip("Spanner must add support of the feature first")
+    def test_get_view_names():
+        pass
+
     @testing.combinations((False,), argnames="use_schema")
     @testing.requires.foreign_key_constraint_reflection
     def test_get_foreign_keys(self, connection, use_schema):
@@ -1311,7 +1315,7 @@ class IntegerTest(_IntegerTest):
 
         config.db.execute(int_table.insert(), {"id": 1, "integer_data": data})
 
-        row = config.db.execute(select([int_table.c.integer_data])).first()
+        row = config.db.execute(select(int_table.c.integer_data)).first()
 
         eq_(row, (data,))
 
@@ -1355,7 +1359,7 @@ class _UnicodeFixture(__UnicodeFixture):
             [{"id": i, "unicode_data": self.data} for i in range(3)],
         )
 
-        rows = config.db.execute(select([unicode_table.c.unicode_data])).fetchall()
+        rows = config.db.execute(select(unicode_table.c.unicode_data)).fetchall()
         eq_(rows, [(self.data,) for i in range(3)])
         for row in rows:
             assert isinstance(row[0], util.text_type)
@@ -1410,8 +1414,8 @@ class RowFetchTest(_RowFetchTest):
         backends that may have unusual behavior with scalar selects.)
         """
         datetable = self.tables.has_dates
-        s = select([datetable.alias("x").c.today]).scalar_subquery()
-        s2 = select([datetable.c.id, s.label("somelabel")])
+        s = select(datetable.alias("x").c.today).scalar_subquery()
+        s2 = select(datetable.c.id, s.label("somelabel"))
         row = config.db.execute(s2).first()
 
         eq_(
@@ -1976,6 +1980,7 @@ class HasIndexTest(_HasIndexTest):
             metadata,
             Column("id", Integer, primary_key=True),
             Column("data", String(50)),
+            Column("data2", String(50)),
         )
         sqlalchemy.Index("my_idx", tt.c.data)
 
@@ -1995,7 +2000,15 @@ class HasTableTest(_HasTableTest):
         )
 
     @pytest.mark.skip("Not supported by Cloud Spanner")
+    def test_has_table_nonexistent_schema(self):
+        pass
+
+    @pytest.mark.skip("Not supported by Cloud Spanner")
     def test_has_table_schema(self):
+        pass
+
+    @pytest.mark.skip("Not supported by Cloud Spanner")
+    def test_has_table_cache(self):
         pass
 
 
@@ -2104,7 +2117,7 @@ class JSONTest(_JSONTest):
             {"id": random.randint(1, 100000000), "name": "row1", "data": data_element},
         )
 
-        row = config.db.execute(select([data_table.c.data])).first()
+        row = config.db.execute(select(data_table.c.data)).first()
 
         eq_(row, (data_element,))
 
@@ -2124,7 +2137,7 @@ class JSONTest(_JSONTest):
             )
 
             eq_(
-                conn.scalar(select([self.tables.data_table.c.data])),
+                conn.scalar(select(self.tables.data_table.c.data)),
                 {
                     util.u("réve🐍 illé"): util.u("réve🐍 illé"),
                     "data": {"k1": util.u("drôl🐍e")},
@@ -2188,7 +2201,7 @@ class JSONTest(_JSONTest):
             expr = data_table.c.data["key1"]
             expr = getattr(expr, "as_%s" % datatype)()
 
-            roundtrip = conn.scalar(select([expr]))
+            roundtrip = conn.scalar(select(expr))
             if roundtrip in ("true", "false", None):
                 roundtrip = str(roundtrip).capitalize()
 
@@ -2233,7 +2246,7 @@ class ExecutionOptionsRequestPriorotyTest(fixtures.TestBase):
         with self._engine.connect().execution_options(
             request_priority=PRIORITY
         ) as connection:
-            connection.execute(select(["*"], from_obj=self._table)).fetchall()
+            connection.execute(select("*", from_obj=self._table)).fetchall()
 
         with self._engine.connect() as connection:
             assert connection.connection.request_priority is None

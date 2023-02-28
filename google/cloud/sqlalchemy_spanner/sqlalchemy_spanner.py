@@ -919,7 +919,7 @@ WHERE
         return cols
 
     @engine_to_connection
-    def has_table(self, connection, table_name, schema=None):
+    def has_table(self, connection, table_name, schema=None, **kw):
         """Check if the given table exists.
 
         The method is used by SQLAlchemy introspection systems.
