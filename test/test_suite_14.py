@@ -53,7 +53,7 @@ from sqlalchemy import Float
 from sqlalchemy import LargeBinary
 from sqlalchemy import String
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relation
 from sqlalchemy.orm import Session
 from sqlalchemy.types import Integer
 from sqlalchemy.types import Numeric
@@ -1671,7 +1671,7 @@ class TestQueryHints(fixtures.TablesTest):
             __tablename__ = "users"
             id = Column(Integer, primary_key=True)
             name = Column(String(50))
-            addresses = relationship("Address", backref="user")
+            addresses = relation("Address", backref="user")
 
         class Address(Base):
             __tablename__ = "addresses"
