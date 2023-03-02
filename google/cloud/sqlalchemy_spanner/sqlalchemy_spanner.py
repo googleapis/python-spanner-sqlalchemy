@@ -573,6 +573,9 @@ class SpannerDialect(DefaultDialect):
 
         The given URL follows the style:
         `spanner:///projects/{project-id}/instances/{instance-id}/databases/{database-id}`
+
+        If you want to diable route to leader add the following at the end of the url:
+        `spanner:///projects/{project-id}/instances/{instance-id}/databases/{database-id}?route_to_leader_enabled=False`
         """
         match = re.match(
             (
