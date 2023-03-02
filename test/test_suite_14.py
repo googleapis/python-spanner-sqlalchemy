@@ -1768,11 +1768,15 @@ class UserAgentTest(fixtures.TestBase):
 
 
 class RouteToLeaderEnabledTest(fixtures.TestBase):
-    """Check that SQLAlchemy dialect passes correct route_to_leader_enabled to Client."""
+    """
+    Check that SQLAlchemy dialect passes correct
+    route_to_leader_enabled to Client.
+    """
 
     def setUp(self):
         self._engine = create_engine(
-            "spanner:///projects/appdev-soda-spanner-staging/instances/?route_to_leader_enabled=False"
+            "spanner:///projects/appdev-soda-spanner-staging/instances/"
+            "?route_to_leader_enabled=False"
             "sqlalchemy-dialect-test/databases/compliance-test"
         )
         self._metadata = MetaData(bind=self._engine)
@@ -1780,7 +1784,7 @@ class RouteToLeaderEnabledTest(fixtures.TestBase):
     def test_route_to_leader_enabled(self):
         with self._engine.connect() as connection:
             assert (
-                connection.connection.instance._client.route_to_leader_enabled == False
+                connection.connection.instance._client.route_to_leader_enabled is False
             )
 
 
