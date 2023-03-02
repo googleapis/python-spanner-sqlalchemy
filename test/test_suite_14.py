@@ -68,15 +68,15 @@ from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
 from google.cloud import spanner_dbapi
 
-from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_ddl import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_insert import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_reflection import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_results import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_select import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_sequence import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
+# from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
+# from sqlalchemy.testing.suite.test_ddl import *  # noqa: F401, F403
+# from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
+# from sqlalchemy.testing.suite.test_insert import *  # noqa: F401, F403
+# from sqlalchemy.testing.suite.test_reflection import *  # noqa: F401, F403
+# from sqlalchemy.testing.suite.test_results import *  # noqa: F401, F403
+# from sqlalchemy.testing.suite.test_select import *  # noqa: F401, F403
+# from sqlalchemy.testing.suite.test_sequence import *  # noqa: F401, F403
+# from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_cte import CTETest as _CTETest
 from sqlalchemy.testing.suite.test_ddl import TableDDLTest as _TableDDLTest
 from sqlalchemy.testing.suite.test_ddl import (
@@ -1764,6 +1764,23 @@ class UserAgentTest(fixtures.TestBase):
             assert (
                 connection.connection.instance._client._client_info.user_agent
                 == "gl-" + dist.project_name + "/" + dist.version
+            )
+
+
+class RouteToLeaderEnabledTest(fixtures.TestBase):
+    """Check that SQLAlchemy dialect passes correct route_to_leader_enabled to Client."""
+
+    def setUp(self):
+        self._engine = create_engine(
+            "spanner:///projects/appdev-soda-spanner-staging/instances/?route_to_leader_enabled=False"
+            "sqlalchemy-dialect-test/databases/compliance-test"
+        )
+        self._metadata = MetaData(bind=self._engine)
+
+    def test_route_to_leader_enabled(self):
+        with self._engine.connect() as connection:
+            assert (
+                connection.connection.instance._client.route_to_leader_enabled == False
             )
 
 

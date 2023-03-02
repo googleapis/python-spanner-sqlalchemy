@@ -582,9 +582,16 @@ class SpannerDialect(DefaultDialect):
             url.database,
         )
         dist = pkg_resources.get_distribution("sqlalchemy-spanner")
+        options = {"user_agent": f"gl-{dist.project_name}/{dist.version}"}
+        options.update(url.query)
+        if "route_to_leader_enabled" in options:
+            if options["route_to_leader_enabled"].lower() == "false":
+                options["route_to_leader_enabled"] = False
+            else:
+                options["route_to_leader_enabled"] = True
         return (
             [match.group("instance"), match.group("database"), match.group("project")],
-            {"user_agent": f"gl-{dist.project_name}/{dist.version}"},
+            options,
         )
 
     @engine_to_connection
