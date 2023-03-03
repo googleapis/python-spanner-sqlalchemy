@@ -531,7 +531,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         created with size defined as MAX. The test
         checks that such a column is correctly reflected.
         """
-        metadata = MetaData(self.bind)
+        metadata = MetaData()
         Table(
             "bytes_table",
             metadata,
