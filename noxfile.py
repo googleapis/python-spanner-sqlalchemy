@@ -245,6 +245,7 @@ def _migration_test(session):
     session.install("pytest")
     session.install("-e", ".")
     session.install("alembic")
+    session.install("sqlalchemy>=1.3,<2.0")
 
     session.run("python", "create_test_database.py")
 
