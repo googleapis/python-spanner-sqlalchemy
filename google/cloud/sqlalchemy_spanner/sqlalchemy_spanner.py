@@ -53,8 +53,6 @@ if sqlalchemy.__version__.split('.')[0]=='2':
 @listens_for(Pool, "reset")
 def reset_connection(dbapi_conn, connection_record):
     """An event of returning a connection back to a pool."""
-    import pdb
-    pdb.set_trace()
     if not USING_SQLACLCHEMY_20:
         dbapi_conn = dbapi_conn.connection
     if isinstance(dbapi_conn, spanner_dbapi.Connection):
