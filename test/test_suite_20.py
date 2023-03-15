@@ -889,7 +889,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
 
 class CompositeKeyReflectionTest(_CompositeKeyReflectionTest):
     @testing.requires.foreign_key_constraint_reflection
-    def test_fk_column_order(self):
+    def test_fk_column_order(self, connection):
         """
         SPANNER OVERRIDE:
 
@@ -898,7 +898,7 @@ class CompositeKeyReflectionTest(_CompositeKeyReflectionTest):
         reflected correctly, without considering their order.
         """
         # test for issue #5661
-        insp = inspect(self.bind)
+        insp = inspect(connection)
         foreign_keys = insp.get_foreign_keys(self.tables.tb2.name)
         eq_(len(foreign_keys), 1)
         fkey1 = foreign_keys[0]

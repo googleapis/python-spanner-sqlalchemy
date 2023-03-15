@@ -43,19 +43,28 @@ from sqlalchemy.sql.operators import json_getitem_op
 from google.cloud.spanner_v1.data_types import JsonObject
 from google.cloud import spanner_dbapi
 from google.cloud.sqlalchemy_spanner._opentelemetry_tracing import trace_call
+import sqlalchemy
+
+USING_SQLACLCHEMY_20=False
+if sqlalchemy.__version__.split('.')[0]=='2':
+    USING_SQLACLCHEMY_20=True
 
 
 @listens_for(Pool, "reset")
 def reset_connection(dbapi_conn, connection_record):
     """An event of returning a connection back to a pool."""
-    if isinstance(dbapi_conn.connection, spanner_dbapi.Connection):
-        if dbapi_conn.connection.inside_transaction:
-            dbapi_conn.connection.rollback()
+    import pdb
+    pdb.set_trace()
+    if not USING_SQLACLCHEMY_20:
+        dbapi_conn = dbapi_conn.connection
+    if isinstance(dbapi_conn, spanner_dbapi.Connection):
+        if dbapi_conn.inside_transaction:
+            dbapi_conn.rollback()
 
-        dbapi_conn.connection.staleness = None
-        dbapi_conn.connection.read_only = False
+        dbapi_conn.staleness = None
+        dbapi_conn.read_only = False
     else:
-        dbapi_conn.connection.rollback()
+        dbapi_conn.rollback()
 
 
 # register a method to get a single value of a JSON object
