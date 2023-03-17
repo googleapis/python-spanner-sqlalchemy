@@ -240,9 +240,6 @@ def _migration_test(session):
     import glob
     import os
     import shutil
-    import sqlalchemy
-    if sqlalchemy.__version__.split('.')[0]=='2':
-        session.skip("Skipping migration tests when sqlalchemy version is 2.0")
 
     session.install("pytest")
     session.install("-e", ".")
@@ -265,6 +262,11 @@ def _migration_test(session):
     else:
         config.read("setup.cfg")
     db_url = config.get("db", "default", fallback=db_url)
+
+    import sqlalchemy
+
+    if sqlalchemy.__version__.split(".")[0] == "2":
+        session.skip("Skipping migration tests when sqlalchemy version is 2.0")
 
     session.run("alembic", "init", "test_migration")
 
