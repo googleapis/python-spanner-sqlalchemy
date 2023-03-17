@@ -53,7 +53,7 @@ if sqlalchemy.__version__.split('.')[0]=='2':
 @listens_for(Pool, "reset")
 def reset_connection(dbapi_conn, connection_record):
     """An event of returning a connection back to a pool."""
-    if not USING_SQLACLCHEMY_20:
+    if hasattr(dbapi_conn, 'connection'):
         dbapi_conn = dbapi_conn.connection
     if isinstance(dbapi_conn, spanner_dbapi.Connection):
         if dbapi_conn.inside_transaction:
@@ -518,6 +518,7 @@ class SpannerDialect(DefaultDialect):
     paramstyle = "format"
     encoding = "utf-8"
     max_identifier_length = 256
+    _legacy_binary_type_literal_encoding = "utf-8"
 
     execute_sequence_format = list
 
