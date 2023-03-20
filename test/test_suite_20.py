@@ -902,7 +902,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
     @testing.combinations(
         (True, testing.requires.views), False, argnames="views"
     )
-    def test_aaaaametadata(self, connection, use_schema, views):
+    def test_metadata(self, connection, use_schema, views):
         m = MetaData()
         schema = config.test_schema if use_schema else None
         m.reflect(connection, schema=schema, views=views, resolve_fks=False)
