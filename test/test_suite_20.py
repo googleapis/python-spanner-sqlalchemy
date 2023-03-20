@@ -901,12 +901,22 @@ class ComponentReflectionTest(_ComponentReflectionTest):
     def test_reflect_table_temp_table(self, connection):
         pass
 
-    def _check_list(self, indexes, expected_indexes, req_keys=None, msg=None):
-        expected_indexes.sort(key=lambda item: item["name"])
+    def _check_list(self, result, exp, req_keys=None, msg=None, index=False):
+        try:
+            exp.sort(key=lambda item: item["name"])
 
-        index_names = [d["name"] for d in indexes]
-        exp_index_names = [d["name"] for d in expected_indexes]
-        assert sorted(index_names) == sorted(exp_index_names)
+            index_names = [d["name"] for d in result]
+            exp_index_names = [d["name"] for d in exp]
+            assert sorted(index_names) == sorted(exp_index_names)
+        except:
+            if req_keys is None:
+                eq_(result, exp, msg)
+            else:
+                eq_(len(result), len(exp), msg)
+                for r, e in zip(result, exp):
+                    for k in set(r) | set(e):
+                        if k in req_keys or (k in r and k in e):
+                            eq_(r[k], e[k], f"{msg} - {k} - {r}")
 
     @testing.combinations(True, False, argnames="use_schema")
     @testing.combinations(
@@ -1468,7 +1478,7 @@ class UnicodeTextTest(_UnicodeFixture, _UnicodeTextTest):
 
 
 class RowFetchTest(_RowFetchTest):
-    def test_row_w_scalar_select(self):
+    def test_row_w_scalar_select(self, connection):
         """
         SPANNER OVERRIDE:
 
@@ -1486,7 +1496,7 @@ class RowFetchTest(_RowFetchTest):
         datetable = self.tables.has_dates
         s = select(datetable.alias("x").c.today).scalar_subquery()
         s2 = select(datetable.c.id, s.label("somelabel"))
-        row = config.db.execute(s2).first()
+        row = connection.execute(s2).first()
 
         eq_(
             row["somelabel"],
@@ -1518,7 +1528,7 @@ class InsertBehaviorTest(_InsertBehaviorTest):
         Overriding the tests and adding a manual primary key value to avoid the same
         failures.
         """
-        if config.requirements.returning.enabled:
+        if hasattr(config.requirements, 'returning') and config.requirements.returning.enabled:
             engine = engines.testing_engine(options={"implicit_returning": False})
         else:
             engine = config.db
