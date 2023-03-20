@@ -1973,6 +1973,7 @@ class SimpleUpdateDeleteTest(_SimpleUpdateDeleteTest):
 
 
 class HasIndexTest(_HasIndexTest):
+    kind = testing.combinations("dialect", "inspector", argnames="kind")
     @classmethod
     def define_tables(cls, metadata):
         tt = Table(
@@ -1985,7 +1986,8 @@ class HasIndexTest(_HasIndexTest):
         sqlalchemy.Index("my_idx", tt.c.data)
 
     @pytest.mark.skip("Not supported by Cloud Spanner")
-    def test_has_index_schema(self):
+    @kind
+    def test_has_index(self, kind, connection, metadata):
         pass
 
 
