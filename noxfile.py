@@ -192,6 +192,7 @@ def compliance_test_14(session):
     session.install("-e", ".[tracing]")
     session.run("pip", "install", "sqlalchemy>=1.4,<2.0", "--force-reinstall")
     session.run("python", "create_test_database.py")
+    
     session.run(
         "py.test",
         "--cov=google.cloud.sqlalchemy_spanner",
