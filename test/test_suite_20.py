@@ -326,7 +326,7 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
         is_true("sqltext" in compData["computed"])
         eq_(self.normalize(compData["computed"]["sqltext"]), "normal+42")
 
-    def test_create_not_null_computed_column(self):
+    def test_create_not_null_computed_column(self, connection):
         """
         SPANNER TEST:
 
@@ -351,7 +351,7 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
             ),
         )
 
-        metadata.create_all(engine)
+        metadata.create_all(connection)
 
 
 class ComponentReflectionTest(_ComponentReflectionTest):
@@ -1901,7 +1901,7 @@ class InterleavedTablesTest(fixtures.TestBase):
             "spanner:///projects/appdev-soda-spanner-staging/instances/"
             "sqlalchemy-dialect-test/databases/compliance-test"
         )
-        self._metadata = MetaData(bind=self._engine)
+        self._metadata = MetaData()
 
     def test_interleave(self):
         EXP_QUERY = (
@@ -1953,7 +1953,7 @@ class UserAgentTest(fixtures.TestBase):
             "spanner:///projects/appdev-soda-spanner-staging/instances/"
             "sqlalchemy-dialect-test/databases/compliance-test"
         )
-        self._metadata = MetaData(bind=self._engine)
+        self._metadata = MetaData()
 
     def test_user_agent(self):
         dist = pkg_resources.get_distribution("sqlalchemy-spanner")
@@ -2252,9 +2252,9 @@ class JSONTest(_JSONTest):
 
 
 class ExecutionOptionsRequestPriorotyTest(fixtures.TestBase):
-    def setUp(self):
+    def setUp(self, connection):
         self._engine = create_engine(get_db_url(), pool_size=1)
-        metadata = MetaData(bind=self._engine)
+        metadata = MetaData()
 
         self._table = Table(
             "execution_options2",
@@ -2263,7 +2263,7 @@ class ExecutionOptionsRequestPriorotyTest(fixtures.TestBase):
             Column("opt_name", String(16), nullable=False),
         )
 
-        metadata.create_all(self._engine)
+        metadata.create_all(connection)
         time.sleep(1)
 
     def test_request_priority(self):
