@@ -675,7 +675,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             event.listen(user_tmp, "before_drop", DDL("drop view user_tmp_v"))
 
     @testing.provide_metadata
-    def test_reflect_string_column_max_len(self):
+    def test_reflect_string_column_max_len(self, connection):
         """
         SPANNER SPECIFIC TEST:
 
@@ -683,13 +683,13 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         created with size defined as MAX. The test
         checks that such a column is correctly reflected.
         """
-        metadata = MetaData(self.bind)
+        metadata = MetaData()
         Table("text_table", metadata, Column("TestColumn", Text, nullable=False))
-        metadata.create_all(self.bind)
+        metadata.create_all(connection)
 
         Table("text_table", metadata, autoload=True)
 
-    def test_reflect_bytes_column_max_len(self):
+    def test_reflect_bytes_column_max_len(self, connection):
         """
         SPANNER SPECIFIC TEST:
 
@@ -697,13 +697,13 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         created with size defined as MAX. The test
         checks that such a column is correctly reflected.
         """
-        metadata = MetaData(self.bind)
+        metadata = MetaData()
         Table(
             "bytes_table",
             metadata,
             Column("TestColumn", LargeBinary, nullable=False),
         )
-        metadata.create_all(self.bind)
+        metadata.create_all(connection)
 
         Table("bytes_table", metadata, autoload=True)
 
@@ -796,12 +796,12 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             eq_(uq_names, set())
 
     @testing.provide_metadata
-    def test_unique_constraint_raises(self):
+    def test_unique_constraint_raises(self, connection):
         """
         Checking that unique constraint creation
         fails due to a ProgrammingError.
         """
-        metadata = MetaData(self.bind)
+        metadata = MetaData()
         Table(
             "user_tmp_failure",
             metadata,
@@ -811,7 +811,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         )
 
         with pytest.raises(spanner_dbapi.exceptions.ProgrammingError):
-            metadata.create_all(self.bind)
+            metadata.create_all(connection)
 
     @testing.provide_metadata
     def _test_get_table_names(self, schema=None, table_type="table", order_by=None):
@@ -869,6 +869,10 @@ class ComponentReflectionTest(_ComponentReflectionTest):
 
     @pytest.mark.skip("Spanner doesn't support temporary tables")
     def test_get_temp_table_columns(self):
+        pass
+
+    @pytest.mark.skip("Spanner doesn't support temporary tables")
+    def test_reflect_table_temp_table(self, connection):
         pass
 
     def _check_list(self, indexes, expected_indexes, req_keys=None, msg=None):
