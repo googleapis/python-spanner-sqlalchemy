@@ -1319,6 +1319,33 @@ class IntegerTest(_IntegerTest):
             assert isinstance(row[0], int)
         else:
             assert isinstance(row[0], (long, int))  # noqa
+    
+    def _huge_ints():
+
+        return testing.combinations(
+            2147483649,  # 32 bits
+            2147483648,  # 32 bits
+            2147483647,  # 31 bits
+            2147483646,  # 31 bits
+            -2147483649,  # 32 bits
+            -2147483648,  # 32 interestingly, asyncpg accepts this one as int32
+            -2147483647,  # 31
+            -2147483646,  # 31
+            0,
+            1376537018368127,
+            -1376537018368127,
+            argnames="intvalue",
+        )
+
+    @_huge_ints()
+    def test_huge_int_auto_accommodation(self, connection, intvalue):
+        """
+        Spanner does not allow query to have FROM clause without a WHERE clause
+        """
+        eq_(
+            connection.scalar(select(intvalue)),
+            intvalue,
+        )
 
 
 class _UnicodeFixture(__UnicodeFixture):
