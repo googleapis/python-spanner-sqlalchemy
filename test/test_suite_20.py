@@ -76,7 +76,23 @@ from sqlalchemy.testing.suite.test_reflection import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_deprecations import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_results import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_types import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_select import *  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_select import (
+    IsOrIsNotDistinctFromTest,
+    DistinctOnTest,
+    ExistsTest,
+    IdentityAutoincrementTest,
+    IdentityColumnTest,
+    LikeFunctionsTest,
+    ExpandingBoundInTest,
+    ComputedColumnTest,
+    PostCompileParamsTest,
+    CompoundSelectTest,
+    JoinTest,
+    FetchLimitOffsetTest,
+    ValuesExpressionTest,
+    OrderByLabelTest,
+    CollateTest
+)  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_sequence import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_unicode_ddl import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
@@ -2252,7 +2268,7 @@ class JSONTest(_JSONTest):
 
 
 class ExecutionOptionsRequestPriorotyTest(fixtures.TestBase):
-    def setUp(self, connection):
+    def test_request_priority(self, connection):
         self._engine = create_engine(get_db_url(), pool_size=1)
         metadata = MetaData()
 
@@ -2265,8 +2281,6 @@ class ExecutionOptionsRequestPriorotyTest(fixtures.TestBase):
 
         metadata.create_all(connection)
         time.sleep(1)
-
-    def test_request_priority(self):
         PRIORITY = RequestOptions.Priority.PRIORITY_MEDIUM
         with self._engine.connect().execution_options(
             request_priority=PRIORITY
