@@ -898,6 +898,27 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         exp_index_names = [d["name"] for d in expected_indexes]
         assert sorted(index_names) == sorted(exp_index_names)
 
+    @testing.combinations(True, False, argnames="use_schema")
+    @testing.combinations(
+        (True, testing.requires.views), False, argnames="views"
+    )
+    def test_aaaaametadata(self, connection, use_schema, views):
+        m = MetaData()
+        schema = config.test_schema if use_schema else None
+        m.reflect(connection, schema=schema, views=views, resolve_fks=False)
+
+        insp = inspect(connection)
+        tables = insp.get_table_names(schema)
+        if views:
+            tables += insp.get_view_names(schema)
+            try:
+                tables += insp.get_materialized_view_names(schema)
+            except NotImplementedError:
+                pass
+        if schema is not None:
+            tables = [f"{schema}.{t}" for t in tables]
+        eq_(sorted(m.tables), sorted(tables))
+
 
 class CompositeKeyReflectionTest(_CompositeKeyReflectionTest):
     @testing.requires.foreign_key_constraint_reflection
