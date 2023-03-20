@@ -190,10 +190,8 @@ def compliance_test_14(session):
 
     session.install("mock")
     session.install("-e", ".[tracing]")
+    session.run("pip", "install", "sqlalchemy>=1.4,<2.0", "--force-reinstall")
     session.run("python", "create_test_database.py")
-
-    session.install("sqlalchemy>=1.4,<2.0")
-
     session.run(
         "py.test",
         "--cov=google.cloud.sqlalchemy_spanner",
@@ -241,6 +239,11 @@ def _migration_test(session):
     import glob
     import os
     import shutil
+
+    try:
+        import sqlalchemy
+    except:
+        session.run("pip", "install", "sqlalchemy>=1.3.11,<2.0", "--force-reinstall")
 
     session.install("pytest")
     session.install("-e", ".")
