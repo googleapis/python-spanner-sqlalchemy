@@ -590,19 +590,16 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         eq_(fkey1["referred_columns"], ["user_id"])
         eq_(fkey1["constrained_columns"], ["remote_user_id"])
 
-    @testing.requires.foreign_key_constraint_reflection
     @testing.combinations(
-        (None, True, False, False),
-        (None, True, False, True, testing.requires.schemas),
-        ("foreign_key", True, False, False),
-        (None, False, False, False),
-        (None, False, False, True, testing.requires.schemas),
-        (None, True, False, False),
-        (None, True, False, True, testing.requires.schemas),
-        argnames="order_by,include_plain,include_views,use_schema",
+        None,
+        ("foreign_key", testing.requires.foreign_key_constraint_reflection),
+        argnames="order_by",
+    )
+    @testing.combinations(
+        (True, testing.requires.schemas), False, argnames="use_schema"
     )
     def test_get_table_names(
-        self, connection, order_by, include_plain, include_views, use_schema
+        self, connection, order_by, use_schema
     ):
 
         if use_schema:
@@ -623,33 +620,27 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             "remote_table_2",
             "text_table",
             "user_tmp",
+            "no_constraints",
         ]
 
         insp = inspect(connection)
+        
+        if order_by:
+            tables = [
+                rec[0]
+                for rec in insp.get_sorted_table_and_fkc_names(schema)
+                if rec[0]
+            ]
+        else:
+            tables = insp.get_table_names(schema)
+        table_names = [t for t in tables if t not in _ignore_tables]
 
-        if include_views:
-            table_names = insp.get_view_names(schema)
-            table_names.sort()
-            answer = ["email_addresses_v", "users_v"]
+        if order_by == "foreign_key":
+            answer = ["users", "email_addresses", "dingalings"]
+            eq_(table_names, answer)
+        else:
+            answer = ["dingalings", "email_addresses", "users"]
             eq_(sorted(table_names), answer)
-
-        if include_plain:
-            if order_by:
-                tables = [
-                    rec[0]
-                    for rec in insp.get_sorted_table_and_fkc_names(schema)
-                    if rec[0]
-                ]
-            else:
-                tables = insp.get_table_names(schema)
-            table_names = [t for t in tables if t not in _ignore_tables]
-
-            if order_by == "foreign_key":
-                answer = ["users", "email_addresses", "dingalings"]
-                eq_(table_names, answer)
-            else:
-                answer = ["dingalings", "email_addresses", "users"]
-                eq_(sorted(table_names), answer)
 
     @classmethod
     def define_temp_tables(cls, metadata):
@@ -839,6 +830,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             "local_table",
             "remote_table",
             "remote_table_2",
+            "no_constraints",
         ]
         meta = self.metadata
 
