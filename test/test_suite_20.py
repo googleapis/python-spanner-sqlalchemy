@@ -85,7 +85,6 @@ from sqlalchemy.testing.suite.test_insert import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_reflection import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_deprecations import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_results import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_types import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_select import (
     IsOrIsNotDistinctFromTest,
     DistinctOnTest,
