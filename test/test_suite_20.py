@@ -879,7 +879,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
     def test_get_temp_table_columns(self):
         pass
 
-    def _assert_insp_indexes(self, indexes, expected_indexes):
+    def _check_list(self, indexes, expected_indexes, req_keys=None, msg=None):
         expected_indexes.sort(key=lambda item: item["name"])
 
         index_names = [d["name"] for d in indexes]
