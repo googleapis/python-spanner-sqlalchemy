@@ -590,16 +590,20 @@ class SpannerDialect(DefaultDialect):
     @engine_to_connection
     def get_view_names(self, connection, schema=None, **kw):
         sql = """
-SELECT table_name
-FROM information_schema.views
-"""
+            SELECT table_name
+            FROM information_schema.views
+            WHERE TABLE_SCHEMA='{}'
+            """.format(
+            schema or ""
+        )
 
-        names = []
+        all_views = []
         with connection.connection.database.snapshot() as snap:
-            for name in snap.execute_sql(sql):
-                names.append(name[0])
+            rows = list(snap.execute_sql(sql))
+            for view in rows:
+                all_views.append(view[0])
 
-        return names
+        return all_views
 
     @engine_to_connection
     def get_columns(self, connection, table_name, schema=None, **kw):
