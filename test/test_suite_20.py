@@ -1422,7 +1422,7 @@ class _UnicodeFixture(__UnicodeFixture):
             Column("unicode_data", cls.datatype),
         )
 
-    def test_round_trip_executemany(self):
+    def test_round_trip_executemany(self, connection):
         """
         SPANNER OVERRIDE
 
@@ -1433,15 +1433,15 @@ class _UnicodeFixture(__UnicodeFixture):
         """
         unicode_table = self.tables.unicode_table
 
-        config.db.execute(
+        connection.execute(
             unicode_table.insert(),
-            [{"id": i, "unicode_data": self.data} for i in range(3)],
+            [{"id": i, "unicode_data": self.data} for i in range(1, 4)],
         )
 
-        rows = config.db.execute(select(unicode_table.c.unicode_data)).fetchall()
-        eq_(rows, [(self.data,) for i in range(3)])
+        rows = connection.execute(select(unicode_table.c.unicode_data)).fetchall()
+        eq_(rows, [(self.data,) for i in range(1, 4)])
         for row in rows:
-            assert isinstance(row[0], util.text_type)
+            assert isinstance(row[0], str)
 
     @pytest.mark.skip("Spanner doesn't support non-ascii characters")
     def test_literal(self):
@@ -1498,7 +1498,7 @@ class RowFetchTest(_RowFetchTest):
         row = connection.execute(s2).first()
 
         eq_(
-            row["somelabel"],
+            row.somelabel,
             DatetimeWithNanoseconds(2006, 5, 12, 12, 0, 0, tzinfo=timezone.utc),
         )
 
@@ -2066,7 +2066,7 @@ class HasIndexTest(_HasIndexTest):
 
     @pytest.mark.skip("Not supported by Cloud Spanner")
     @kind
-    def test_has_index(self, kind, connection, metadata):
+    def test_has_index_schema(self, kind, connection, metadata):
         pass
 
 
@@ -2308,7 +2308,7 @@ class JSONTest(_JSONTest):
 
 
 class ExecutionOptionsRequestPriorotyTest(fixtures.TestBase):
-    def test_request_priority(self, connection):
+    def setUp(self):
         self._engine = create_engine(get_db_url(), pool_size=1)
         metadata = MetaData()
 
@@ -2319,13 +2319,15 @@ class ExecutionOptionsRequestPriorotyTest(fixtures.TestBase):
             Column("opt_name", String(16), nullable=False),
         )
 
-        metadata.create_all(connection)
+        metadata.create_all(self._engine)
         time.sleep(1)
+
+    def test_request_priority(self):
         PRIORITY = RequestOptions.Priority.PRIORITY_MEDIUM
         with self._engine.connect().execution_options(
             request_priority=PRIORITY
         ) as connection:
-            connection.execute(select("*", from_obj=self._table)).fetchall()
+            connection.execute(select(self._table)).fetchall()
 
         with self._engine.connect() as connection:
             assert connection.connection.request_priority is None
