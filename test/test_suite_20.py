@@ -2066,6 +2066,11 @@ class HasIndexTest(_HasIndexTest):
 
     @pytest.mark.skip("Not supported by Cloud Spanner")
     @kind
+    def test_has_index(self, kind, connection, metadata):
+        pass
+
+    @pytest.mark.skip("Not supported by Cloud Spanner")
+    @kind
     def test_has_index_schema(self, kind, connection, metadata):
         pass
 
