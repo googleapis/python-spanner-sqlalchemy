@@ -32,6 +32,8 @@ from sqlalchemy import inspect
 from sqlalchemy import testing
 from sqlalchemy import ForeignKey
 from sqlalchemy import MetaData
+from sqlalchemy.engine import ObjectKind
+from sqlalchemy.engine import ObjectScope
 from sqlalchemy.schema import DDL
 from sqlalchemy.schema import Computed
 from sqlalchemy.testing import config
@@ -900,22 +902,112 @@ class ComponentReflectionTest(_ComponentReflectionTest):
     def test_reflect_table_temp_table(self, connection):
         pass
 
-    def _check_list(self, result, exp, req_keys=None, msg=None, index=False):
-        if result is not None and hasattr(result[0], 'name'):
-            exp.sort(key=lambda item: item["name"])
+    def exp_indexes(
+        self,
+        schema=None,
+        scope=ObjectScope.ANY,
+        kind=ObjectKind.ANY,
+        filter_names=None,
+    ):
+        def idx(
+            *cols,
+            name,
+            unique=False,
+            column_sorting=None,
+            duplicates=False,
+            fk=False,
+        ):
+            fk_req = testing.requires.foreign_keys_reflect_as_index
+            dup_req = testing.requires.unique_constraints_reflect_as_index
+            if (fk and not fk_req.enabled) or (
+                duplicates and not dup_req.enabled
+            ):
+                return ()
+            res = {
+                "unique": unique,
+                "column_names": list(cols),
+                "name": name,
+                "dialect_options": mock.ANY,
+                "include_columns": [],
+            }
+            if column_sorting:
+                res["column_sorting"] = {"q": 'DESC'}
+            if duplicates:
+                res["duplicates_constraint"] = name
+            return [res]
 
-            index_names = [d["name"] for d in result]
-            exp_index_names = [d["name"] for d in exp]
-            assert sorted(index_names) == sorted(exp_index_names)
-        else:
-            if req_keys is None:
-                eq_(result, exp, msg)
-            else:
-                eq_(len(result), len(exp), msg)
-                for r, e in zip(result, exp):
-                    for k in set(r) | set(e):
-                        if k in req_keys or (k in r and k in e):
-                            eq_(r[k], e[k], f"{msg} - {k} - {r}")
+        materialized = {(schema, "dingalings_v"): []}
+        views = {
+            (schema, "email_addresses_v"): [],
+            (schema, "users_v"): [],
+            (schema, "user_tmp_v"): [],
+        }
+        self._resolve_views(views, materialized)
+        if materialized:
+            materialized[(schema, "dingalings_v")].extend(
+                idx("data", name="mat_index")
+            )
+        tables = {
+            (schema, "users"): [
+                *idx("parent_user_id", name="user_id_fk", fk=True),
+                *idx("user_id", "test2", "test1", name="users_all_idx"),
+                *idx("test1", "test2", name="users_t_idx", unique=True),
+            ],
+            (schema, "dingalings"): [
+                *idx("data", name=mock.ANY, unique=True, duplicates=True),
+                *idx("id_user", name=mock.ANY, fk=True),
+                *idx(
+                    "address_id",
+                    "dingaling_id",
+                    name="zz_dingalings_multiple",
+                    unique=True,
+                    duplicates=True,
+                ),
+            ],
+            (schema, "email_addresses"): [
+                *idx("email_address", name=mock.ANY),
+                *idx("remote_user_id", name=mock.ANY, fk=True),
+            ],
+            (schema, "comment_test"): [],
+            (schema, "no_constraints"): [],
+            (schema, "local_table"): [
+                *idx("remote_id", name=mock.ANY, fk=True)
+            ],
+            (schema, "remote_table"): [
+                *idx("local_id", name=mock.ANY, fk=True)
+            ],
+            (schema, "remote_table_2"): [],
+            (schema, "noncol_idx_test_nopk"): [
+                *idx(
+                    "q",
+                    name="noncol_idx_nopk",
+                    column_sorting={"q": 'DESC'},
+                )
+            ],
+            (schema, "noncol_idx_test_pk"): [
+                *idx(
+                    "q", name="noncol_idx_pk", column_sorting={"q": 'DESC'}
+                )
+            ],
+            (schema, self.temp_table_name()): [
+                *idx("foo", name="user_tmp_ix"),
+                *idx(
+                    "name",
+                    name=f"user_tmp_uq_{config.ident}",
+                    duplicates=True,
+                    unique=True,
+                ),
+            ],
+        }
+        if (
+            not testing.requires.indexes_with_ascdesc.enabled
+            or not testing.requires.reflect_indexes_with_ascdesc.enabled
+        ):
+            tables[(schema, "noncol_idx_test_nopk")].clear()
+            tables[(schema, "noncol_idx_test_pk")].clear()
+        res = self._resolve_kind(kind, tables, views, materialized)
+        res = self._resolve_names(schema, scope, filter_names, res)
+        return res
 
     @testing.combinations(True, False, argnames="use_schema")
     @testing.combinations(
