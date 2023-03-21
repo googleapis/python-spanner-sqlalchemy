@@ -901,13 +901,13 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         pass
 
     def _check_list(self, result, exp, req_keys=None, msg=None, index=False):
-        try:
+        if result is not None and hasattr(result[0], 'name'):
             exp.sort(key=lambda item: item["name"])
 
             index_names = [d["name"] for d in result]
             exp_index_names = [d["name"] for d in exp]
             assert sorted(index_names) == sorted(exp_index_names)
-        except:
+        else:
             if req_keys is None:
                 eq_(result, exp, msg)
             else:

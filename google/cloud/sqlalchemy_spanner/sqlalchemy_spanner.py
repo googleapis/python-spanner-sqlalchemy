@@ -692,47 +692,6 @@ ORDER BY
         else:
             return _type_map[str_repr]
 
-    # def _build_multi_index_query(self, schema, filter_names, scope, kind):
-
-
-    # @engine_to_connection
-    # def get_multi_indexes(self, connection, schema, filter_names, scope, kind, **kw):
-    #     sql = """
-    #         SELECT
-    #             i.index_name,
-    #             ARRAY_AGG(ic.column_name),
-    #             i.is_unique,
-    #             ARRAY_AGG(ic.column_ordering)
-    #         FROM information_schema.indexes as i
-    #         JOIN information_schema.index_columns AS ic
-    #             ON ic.index_name = i.index_name AND ic.table_name = i.table_name
-    #         WHERE
-    #             i.table_name="{table_name}"
-    #             AND i.index_type != 'PRIMARY_KEY'
-    #             AND i.spanner_is_managed = FALSE
-    #         GROUP BY i.index_name, i.is_unique
-    #         ORDER BY i.index_name
-    #     """.format(
-    #         table_name=table_name
-    #     )
-
-    #     ind_desc = []
-    #     with connection.connection.database.snapshot() as snap:
-    #         rows = snap.execute_sql(sql)
-
-    #         for row in rows:
-    #             ind_desc.append(
-    #                 {
-    #                     "name": row[0],
-    #                     "column_names": row[1],
-    #                     "unique": row[2],
-    #                     "column_sorting": {
-    #                         col: order for col, order in zip(row[1], row[3])
-    #                     },
-    #                 }
-    #             )
-    #     return ind_desc
-
     @engine_to_connection
     def get_indexes(self, connection, table_name, schema=None, **kw):
         """Get the table indexes.
