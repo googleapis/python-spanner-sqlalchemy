@@ -1008,6 +1008,19 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         res = self._resolve_kind(kind, tables, views, materialized)
         res = self._resolve_names(schema, scope, filter_names, res)
         return res
+    
+    def _check_list(self, result, exp, req_keys=None, msg=None):
+        if req_keys is None:
+            eq_(result, exp, msg)
+        else:
+            eq_(len(result), len(exp), msg)
+            for r, e in zip(result, exp):
+                for k in set(r) | set(e):
+                    if (k in req_keys and (k in r and k in e)) or (k in r and k in e):
+                        if isinstance(r[k],list):
+                            r[k].sort()
+                            e[k].sort()
+                        eq_(r[k], e[k], f"{msg} - {k} - {r}")
 
     @testing.combinations(True, False, argnames="use_schema")
     @testing.combinations(
