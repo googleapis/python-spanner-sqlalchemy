@@ -141,18 +141,19 @@ def compliance_test_13(session):
         )
 
     session.install(
-        "pytest",
         "pytest-cov",
-        "pytest-asyncio",
     )
 
     session.install("mock")
     session.install("-e", ".[tracing]")
     session.run("pip", "install", "sqlalchemy>=1.1.13,<=1.3.24", "--force-reinstall")
-    session.run("pip", "install", "pytest==6.2.2", "--force-reinstall")
     session.run("pip", "install", "opentelemetry-api<=1.10", "--force-reinstall")
     session.run("pip", "install", "opentelemetry-sdk<=1.10", "--force-reinstall")
     session.run("python", "create_test_database.py")
+    session.run("pip", "install", "pytest==6.2.2", "--force-reinstall")
+    session.run(
+        "pip", "install", "pytest-asyncio<0.21.0", "--force-reinstall", "--no-deps"
+    )
 
     session.run(
         "py.test",
@@ -190,10 +191,8 @@ def compliance_test_14(session):
 
     session.install("mock")
     session.install("-e", ".[tracing]")
+    session.run("pip", "install", "sqlalchemy>=1.4,<2.0", "--force-reinstall")
     session.run("python", "create_test_database.py")
-
-    session.install("sqlalchemy>=1.4,<2.0")
-
     session.run(
         "py.test",
         "--cov=google.cloud.sqlalchemy_spanner",
@@ -224,7 +223,7 @@ def unit(session):
 @nox.session(python=DEFAULT_PYTHON_VERSION)
 def migration_test(session):
     """Test migrations with SQLAlchemy v1.3.11+ and Alembic"""
-    session.run("pip", "install", "sqlalchemy>=1.3.11", "--force-reinstall")
+    session.run("pip", "install", "sqlalchemy>=1.3.11,<2.0", "--force-reinstall")
     _migration_test(session)
 
 
@@ -241,6 +240,11 @@ def _migration_test(session):
     import glob
     import os
     import shutil
+
+    try:
+        import sqlalchemy
+    except:
+        session.run("pip", "install", "sqlalchemy>=1.3.11,<2.0", "--force-reinstall")
 
     session.install("pytest")
     session.install("-e", ".")
@@ -307,7 +311,7 @@ def snippets(session):
         session.skip("Credentials must be set via environment variable.")
 
     session.install("pytest")
-    session.install("sqlalchemy")
+    session.install("sqlalchemy>=1.4,<2.0")
     session.install(
         "git+https://github.com/googleapis/python-spanner.git#egg=google-cloud-spanner"
     )
