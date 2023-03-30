@@ -307,28 +307,27 @@ class ComputedReflectionFixtureTest(_ComputedReflectionFixtureTest):
 
 
 class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureTest):
-    def _multi_combination(fn):
-        schema = testing.combinations(
-            None,
-            (
-                lambda: config.test_schema,
-                testing.requires.schemas,
-            ),
-            argnames="schema",
-        )
-        scope = testing.combinations(
-            ObjectScope.DEFAULT,
-            ObjectScope.ANY,
-            argnames="scope",
-        )
-        kind = testing.combinations(
-            ObjectKind.TABLE,
-            ObjectKind.ANY,
-            argnames="kind",
-        )
-        filter_names = testing.combinations(True, False, argnames="use_filter")
+    def filter_name_values():
 
-        return schema(scope(kind(filter_names(fn))))
+        return  testing.combinations(True, False, argnames="use_filter")
+
+    @filter_name_values()
+    @testing.requires.index_reflection
+    def test_get_multi_indexes(
+        self, get_multi_exp, schema , use_filter, scope=ObjectScope.DEFAULT, kind=ObjectKind.TABLE
+    ):
+        insp, kws, exp = get_multi_exp(
+            schema,
+            scope,
+            kind,
+            use_filter,
+            Inspector.get_indexes,
+            self.exp_indexes,
+        )
+        for kw in kws:
+            insp.clear_cache()
+            result = insp.get_multi_indexes(**kw)
+            self._check_table_dict(result, exp, self._required_index_keys)
 
     @testing.requires.schemas
     def test_get_column_returns_persisted_with_schema(self):

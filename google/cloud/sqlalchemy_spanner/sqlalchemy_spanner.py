@@ -39,7 +39,6 @@ from sqlalchemy.sql.compiler import (
 )
 from sqlalchemy.sql.default_comparator import operator_lookup
 from sqlalchemy.sql.operators import json_getitem_op
-from sqlalchemy.engine.reflection import ObjectKind
 
 from google.cloud.spanner_v1.data_types import JsonObject
 from google.cloud import spanner_dbapi
@@ -697,11 +696,6 @@ ORDER BY
     def get_multi_indexes(
         self, connection, schema=None, filter_names=None, scope=None, kind=None, **kw
     ):
-        unsupportedIndexObjectKind = [ObjectKind.MATERIALIZED_VIEW, ObjectKind.VIEW]
-        if kind is not None:
-            if kind in unsupportedIndexObjectKind:
-                raise ValueError("VIEW and MATERIALIZED_VIEW Indexes are not supported")
-
         table_filter_query = ""
         if filter_names is not None:
             for table_name in filter_names:
