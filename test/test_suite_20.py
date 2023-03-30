@@ -579,16 +579,30 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             result = insp.get_multi_indexes(**kw)
             self._check_table_dict(result, exp, self._required_index_keys)
 
-    @pytest.mark.skip(
-        "Requires an introspection method to be implemented in SQLAlchemy first"
-    )
-    def test_get_multi_columns():
-        pass
+    @filter_name_values()
+    @testing.requires.primary_key_constraint_reflection
+    def test_get_multi_pk_constraint(
+        self, get_multi_exp, schema, scope, kind, use_filter
+    ):
+        insp, kws, exp = get_multi_exp(
+            schema,
+            scope,
+            kind,
+            use_filter,
+            Inspector.get_pk_constraint,
+            self.exp_pks,
+        )
+        for kw in kws:
+            insp.clear_cache()
+            result = insp.get_multi_pk_constraint(**kw)
+            self._check_table_dict(
+                result, exp, self._required_pk_keys, make_lists=True
+            )
 
     @pytest.mark.skip(
         "Requires an introspection method to be implemented in SQLAlchemy first"
     )
-    def test_get_multi_pk_constraint():
+    def test_get_multi_columns():
         pass
 
     @pytest.mark.skip(

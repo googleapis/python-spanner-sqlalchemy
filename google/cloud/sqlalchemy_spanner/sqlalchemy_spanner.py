@@ -780,6 +780,46 @@ ORDER BY
         )
         schema = None if schema == "" else schema
         return dict.get((schema, table_name), [])
+    
+    @engine_to_connection
+    def get_multi_pk_constraint(
+        self, connection, schema=None, filter_names=None, scope=None, kind=None, **kw
+    ):
+        table_filter_query = ""
+        schema_filter_query = "AND tc.table_schema = '{schema}'".format(
+            schema=schema or ""
+        )
+        if filter_names is not None:
+            for table_name in filter_names:
+                query = "tc.TABLE_NAME = '{table_name}'".format(table_name=table_name)
+                if table_filter_query != "":
+                    table_filter_query = table_filter_query + " OR " + query
+                else:
+                    table_filter_query = query
+            table_filter_query = "(" + table_filter_query + ") AND "
+
+        sql = """
+            SELECT tc.table_schema, tc.table_name, ccu.COLUMN_NAME
+            FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc
+            JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS ccu
+                ON ccu.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
+            WHERE {table_filter_query} tc.CONSTRAINT_TYPE = "PRIMARY KEY" {schema_filter_query}
+        """.format(
+            table_filter_query=table_filter_query,
+            schema_filter_query=schema_filter_query,
+        )
+
+        with connection.connection.database.snapshot() as snap:
+            rows = list(snap.execute_sql(sql))
+            result_dict = {}
+
+            for row in rows:
+                row[0] = row[0] if row[0] != "" else None
+                table_info = result_dict.get((row[0], row[1]), {"constrained_columns":[]})
+                table_info["constrained_columns"].append(row[2])
+                result_dict[(row[0], row[1])] = table_info
+
+        return result_dict
 
     @engine_to_connection
     def get_pk_constraint(self, connection, table_name, schema=None, **kw):
@@ -796,24 +836,29 @@ ORDER BY
         Returns:
             dict: Dict with the primary key constraint description.
         """
-        sql = """
-SELECT ccu.COLUMN_NAME
-FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc
-JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS ccu
-    ON ccu.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
-WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "PRIMARY KEY"
-""".format(
-            table_name=table_name
+        dict = self.get_multi_pk_constraint(
+            connection, schema=schema, filter_names=[table_name]
         )
+        schema = None if schema == "" else schema
+        return dict.get((schema, table_name), [])
+#         sql = """
+# SELECT ccu.COLUMN_NAME
+# FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc
+# JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS ccu
+#     ON ccu.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
+# WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "PRIMARY KEY"
+# """.format(
+#             table_name=table_name
+#         )
 
-        cols = []
-        with connection.connection.database.snapshot() as snap:
-            rows = snap.execute_sql(sql)
+#         cols = []
+#         with connection.connection.database.snapshot() as snap:
+#             rows = snap.execute_sql(sql)
 
-            for row in rows:
-                cols.append(row[0])
+#             for row in rows:
+#                 cols.append(row[0])
 
-        return {"constrained_columns": cols}
+#         return {"constrained_columns": cols}
 
     @engine_to_connection
     def get_schema_names(self, connection, **kw):
