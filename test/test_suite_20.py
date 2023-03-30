@@ -207,10 +207,6 @@ class BooleanTest(_BooleanTest):
 
 
 class ComponentReflectionTestExtra(_ComponentReflectionTestExtra):
-    @pytest.mark.skip("Skip")
-    def test_not_existing_table(self, method, connection):
-        pass
-
     @testing.requires.table_reflection
     def test_nullable_reflection(self, connection, metadata):
         t = Table(
@@ -388,6 +384,10 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
 
 
 class ComponentReflectionTest(_ComponentReflectionTest):
+    @pytest.mark.skip("Skip")
+    def test_not_existing_table(self, method, connection):
+        pass
+
     @classmethod
     def define_tables(cls, metadata):
         cls.define_reflected_tables(metadata, None)
@@ -547,12 +547,17 @@ class ComponentReflectionTest(_ComponentReflectionTest):
 
     def filter_name_values():
 
-        return  testing.combinations(True, False, argnames="use_filter")
+        return testing.combinations(True, False, argnames="use_filter")
 
     @filter_name_values()
     @testing.requires.index_reflection
     def test_get_multi_indexes(
-        self, get_multi_exp , use_filter, schema=None, scope=ObjectScope.DEFAULT, kind=ObjectKind.TABLE
+        self,
+        get_multi_exp,
+        use_filter,
+        schema=None,
+        scope=ObjectScope.DEFAULT,
+        kind=ObjectKind.TABLE,
     ):
         insp, kws, exp = get_multi_exp(
             schema,
@@ -562,14 +567,18 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             Inspector.get_indexes,
             self.exp_indexes,
         )
-        tables_with_indexes = [(None, 'noncol_idx_test_nopk'), (None, 'noncol_idx_test_pk'), (None, 'users')]
+        tables_with_indexes = [
+            (None, "noncol_idx_test_nopk"),
+            (None, "noncol_idx_test_pk"),
+            (None, "users"),
+        ]
         exp = {k: v for k, v in exp.items() if k in tables_with_indexes}
 
         for kw in kws:
             insp.clear_cache()
             result = insp.get_multi_indexes(**kw)
             self._check_table_dict(result, exp, self._required_index_keys)
-    
+
     @pytest.mark.skip(
         "Requires an introspection method to be implemented in SQLAlchemy first"
     )

@@ -547,7 +547,7 @@ class SpannerDialect(DefaultDialect):
         Used to initiate connections to the Cloud Spanner databases.
         """
         return spanner_dbapi
-    
+
     @classmethod
     def import_dbapi(cls):
         """A pointer to the Cloud Spanner DB API package.
@@ -705,7 +705,9 @@ ORDER BY
         self, connection, schema=None, filter_names=None, scope=None, kind=None, **kw
     ):
         table_filter_query = ""
-        schema_filter_query = "AND i.table_schema = '{schema}'".format(schema=schema or "")
+        schema_filter_query = "AND i.table_schema = '{schema}'".format(
+            schema=schema or ""
+        )
         if filter_names is not None:
             for table_name in filter_names:
                 query = "i.table_name = '{table_name}'".format(table_name=table_name)
@@ -734,7 +736,8 @@ ORDER BY
             GROUP BY i.table_schema, i.table_name, i.index_name, i.is_unique
             ORDER BY i.index_name
         """.format(
-            table_filter_query=table_filter_query, schema_filter_query=schema_filter_query
+            table_filter_query=table_filter_query,
+            schema_filter_query=schema_filter_query,
         )
 
         with connection.connection.database.snapshot() as snap:
@@ -750,11 +753,10 @@ ORDER BY
                         col: order for col, order in zip(row[3], row[5])
                     },
                 }
-                row[0] = row[0] if row[0] != '' else None
+                row[0] = row[0] if row[0] != "" else None
                 table_info = result_dict.get((row[0], row[1]), [])
                 table_info.append(index_info)
-                result_dict[(row[0], row[1])]= table_info
-        
+                result_dict[(row[0], row[1])] = table_info
 
         return result_dict
 
@@ -773,10 +775,10 @@ ORDER BY
         Returns:
             list: List with indexes description.
         """
-        dict=self.get_multi_indexes(
+        dict = self.get_multi_indexes(
             connection, schema=schema, filter_names=[table_name]
         )
-        schema = None if schema == '' else schema
+        schema = None if schema == "" else schema
         return dict.get((schema, table_name), [])
 
     @engine_to_connection
