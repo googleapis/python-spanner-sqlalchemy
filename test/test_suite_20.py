@@ -207,6 +207,7 @@ class BooleanTest(_BooleanTest):
 
 
 class ComponentReflectionTestExtra(_ComponentReflectionTestExtra):
+    @pytest.mark.skip("Skip")
     def test_not_existing_table(self, method, connection):
         pass
 
@@ -328,22 +329,6 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
         filter_names = testing.combinations(True, False, argnames="use_filter")
 
         return schema(scope(kind(filter_names(fn))))
-
-    @testing.requires.index_reflection
-    @_multi_combination
-    def test_get_multi_indexes(self, get_multi_exp, schema, scope, kind, use_filter):
-        insp, kws, exp = get_multi_exp(
-            schema,
-            scope,
-            kind,
-            use_filter,
-            Inspector.get_indexes,
-            self.exp_indexes,
-        )
-        for kw in kws:
-            insp.clear_cache()
-            result = insp.get_multi_indexes(**kw)
-            self._check_table_dict(result, exp, self._required_index_keys)
 
     @testing.requires.schemas
     def test_get_column_returns_persisted_with_schema(self):
@@ -599,12 +584,6 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         "Requires an introspection method to be implemented in SQLAlchemy first"
     )
     def test_get_multi_foreign_keys():
-        pass
-
-    @pytest.mark.skip(
-        "Requires an introspection method to be implemented in SQLAlchemy first"
-    )
-    def test_get_multi_indexes():
         pass
 
     @pytest.mark.skip(

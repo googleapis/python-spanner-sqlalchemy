@@ -39,7 +39,7 @@ from sqlalchemy.sql.compiler import (
 )
 from sqlalchemy.sql.default_comparator import operator_lookup
 from sqlalchemy.sql.operators import json_getitem_op
-from sqlalchemy.engine.reflection import ObjectKind, ObjectScope
+from sqlalchemy.engine.reflection import ObjectKind
 
 from google.cloud.spanner_v1.data_types import JsonObject
 from google.cloud import spanner_dbapi
