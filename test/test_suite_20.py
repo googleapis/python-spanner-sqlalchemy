@@ -307,28 +307,6 @@ class ComputedReflectionFixtureTest(_ComputedReflectionFixtureTest):
 
 
 class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureTest):
-    def filter_name_values():
-
-        return  testing.combinations(True, False, argnames="use_filter")
-
-    @filter_name_values()
-    @testing.requires.index_reflection
-    def test_get_multi_indexes(
-        self, get_multi_exp, schema , use_filter, scope=ObjectScope.DEFAULT, kind=ObjectKind.TABLE
-    ):
-        insp, kws, exp = get_multi_exp(
-            schema,
-            scope,
-            kind,
-            use_filter,
-            Inspector.get_indexes,
-            self.exp_indexes,
-        )
-        for kw in kws:
-            insp.clear_cache()
-            result = insp.get_multi_indexes(**kw)
-            self._check_table_dict(result, exp, self._required_index_keys)
-
     @testing.requires.schemas
     def test_get_column_returns_persisted_with_schema(self):
         insp = inspect(config.db)
@@ -567,6 +545,28 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         if testing.requires.view_column_reflection.enabled:
             cls.define_views(metadata, schema)
 
+    def filter_name_values():
+
+        return  testing.combinations(True, False, argnames="use_filter")
+
+    @filter_name_values()
+    @testing.requires.index_reflection
+    def test_get_multi_indexes(
+        self, get_multi_exp, schema , use_filter, scope=ObjectScope.DEFAULT, kind=ObjectKind.TABLE
+    ):
+        insp, kws, exp = get_multi_exp(
+            schema,
+            scope,
+            kind,
+            use_filter,
+            Inspector.get_indexes,
+            self.exp_indexes,
+        )
+        for kw in kws:
+            insp.clear_cache()
+            result = insp.get_multi_indexes(**kw)
+            self._check_table_dict(result, exp, self._required_index_keys)
+    
     @pytest.mark.skip(
         "Requires an introspection method to be implemented in SQLAlchemy first"
     )
@@ -577,6 +577,12 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         "Requires an introspection method to be implemented in SQLAlchemy first"
     )
     def test_get_multi_pk_constraint():
+        pass
+
+    @pytest.mark.skip(
+        "Requires an introspection method to be implemented in SQLAlchemy first"
+    )
+    def test_get_multi_indexes():
         pass
 
     @pytest.mark.skip(
