@@ -582,7 +582,11 @@ class ComponentReflectionTest(_ComponentReflectionTest):
     @filter_name_values()
     @testing.requires.primary_key_constraint_reflection
     def test_get_multi_pk_constraint(
-        self, get_multi_exp, schema, scope, kind, use_filter
+        self, get_multi_exp, 
+        use_filter,
+        schema=None,
+        scope=ObjectScope.DEFAULT,
+        kind=ObjectKind.TABLE,
     ):
         insp, kws, exp = get_multi_exp(
             schema,
