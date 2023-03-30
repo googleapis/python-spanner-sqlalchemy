@@ -559,6 +559,15 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         scope=ObjectScope.DEFAULT,
         kind=ObjectKind.TABLE,
     ):
+        """
+        SPANNER OVERRIDE:
+
+        Spanner doesn't support indexes on views and
+        doesn't support temporary tables, so real tables are
+        used for testing. As the original test expects only real
+        tables to be read, and in Spanner all the tables are real,
+        expected results override is required.
+        """
         insp, kws, exp = get_multi_exp(
             schema,
             scope,
@@ -567,12 +576,13 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             Inspector.get_indexes,
             self.exp_indexes,
         )
-        tables_with_indexes = [
-            (None, "noncol_idx_test_nopk"),
-            (None, "noncol_idx_test_pk"),
-            (None, "users"),
+        _ignore_tables = [
+            (None, "comment_test"),
+            (None, "dingalings"),
+            (None, "email_addresses"),
+            (None, "no_constraints"),
         ]
-        exp = {k: v for k, v in exp.items() if k in tables_with_indexes}
+        exp = {k: v for k, v in exp.items() if k not in _ignore_tables}
 
         for kw in kws:
             insp.clear_cache()
@@ -588,6 +598,14 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         scope=ObjectScope.DEFAULT,
         kind=ObjectKind.TABLE,
     ):
+        """
+        SPANNER OVERRIDE:
+
+        Spanner doesn't support temporary tables, so real tables are
+        used for testing. As the original test expects only real
+        tables to be read, and in Spanner all the tables are real,
+        expected results override is required.
+        """
         insp, kws, exp = get_multi_exp(
             schema,
             scope,
@@ -596,6 +614,9 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             Inspector.get_pk_constraint,
             self.exp_pks,
         )
+        _ignore_tables = [(None, 'no_constraints')]
+        exp = {k: v for k, v in exp.items() if k not in _ignore_tables}
+        
         for kw in kws:
             insp.clear_cache()
             result = insp.get_multi_pk_constraint(**kw)
