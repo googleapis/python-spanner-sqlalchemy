@@ -552,7 +552,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
     @filter_name_values()
     @testing.requires.index_reflection
     def test_get_multi_indexes(
-        self, get_multi_exp, schema , use_filter, scope=ObjectScope.DEFAULT, kind=ObjectKind.TABLE
+        self, get_multi_exp , use_filter, schema=None, scope=ObjectScope.DEFAULT, kind=ObjectKind.TABLE
     ):
         insp, kws, exp = get_multi_exp(
             schema,
