@@ -387,7 +387,7 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
         metadata.create_all(connection)
 
 
-class AAAAAComponentReflectionTest(_ComponentReflectionTest):
+class ComponentReflectionTest(_ComponentReflectionTest):
     @classmethod
     def define_tables(cls, metadata):
         cls.define_reflected_tables(metadata, None)

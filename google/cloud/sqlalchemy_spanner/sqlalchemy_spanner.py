@@ -776,6 +776,7 @@ ORDER BY
         dict=self.get_multi_indexes(
             connection, schema=schema, filter_names=[table_name]
         )
+        schema = None if schema == '' else schema
         return dict.get((schema, table_name), [])
 
     @engine_to_connection
