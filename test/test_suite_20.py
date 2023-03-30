@@ -582,12 +582,6 @@ class ComponentReflectionTest(_ComponentReflectionTest):
     @pytest.mark.skip(
         "Requires an introspection method to be implemented in SQLAlchemy first"
     )
-    def test_get_multi_indexes():
-        pass
-
-    @pytest.mark.skip(
-        "Requires an introspection method to be implemented in SQLAlchemy first"
-    )
     def test_get_multi_foreign_keys():
         pass
 
