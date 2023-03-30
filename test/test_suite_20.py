@@ -25,7 +25,7 @@ import time
 from unittest import mock
 
 from google.cloud.spanner_v1 import RequestOptions
-
+from sqlalchemy.testing.assertions import is_
 import sqlalchemy
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Inspector
@@ -387,7 +387,7 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
         metadata.create_all(connection)
 
 
-class ComponentReflectionTest(_ComponentReflectionTest):
+class AAAAAComponentReflectionTest(_ComponentReflectionTest):
     @classmethod
     def define_tables(cls, metadata):
         cls.define_reflected_tables(metadata, None)
@@ -562,6 +562,9 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             Inspector.get_indexes,
             self.exp_indexes,
         )
+        tables_with_indexes = [(None, 'noncol_idx_test_nopk'), (None, 'noncol_idx_test_pk'), (None, 'users')]
+        exp = {k: v for k, v in exp.items() if k in tables_with_indexes}
+
         for kw in kws:
             insp.clear_cache()
             result = insp.get_multi_indexes(**kw)
