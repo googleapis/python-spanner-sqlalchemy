@@ -39,21 +39,22 @@ from sqlalchemy.sql.compiler import (
 )
 from sqlalchemy.sql.default_comparator import operator_lookup
 from sqlalchemy.sql.operators import json_getitem_op
+from sqlalchemy.engine.reflection import ObjectKind, ObjectScope
 
 from google.cloud.spanner_v1.data_types import JsonObject
 from google.cloud import spanner_dbapi
 from google.cloud.sqlalchemy_spanner._opentelemetry_tracing import trace_call
 import sqlalchemy
 
-USING_SQLACLCHEMY_20=False
-if sqlalchemy.__version__.split('.')[0]=='2':
-    USING_SQLACLCHEMY_20=True
+USING_SQLACLCHEMY_20 = False
+if sqlalchemy.__version__.split(".")[0] == "2":
+    USING_SQLACLCHEMY_20 = True
 
 
 @listens_for(Pool, "reset")
 def reset_connection(dbapi_conn, connection_record):
     """An event of returning a connection back to a pool."""
-    if hasattr(dbapi_conn, 'connection'):
+    if hasattr(dbapi_conn, "connection"):
         dbapi_conn = dbapi_conn.connection
     if isinstance(dbapi_conn, spanner_dbapi.Connection):
         if dbapi_conn.inside_transaction:
@@ -693,6 +694,65 @@ ORDER BY
             return _type_map[str_repr]
 
     @engine_to_connection
+    def get_multi_indexes(
+        self, connection, schema=None, filter_names=None, scope=None, kind=None, **kw
+    ):
+        unsupportedIndexObjectKind = [ObjectKind.MATERIALIZED_VIEW, ObjectKind.VIEW]
+        if kind is not None:
+            if kind in unsupportedIndexObjectKind:
+                raise ValueError("VIEW and MATERIALIZED_VIEW Indexes are not supported")
+
+        table_filter_query = ""
+        if filter_names is not None:
+            for table_name in filter_names:
+                query = "i.table_name = '{table_name}'".format(table_name=table_name)
+                if table_filter_query != "":
+                    table_filter_query = table_filter_query + " OR " + query
+                else:
+                    table_filter_query = query
+            table_filter_query = "(" + table_filter_query + ") AND "
+
+        sql = """
+            SELECT
+               i.table_name,
+               i.index_name,
+               ARRAY_AGG(ic.column_name),
+               i.is_unique,
+               ARRAY_AGG(ic.column_ordering)
+            FROM information_schema.indexes as i
+            JOIN information_schema.index_columns AS ic
+                ON ic.index_name = i.index_name AND ic.table_name = i.table_name
+            WHERE
+                {table_filter_query}
+                i.index_type != 'PRIMARY_KEY'
+                AND i.spanner_is_managed = FALSE
+                AND i.table_schema = '{schema}'
+            GROUP BY i.table_name, i.index_name, i.is_unique
+            ORDER BY i.index_name
+        """.format(
+            table_filter_query=table_filter_query, schema=schema or ""
+        )
+
+        with connection.connection.database.snapshot() as snap:
+            rows = list(snap.execute_sql(sql))
+            result_dict = {}
+
+            for row in rows:
+                index_info = {
+                    "name": row[1],
+                    "column_names": row[2],
+                    "unique": row[3],
+                    "column_sorting": {
+                        col: order for col, order in zip(row[2], row[4])
+                    },
+                }
+                table_info = result_dict.get(row[0], [])
+                table_info.append(index_info)
+                result_dict[row[0]] = table_info
+
+        return result_dict
+
+    @engine_to_connection
     def get_indexes(self, connection, table_name, schema=None, **kw):
         """Get the table indexes.
 
@@ -707,41 +767,9 @@ ORDER BY
         Returns:
             list: List with indexes description.
         """
-        sql = """
-SELECT
-    i.index_name,
-    ARRAY_AGG(ic.column_name),
-    i.is_unique,
-    ARRAY_AGG(ic.column_ordering)
-FROM information_schema.indexes as i
-JOIN information_schema.index_columns AS ic
-    ON ic.index_name = i.index_name AND ic.table_name = i.table_name
-WHERE
-    i.table_name="{table_name}"
-    AND i.index_type != 'PRIMARY_KEY'
-    AND i.spanner_is_managed = FALSE
-GROUP BY i.index_name, i.is_unique
-ORDER BY i.index_name
-""".format(
-            table_name=table_name
-        )
-
-        ind_desc = []
-        with connection.connection.database.snapshot() as snap:
-            rows = snap.execute_sql(sql)
-
-            for row in rows:
-                ind_desc.append(
-                    {
-                        "name": row[0],
-                        "column_names": row[1],
-                        "unique": row[2],
-                        "column_sorting": {
-                            col: order for col, order in zip(row[1], row[3])
-                        },
-                    }
-                )
-        return ind_desc
+        return self.get_multi_indexes(
+            connection, schema=schema, filter_names=[table_name]
+        )[table_name]
 
     @engine_to_connection
     def get_pk_constraint(self, connection, table_name, schema=None, **kw):

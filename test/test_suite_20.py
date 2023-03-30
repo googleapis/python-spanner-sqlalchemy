@@ -28,6 +28,7 @@ from google.cloud.spanner_v1 import RequestOptions
 
 import sqlalchemy
 from sqlalchemy import create_engine
+from sqlalchemy.engine import Inspector
 from sqlalchemy import inspect
 from sqlalchemy import testing
 from sqlalchemy import ForeignKey
@@ -62,6 +63,7 @@ from sqlalchemy.types import Numeric
 from sqlalchemy.types import Text
 from sqlalchemy.testing import requires
 from sqlalchemy.testing import is_true
+from sqlalchemy import exc
 from sqlalchemy.testing.fixtures import (
     ComputedReflectionFixtureTest as _ComputedReflectionFixtureTest,
 )
@@ -81,7 +83,7 @@ from sqlalchemy.testing.suite.test_dialect import (
     EscapingTest,
     WeCanSetDefaultSchemaWEventsTest,
     FutureWeCanSetDefaultSchemaWEventsTest,
-    DifficultParametersTest
+    DifficultParametersTest,
 )  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_insert import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_reflection import *  # noqa: F401, F403
@@ -102,7 +104,7 @@ from sqlalchemy.testing.suite.test_select import (
     FetchLimitOffsetTest,
     ValuesExpressionTest,
     OrderByLabelTest,
-    CollateTest
+    CollateTest,
 )  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_sequence import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_unicode_ddl import *  # noqa: F401, F403
@@ -205,6 +207,9 @@ class BooleanTest(_BooleanTest):
 
 
 class ComponentReflectionTestExtra(_ComponentReflectionTestExtra):
+    def test_not_existing_table(self, method, connection):
+        pass
+
     @testing.requires.table_reflection
     def test_nullable_reflection(self, connection, metadata):
         t = Table(
@@ -301,6 +306,45 @@ class ComputedReflectionFixtureTest(_ComputedReflectionFixtureTest):
 
 
 class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureTest):
+    def _multi_combination(fn):
+        schema = testing.combinations(
+            None,
+            (
+                lambda: config.test_schema,
+                testing.requires.schemas,
+            ),
+            argnames="schema",
+        )
+        scope = testing.combinations(
+            ObjectScope.DEFAULT,
+            ObjectScope.ANY,
+            argnames="scope",
+        )
+        kind = testing.combinations(
+            ObjectKind.TABLE,
+            ObjectKind.ANY,
+            argnames="kind",
+        )
+        filter_names = testing.combinations(True, False, argnames="use_filter")
+
+        return schema(scope(kind(filter_names(fn))))
+
+    @testing.requires.index_reflection
+    @_multi_combination
+    def test_get_multi_indexes(self, get_multi_exp, schema, scope, kind, use_filter):
+        insp, kws, exp = get_multi_exp(
+            schema,
+            scope,
+            kind,
+            use_filter,
+            Inspector.get_indexes,
+            self.exp_indexes,
+        )
+        for kw in kws:
+            insp.clear_cache()
+            result = insp.get_multi_indexes(**kw)
+            self._check_table_dict(result, exp, self._required_index_keys)
+
     @testing.requires.schemas
     def test_get_column_returns_persisted_with_schema(self):
         insp = inspect(config.db)
@@ -625,9 +669,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
     @testing.combinations(
         (True, testing.requires.schemas), False, argnames="use_schema"
     )
-    def test_get_table_names(
-        self, connection, order_by, use_schema
-    ):
+    def test_get_table_names(self, connection, order_by, use_schema):
 
         if use_schema:
             schema = config.test_schema
@@ -651,12 +693,10 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         ]
 
         insp = inspect(connection)
-        
+
         if order_by:
             tables = [
-                rec[0]
-                for rec in insp.get_sorted_table_and_fkc_names(schema)
-                if rec[0]
+                rec[0] for rec in insp.get_sorted_table_and_fkc_names(schema) if rec[0]
             ]
         else:
             tables = insp.get_table_names(schema)
@@ -919,9 +959,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         ):
             fk_req = testing.requires.foreign_keys_reflect_as_index
             dup_req = testing.requires.unique_constraints_reflect_as_index
-            if (fk and not fk_req.enabled) or (
-                duplicates and not dup_req.enabled
-            ):
+            if (fk and not fk_req.enabled) or (duplicates and not dup_req.enabled):
                 return ()
             res = {
                 "unique": unique,
@@ -931,7 +969,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
                 "include_columns": [],
             }
             if column_sorting:
-                res["column_sorting"] = {"q": 'DESC'}
+                res["column_sorting"] = {"q": "DESC"}
             if duplicates:
                 res["duplicates_constraint"] = name
             return [res]
@@ -944,9 +982,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         }
         self._resolve_views(views, materialized)
         if materialized:
-            materialized[(schema, "dingalings_v")].extend(
-                idx("data", name="mat_index")
-            )
+            materialized[(schema, "dingalings_v")].extend(idx("data", name="mat_index"))
         tables = {
             (schema, "users"): [
                 *idx("parent_user_id", name="user_id_fk", fk=True),
@@ -970,24 +1006,18 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             ],
             (schema, "comment_test"): [],
             (schema, "no_constraints"): [],
-            (schema, "local_table"): [
-                *idx("remote_id", name=mock.ANY, fk=True)
-            ],
-            (schema, "remote_table"): [
-                *idx("local_id", name=mock.ANY, fk=True)
-            ],
+            (schema, "local_table"): [*idx("remote_id", name=mock.ANY, fk=True)],
+            (schema, "remote_table"): [*idx("local_id", name=mock.ANY, fk=True)],
             (schema, "remote_table_2"): [],
             (schema, "noncol_idx_test_nopk"): [
                 *idx(
                     "q",
                     name="noncol_idx_nopk",
-                    column_sorting={"q": 'DESC'},
+                    column_sorting={"q": "DESC"},
                 )
             ],
             (schema, "noncol_idx_test_pk"): [
-                *idx(
-                    "q", name="noncol_idx_pk", column_sorting={"q": 'DESC'}
-                )
+                *idx("q", name="noncol_idx_pk", column_sorting={"q": "DESC"})
             ],
             (schema, self.temp_table_name()): [
                 *idx("foo", name="user_tmp_ix"),
@@ -1008,7 +1038,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         res = self._resolve_kind(kind, tables, views, materialized)
         res = self._resolve_names(schema, scope, filter_names, res)
         return res
-    
+
     def _check_list(self, result, exp, req_keys=None, msg=None):
         if req_keys is None:
             eq_(result, exp, msg)
@@ -1017,15 +1047,13 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             for r, e in zip(result, exp):
                 for k in set(r) | set(e):
                     if (k in req_keys and (k in r and k in e)) or (k in r and k in e):
-                        if isinstance(r[k],list):
+                        if isinstance(r[k], list):
                             r[k].sort()
                             e[k].sort()
                         eq_(r[k], e[k], f"{msg} - {k} - {r}")
 
     @testing.combinations(True, False, argnames="use_schema")
-    @testing.combinations(
-        (True, testing.requires.views), False, argnames="views"
-    )
+    @testing.combinations((True, testing.requires.views), False, argnames="views")
     def test_metadata(self, connection, use_schema, views):
         m = MetaData()
         schema = config.test_schema if use_schema else None
@@ -1480,7 +1508,7 @@ class IntegerTest(_IntegerTest):
             assert isinstance(row[0], int)
         else:
             assert isinstance(row[0], (long, int))  # noqa
-    
+
     def _huge_ints():
 
         return testing.combinations(
@@ -1632,7 +1660,10 @@ class InsertBehaviorTest(_InsertBehaviorTest):
         Overriding the tests and adding a manual primary key value to avoid the same
         failures.
         """
-        if hasattr(config.requirements, 'returning') and config.requirements.returning.enabled:
+        if (
+            hasattr(config.requirements, "returning")
+            and config.requirements.returning.enabled
+        ):
             engine = engines.testing_engine(options={"implicit_returning": False})
         else:
             engine = config.db
@@ -2158,6 +2189,7 @@ class SimpleUpdateDeleteTest(_SimpleUpdateDeleteTest):
 
 class HasIndexTest(_HasIndexTest):
     kind = testing.combinations("dialect", "inspector", argnames="kind")
+
     @classmethod
     def define_tables(cls, metadata):
         tt = Table(
