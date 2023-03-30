@@ -769,7 +769,7 @@ ORDER BY
         """
         return self.get_multi_indexes(
             connection, schema=schema, filter_names=[table_name]
-        )[table_name]
+        ).get(table_name, [])
 
     @engine_to_connection
     def get_pk_constraint(self, connection, table_name, schema=None, **kw):
