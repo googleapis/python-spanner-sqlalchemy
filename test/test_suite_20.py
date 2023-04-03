@@ -1760,6 +1760,8 @@ class StringTest(_StringTest):
             connection.scalars(select(t.c.x).where(t.c.x.like(expr))).all(),
             expected,
         )
+        
+        t.drop()
 
 
 class TextTest(_TextTest):
