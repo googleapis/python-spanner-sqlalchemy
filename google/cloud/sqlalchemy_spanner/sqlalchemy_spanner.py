@@ -753,7 +753,7 @@ ORDER BY
                         col: order for col, order in zip(row[3], row[5])
                     },
                 }
-                row[0] = row[0] if row[0] != "" else None
+                row[0] = row[0] or None
                 table_info = result_dict.get((row[0], row[1]), [])
                 table_info.append(index_info)
                 result_dict[(row[0], row[1])] = table_info
@@ -778,9 +778,9 @@ ORDER BY
         dict = self.get_multi_indexes(
             connection, schema=schema, filter_names=[table_name]
         )
-        schema = None if schema == "" else schema
+        schema = schema or None
         return dict.get((schema, table_name), [])
-    
+
     @engine_to_connection
     def get_multi_pk_constraint(
         self, connection, schema=None, filter_names=None, scope=None, kind=None, **kw
@@ -814,8 +814,10 @@ ORDER BY
             result_dict = {}
 
             for row in rows:
-                row[0] = row[0] if row[0] != "" else None
-                table_info = result_dict.get((row[0], row[1]), {"constrained_columns":[]})
+                row[0] = row[0] or None
+                table_info = result_dict.get(
+                    (row[0], row[1]), {"constrained_columns": []}
+                )
                 table_info["constrained_columns"].append(row[2])
                 result_dict[(row[0], row[1])] = table_info
 
@@ -839,26 +841,8 @@ ORDER BY
         dict = self.get_multi_pk_constraint(
             connection, schema=schema, filter_names=[table_name]
         )
-        schema = None if schema == "" else schema
+        schema = schema or None
         return dict.get((schema, table_name), [])
-#         sql = """
-# SELECT ccu.COLUMN_NAME
-# FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc
-# JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS ccu
-#     ON ccu.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
-# WHERE tc.TABLE_NAME="{table_name}" AND tc.CONSTRAINT_TYPE = "PRIMARY KEY"
-# """.format(
-#             table_name=table_name
-#         )
-
-#         cols = []
-#         with connection.connection.database.snapshot() as snap:
-#             rows = snap.execute_sql(sql)
-
-#             for row in rows:
-#                 cols.append(row[0])
-
-#         return {"constrained_columns": cols}
 
     @engine_to_connection
     def get_schema_names(self, connection, **kw):
@@ -883,51 +867,55 @@ ORDER BY
         return schemas
 
     @engine_to_connection
-    def get_foreign_keys(self, connection, table_name, schema=None, **kw):
-        """Get the table foreign key constraints.
+    def get_multi_foreign_keys(
+        self, connection, schema=None, filter_names=None, scope=None, kind=None, **kw
+    ):
+        table_filter_query = ""
+        schema_filter_query = "AND tc.table_schema = '{schema}'".format(
+            schema=schema or ""
+        )
+        if filter_names is not None:
+            for table_name in filter_names:
+                query = "tc.TABLE_NAME = '{table_name}'".format(table_name=table_name)
+                if table_filter_query != "":
+                    table_filter_query = table_filter_query + " OR " + query
+                else:
+                    table_filter_query = query
+            table_filter_query = "(" + table_filter_query + ") AND "
 
-        The method is used by SQLAlchemy introspection systems.
-
-        Args:
-            connection (sqlalchemy.engine.base.Connection):
-                SQLAlchemy connection or engine object.
-            table_name (str): Name of the table to introspect.
-            schema (str): Optional. Schema name
-
-        Returns:
-            list: Dicts, each of which describes a foreign key constraint.
-        """
         sql = """
-SELECT
-    tc.constraint_name,
-    ctu.table_name,
-    ctu.table_schema,
-    ARRAY_AGG(DISTINCT ccu.column_name),
-    ARRAY_AGG(
-        DISTINCT CONCAT(
-            CAST(kcu.ordinal_position AS STRING),
-            '_____',
-            kcu.column_name
-        )
-    )
-FROM information_schema.table_constraints AS tc
-JOIN information_schema.constraint_column_usage AS ccu
-    ON ccu.constraint_name = tc.constraint_name
-JOIN information_schema.constraint_table_usage AS ctu
-    ON ctu.constraint_name = tc.constraint_name
-JOIN information_schema.key_column_usage AS kcu
-    ON kcu.constraint_name = tc.constraint_name
-WHERE
-    tc.table_name="{table_name}"
-    AND tc.constraint_type = "FOREIGN KEY"
-GROUP BY tc.constraint_name, ctu.table_name, ctu.table_schema
-""".format(
-            table_name=table_name
+        SELECT
+            tc.constraint_name,
+            ctu.table_name,
+            ctu.table_schema,
+            ARRAY_AGG(DISTINCT ccu.column_name),
+            ARRAY_AGG(
+                DISTINCT CONCAT(
+                    CAST(kcu.ordinal_position AS STRING),
+                    '_____',
+                    kcu.column_name
+                )
+            )
+            FROM information_schema.table_constraints AS tc
+            JOIN information_schema.constraint_column_usage AS ccu
+                ON ccu.constraint_name = tc.constraint_name
+            JOIN information_schema.constraint_table_usage AS ctu
+                ON ctu.constraint_name = tc.constraint_name
+            JOIN information_schema.key_column_usage AS kcu
+                ON kcu.constraint_name = tc.constraint_name
+            WHERE
+                {table_filter_query}
+                tc.constraint_type = "FOREIGN KEY"
+                {schema_filter_query}
+            GROUP BY tc.constraint_name, ctu.table_name, ctu.table_schema
+            """.format(
+            table_filter_query=table_filter_query,
+            schema_filter_query=schema_filter_query,
         )
 
-        keys = []
         with connection.connection.database.snapshot() as snap:
-            rows = snap.execute_sql(sql)
+            rows = list(snap.execute_sql(sql))
+            result_dict = {}
 
             for row in rows:
                 # Due to Spanner limitations, arrays order is not guaranteed during
@@ -942,20 +930,43 @@ GROUP BY tc.constraint_name, ctu.table_name, ctu.table_schema
                 #
                 # The solution seem a bit clumsy, and should be improved as soon as a
                 # better approach found.
+                table_info = result_dict.get((row[0], row[1]), [])
                 for index, value in enumerate(sorted(row[4])):
                     row[4][index] = value.split("_____")[1]
 
-                keys.append(
-                    {
-                        "name": row[0],
-                        "referred_table": row[1],
-                        "referred_schema": row[2] or None,
-                        "referred_columns": row[3],
-                        "constrained_columns": row[4],
-                    }
-                )
+                fk_info = {
+                    "name": row[0],
+                    "referred_table": row[1],
+                    "referred_schema": row[2] or None,
+                    "referred_columns": row[3],
+                    "constrained_columns": row[4],
+                }
 
-        return keys
+                table_info.append(fk_info)
+                result_dict[(row[0], row[1])] = table_info
+
+        return result_dict
+
+    @engine_to_connection
+    def get_foreign_keys(self, connection, table_name, schema=None, **kw):
+        """Get the table foreign key constraints.
+
+        The method is used by SQLAlchemy introspection systems.
+
+        Args:
+            connection (sqlalchemy.engine.base.Connection):
+                SQLAlchemy connection or engine object.
+            table_name (str): Name of the table to introspect.
+            schema (str): Optional. Schema name
+
+        Returns:
+            list: Dicts, each of which describes a foreign key constraint.
+        """
+        dict = self.get_multi_foreign_keys(
+            connection, schema=schema, filter_names=[table_name]
+        )
+        schema = schema or None
+        return dict.get((schema, table_name), [])
 
     @engine_to_connection
     def get_table_names(self, connection, schema=None, **kw):

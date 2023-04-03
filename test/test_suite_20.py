@@ -592,7 +592,8 @@ class ComponentReflectionTest(_ComponentReflectionTest):
     @filter_name_values()
     @testing.requires.primary_key_constraint_reflection
     def test_get_multi_pk_constraint(
-        self, get_multi_exp, 
+        self,
+        get_multi_exp,
         use_filter,
         schema=None,
         scope=ObjectScope.DEFAULT,
@@ -614,26 +615,42 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             Inspector.get_pk_constraint,
             self.exp_pks,
         )
-        _ignore_tables = [(None, 'no_constraints')]
+        _ignore_tables = [(None, "no_constraints")]
         exp = {k: v for k, v in exp.items() if k not in _ignore_tables}
-        
+
         for kw in kws:
             insp.clear_cache()
             result = insp.get_multi_pk_constraint(**kw)
-            self._check_table_dict(
-                result, exp, self._required_pk_keys, make_lists=True
-            )
+            self._check_table_dict(result, exp, self._required_pk_keys, make_lists=True)
+
+    @filter_name_values()
+    @testing.requires.foreign_key_constraint_reflection
+    def test_get_multi_foreign_keys(
+        self,
+        get_multi_exp,
+        use_filter,
+        schema=None,
+        scope=ObjectScope.DEFAULT,
+        kind=ObjectKind.TABLE,
+    ):
+        insp, kws, exp = get_multi_exp(
+            schema,
+            scope,
+            kind,
+            use_filter,
+            Inspector.get_foreign_keys,
+            self.exp_fks,
+        )
+        for kw in kws:
+            insp.clear_cache()
+            result = insp.get_multi_foreign_keys(**kw)
+            self._adjust_sort(result, exp, lambda d: tuple(d["constrained_columns"]))
+            self._check_table_dict(result, exp, self._required_fk_keys)
 
     @pytest.mark.skip(
         "Requires an introspection method to be implemented in SQLAlchemy first"
     )
     def test_get_multi_columns():
-        pass
-
-    @pytest.mark.skip(
-        "Requires an introspection method to be implemented in SQLAlchemy first"
-    )
-    def test_get_multi_foreign_keys():
         pass
 
     @pytest.mark.skip(
