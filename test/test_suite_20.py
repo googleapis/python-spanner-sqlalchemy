@@ -1744,7 +1744,7 @@ class StringTest(_StringTest):
     def test_dont_truncate_rightside(
         self, metadata, connection, expr=None, expected=None
     ):
-        t = Table("t", metadata, Column("x", String(2)))
+        t = Table("t2", metadata, Column("x", String(2)))
         t.create(connection)
         connection.connection.commit()
         connection.execute(t.insert(), [{"x": "AB"}, {"x": "BC"}, {"x": "AC"}])
