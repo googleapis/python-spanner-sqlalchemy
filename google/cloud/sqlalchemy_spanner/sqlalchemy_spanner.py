@@ -934,16 +934,18 @@ ORDER BY
                 for index, value in enumerate(sorted(row[4])):
                     row[4][index] = value.split("_____")[1]
 
+                row[2] = row[2] or None 
+
                 fk_info = {
                     "name": row[0],
                     "referred_table": row[1],
-                    "referred_schema": row[2] or None,
+                    "referred_schema": row[2],
                     "referred_columns": row[3],
                     "constrained_columns": row[4],
                 }
 
                 table_info.append(fk_info)
-                result_dict[(row[0], row[1])] = table_info
+                result_dict[(row[2], row[1])] = table_info
 
         return result_dict
 

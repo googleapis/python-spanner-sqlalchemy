@@ -383,7 +383,7 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
         metadata.create_all(connection)
 
 
-class ComponentReflectionTest(_ComponentReflectionTest):
+class AAAAAComponentReflectionTest(_ComponentReflectionTest):
     @pytest.mark.skip("Skip")
     def test_not_existing_table(self, method, connection):
         pass
@@ -672,6 +672,8 @@ class ComponentReflectionTest(_ComponentReflectionTest):
     @testing.combinations((False,), argnames="use_schema")
     @testing.requires.foreign_key_constraint_reflection
     def test_get_foreign_keys(self, connection, use_schema):
+        import pdb
+        pdb.set_trace()
         if use_schema:
             schema = config.test_schema
         else:
