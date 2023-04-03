@@ -2268,6 +2268,7 @@ class SimpleUpdateDeleteTest(_SimpleUpdateDeleteTest):
 
 
 class HasIndexTest(_HasIndexTest):
+    __backend__ = True
     kind = testing.combinations("dialect", "inspector", argnames="kind")
 
     @classmethod
