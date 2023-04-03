@@ -915,9 +915,6 @@ ORDER BY
             schema_filter_query=schema_filter_query,
         )
 
-        import pdb
-        pdb.set_trace()
-
         with connection.connection.database.snapshot() as snap:
             rows = list(snap.execute_sql(sql))
             result_dict = {}
@@ -951,8 +948,6 @@ ORDER BY
                 table_info.append(fk_info)
                 result_dict[(row[0], row[1])] = table_info
 
-        import pdb
-        pdb.set_trace()
         return result_dict
 
     @engine_to_connection
