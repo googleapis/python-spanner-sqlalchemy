@@ -885,6 +885,8 @@ ORDER BY
 
         sql = """
         SELECT
+            tc.table_name,
+            tc.table_schema,
             tc.constraint_name,
             ctu.table_name,
             ctu.table_schema,
@@ -907,7 +909,7 @@ ORDER BY
                 {table_filter_query}
                 tc.constraint_type = "FOREIGN KEY"
                 {schema_filter_query}
-            GROUP BY tc.constraint_name, ctu.table_name, ctu.table_schema
+            GROUP BY tc.table_name, tc.table_schema, tc.constraint_name, ctu.table_name, ctu.table_schema
             """.format(
             table_filter_query=table_filter_query,
             schema_filter_query=schema_filter_query,
@@ -930,22 +932,21 @@ ORDER BY
                 #
                 # The solution seem a bit clumsy, and should be improved as soon as a
                 # better approach found.
+                row[0] = row[0] or None
                 table_info = result_dict.get((row[0], row[1]), [])
-                for index, value in enumerate(sorted(row[4])):
-                    row[4][index] = value.split("_____")[1]
-
-                row[2] = row[2] or None 
+                for index, value in enumerate(sorted(row[6])):
+                    row[6][index] = value.split("_____")[1]
 
                 fk_info = {
-                    "name": row[0],
-                    "referred_table": row[1],
-                    "referred_schema": row[2],
-                    "referred_columns": row[3],
-                    "constrained_columns": row[4],
+                    "name": row[2],
+                    "referred_table": row[3],
+                    "referred_schema": row[4] or None,
+                    "referred_columns": row[5],
+                    "constrained_columns": row[6],
                 }
 
                 table_info.append(fk_info)
-                result_dict[(row[2], row[1])] = table_info
+                result_dict[(row[0], row[1])] = table_info
 
         return result_dict
 
