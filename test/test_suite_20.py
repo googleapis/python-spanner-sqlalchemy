@@ -1754,15 +1754,13 @@ class StringTest(_StringTest):
         t.create(connection)
         connection.connection.commit()
 
+        connection.execute(t.delete())
         connection.execute(t.insert(), [{"x": "AB"}, {"x": "BC"}, {"x": "AC"}])
 
         eq_(
             connection.scalars(select(t.c.x).where(t.c.x.like(expr))).all(),
             expected,
         )
-
-        t.drop()
-        connection.connection.commit()
 
 
 class TextTest(_TextTest):
