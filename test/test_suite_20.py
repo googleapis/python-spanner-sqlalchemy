@@ -647,11 +647,28 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             self._adjust_sort(result, exp, lambda d: tuple(d["constrained_columns"]))
             self._check_table_dict(result, exp, self._required_fk_keys)
 
-    @pytest.mark.skip(
-        "Requires an introspection method to be implemented in SQLAlchemy first"
-    )
-    def test_get_multi_columns():
-        pass
+    @filter_name_values()
+    def test_get_multi_columns(
+        self,
+        get_multi_exp,
+        use_filter,
+        schema=None,
+        scope=ObjectScope.DEFAULT,
+        kind=ObjectKind.TABLE,
+    ):
+        insp, kws, exp = get_multi_exp(
+            schema,
+            scope,
+            kind,
+            use_filter,
+            Inspector.get_columns,
+            self.exp_columns,
+        )
+
+        for kw in kws:
+            insp.clear_cache()
+            result = insp.get_multi_columns(**kw)
+            self._check_table_dict(result, exp, self._required_column_keys)
 
     @pytest.mark.skip(
         "Requires an introspection method to be implemented in SQLAlchemy first"
@@ -1744,16 +1761,12 @@ class StringTest(_StringTest):
     def test_dont_truncate_rightside(
         self, metadata, connection, expr=None, expected=None
     ):
-        t = Table("t2", metadata, Column("x", String(2)))
+        t = Table("t", metadata, Column("x", String(2)))
         t.create(connection)
         connection.connection.commit()
         connection.execute(t.insert(), [{"x": "AB"}, {"x": "BC"}, {"x": "AC"}])
 
-        combinations =[
-            ("%B%", ["AB", "BC"]),
-            ("A%C", ["AC"]),
-            ("A%C%Z", [])
-        ]
+        combinations = [("%B%", ["AB", "BC"]), ("A%C", ["AC"]), ("A%C%Z", [])]
 
         for args in combinations:
             eq_(

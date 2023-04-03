@@ -622,6 +622,66 @@ class SpannerDialect(DefaultDialect):
         return all_views
 
     @engine_to_connection
+    def get_multi_columns(
+        self, connection, schema=None, filter_names=None, scope=None, kind=None, **kw
+    ):
+        table_filter_query = ""
+        schema_filter_query = "AND i.table_schema = '{schema}'".format(
+            schema=schema or ""
+        )
+        if filter_names is not None:
+            for table_name in filter_names:
+                query = "i.table_name = '{table_name}'".format(table_name=table_name)
+                if table_filter_query != "":
+                    table_filter_query = table_filter_query + " OR " + query
+                else:
+                    table_filter_query = query
+            table_filter_query = "(" + table_filter_query + ") AND "
+
+        sql = """
+            SELECT table_schema, table_name, column_name, 
+                   spanner_type, is_nullable, generation_expression
+            FROM information_schema.columns
+            WHERE
+                {table_filter_query}
+                table_catalog = ''
+                {schema_filter_query}
+            ORDER BY
+                table_catalog,
+                table_schema,
+                table_name,
+                ordinal_position
+        """.format(
+            table_filter_query=table_filter_query,
+            schema_filter_query=schema_filter_query,
+        )
+
+        with connection.connection.database.snapshot() as snap:
+            columns = list(snap.execute_sql(sql))
+            result_dict = {}
+
+            for col in columns:
+                columns = snap.execute_sql(sql)
+                column_info = {
+                    "name": col[2],
+                    "type": self._designate_type(col[3]),
+                    "nullable": col[4] == "YES",
+                    "default": None,
+                }
+
+                if col[5] is not None:
+                    column_info["computed"] = {
+                        "persisted": True,
+                        "sqltext": col[5],
+                    }
+                col[0] = col[0] or None
+                table_info = result_dict.get((col[0], col[1]), [])
+                table_info.append(column_info)
+                result_dict[(col[0], col[1])] = table_info
+
+        return result_dict
+
+    @engine_to_connection
     def get_columns(self, connection, table_name, schema=None, **kw):
         """Get the table columns description.
 
@@ -636,42 +696,11 @@ class SpannerDialect(DefaultDialect):
         Returns:
             list: The table every column dict-like description.
         """
-        sql = """
-SELECT column_name, spanner_type, is_nullable, generation_expression
-FROM information_schema.columns
-WHERE
-    table_catalog = ''
-    AND table_schema = ''
-    AND table_name = '{}'
-ORDER BY
-    table_catalog,
-    table_schema,
-    table_name,
-    ordinal_position
-""".format(
-            table_name
+        dict = self.get_multi_columns(
+            connection, schema=schema, filter_names=[table_name]
         )
-
-        cols_desc = []
-        with connection.connection.database.snapshot() as snap:
-            columns = snap.execute_sql(sql)
-
-            for col in columns:
-                col_desc = {
-                    "name": col[0],
-                    "type": self._designate_type(col[1]),
-                    "nullable": col[2] == "YES",
-                    "default": None,
-                }
-
-                if col[3] is not None:
-                    col_desc["computed"] = {
-                        "persisted": True,
-                        "sqltext": col[3],
-                    }
-                cols_desc.append(col_desc)
-
-        return cols_desc
+        schema = schema or None
+        return dict.get((schema, table_name), [])
 
     def _designate_type(self, str_repr):
         """
