@@ -383,7 +383,7 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
         metadata.create_all(connection)
 
 
-class AAAAAComponentReflectionTest(_ComponentReflectionTest):
+class ComponentReflectionTest(_ComponentReflectionTest):
     @pytest.mark.skip("Skip")
     def test_not_existing_table(self, method, connection):
         pass
@@ -683,8 +683,6 @@ class AAAAAComponentReflectionTest(_ComponentReflectionTest):
         # users
 
         if testing.requires.self_referential_foreign_keys.enabled:
-            import pdb
-            pdb.set_trace()
             users_fkeys = insp.get_foreign_keys(users.name, schema=schema)
             fkey1 = users_fkeys[0]
 
