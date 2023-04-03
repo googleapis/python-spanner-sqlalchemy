@@ -2272,8 +2272,6 @@ class HasIndexTest(_HasIndexTest):
 
     @classmethod
     def define_tables(cls, metadata):
-        import pdb
-        pdb.set_trace()
         tt = Table(
             "test_table",
             metadata,
