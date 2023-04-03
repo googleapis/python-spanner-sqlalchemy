@@ -626,12 +626,12 @@ class SpannerDialect(DefaultDialect):
         self, connection, schema=None, filter_names=None, scope=None, kind=None, **kw
     ):
         table_filter_query = ""
-        schema_filter_query = "AND i.table_schema = '{schema}'".format(
+        schema_filter_query = "AND table_schema = '{schema}'".format(
             schema=schema or ""
         )
         if filter_names is not None:
             for table_name in filter_names:
-                query = "i.table_name = '{table_name}'".format(table_name=table_name)
+                query = "table_name = '{table_name}'".format(table_name=table_name)
                 if table_filter_query != "":
                     table_filter_query = table_filter_query + " OR " + query
                 else:
