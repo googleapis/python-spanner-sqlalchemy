@@ -64,6 +64,7 @@ from sqlalchemy.types import Text
 from sqlalchemy.testing import requires
 from sqlalchemy.testing import is_true
 from sqlalchemy import exc
+from sqlalchemy import Index
 from sqlalchemy.testing.fixtures import (
     ComputedReflectionFixtureTest as _ComputedReflectionFixtureTest,
 )
@@ -2280,10 +2281,42 @@ class HasIndexTest(_HasIndexTest):
         )
         sqlalchemy.Index("my_idx", tt.c.data)
 
-    @pytest.mark.skip("Not supported by Cloud Spanner")
     @kind
     def test_has_index(self, kind, connection, metadata):
-        pass
+        meth = self._has_index(kind, connection)
+        assert meth("test_table", "my_idx")
+        assert not meth("test_table", "my_idx_s")
+        assert not meth("nonexistent_table", "my_idx")
+        assert not meth("test_table", "nonexistent_idx")
+
+        assert not meth("test_table", "my_idx_2")
+        assert not meth("test_table_2", "my_idx_3")
+        idx = Index("my_idx_2", self.tables.test_table.c.data2)
+        tbl = Table(
+            "test_table_2",
+            metadata,
+            Column("foo", Integer),
+            Index("my_idx_3", "foo"),
+        )
+        idx.create(connection)
+        tbl.create(connection)
+        if kind == "dialect":
+                connection.connection.commit()
+
+        try:
+            if kind == "inspector":
+                assert not meth("test_table", "my_idx_2")
+                assert not meth("test_table_2", "my_idx_3")
+                meth.__self__.clear_cache()
+            assert meth("test_table", "my_idx_2") is True
+            assert meth("test_table_2", "my_idx_3") is True
+        finally:
+            tbl.drop(connection)
+            idx.drop(connection)
+            if kind == "dialect":
+                connection.connection.commit()
+
+
 
     @pytest.mark.skip("Not supported by Cloud Spanner")
     @kind
