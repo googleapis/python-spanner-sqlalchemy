@@ -661,7 +661,6 @@ class SpannerDialect(DefaultDialect):
             result_dict = {}
 
             for col in columns:
-                columns = snap.execute_sql(sql)
                 column_info = {
                     "name": col[2],
                     "type": self._designate_type(col[3]),
