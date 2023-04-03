@@ -1741,26 +1741,25 @@ class StringTest(_StringTest):
     def test_literal_non_ascii(self):
         pass
 
-    @testing.combinations(
-        ("%B%", ["AB", "BC"]),
-        ("A%C", ["AC"]),
-        ("A%C%Z", []),
-        argnames="expr, expected",
-    )
     def test_dont_truncate_rightside(
-        self, metadata, connection, expr, expected
+        self, metadata, connection, expr=None, expected=None
     ):
         t = Table("t", metadata, Column("x", String(2)))
         t.create(connection)
         connection.connection.commit()
-
-        connection.execute(t.delete())
         connection.execute(t.insert(), [{"x": "AB"}, {"x": "BC"}, {"x": "AC"}])
 
-        eq_(
-            connection.scalars(select(t.c.x).where(t.c.x.like(expr))).all(),
-            expected,
-        )
+        combinations =[
+            ("%B%", ["AB", "BC"]),
+            ("A%C", ["AC"]),
+            ("A%C%Z", [])
+        ]
+
+        for args in combinations:
+            eq_(
+                connection.scalars(select(t.c.x).where(t.c.x.like(args[0]))).all(),
+                args[1],
+            )
 
 
 class TextTest(_TextTest):
