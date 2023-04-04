@@ -527,7 +527,8 @@ class ComponentReflectionTest(_ComponentReflectionTest):
                 noncol_idx_test_nopk = Table(
                     "noncol_idx_test_nopk",
                     metadata,
-                    Column("q", sqlalchemy.String(5), primary_key=True),
+                    Column("id", sqlalchemy.Integer, primary_key=True),
+                    Column("q", sqlalchemy.String(5)),
                     test_needs_fk=True,
                     extend_existing=True,
                 )
@@ -628,7 +629,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             (schema, "local_table"): pk("id"),
             (schema, "remote_table"): pk("id"),
             (schema, "remote_table_2"): pk("id"),
-            (schema, "noncol_idx_test_nopk"): pk("q"),
+            (schema, "noncol_idx_test_nopk"): pk("id"),
             (schema, "noncol_idx_test_pk"): pk("id"),
             (schema, self.temp_table_name()): pk("id"),
         }
@@ -721,7 +722,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
                     ["address_id"],
                     ["address_id"],
                     "email_addresses",
-                    name="zz_email_add_id_fg",
+                    name="FK_dingalings_email_addresses_69EDC2F1F8F407B7_1",
                     comment="di fk comment",
                 ),
             ],
@@ -860,7 +861,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             (schema, "local_table"): [pk("id"), col("data"), col("remote_id")],
             (schema, "remote_table"): [pk("id"), col("local_id"), col("data")],
             (schema, "remote_table_2"): [pk("id"), col("data")],
-            (schema, "noncol_idx_test_nopk"): [pk("q")],
+            (schema, "noncol_idx_test_nopk"): [pk("id"), col("q")],
             (schema, "noncol_idx_test_pk"): [pk("id"), col("q")],
             (schema, self.temp_table_name()): [
                 pk("id"),
@@ -1209,6 +1210,13 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             else:
                 answer = ["dingalings", "email_addresses", "user_tmp", "users"]
                 eq_(sorted(table_names), answer)
+
+    @pytest.mark.skipif(
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+    )
+    def test_get_view_names(self):
+        super().test_get_view_names()
+
 
     @pytest.mark.skip("Spanner doesn't support temporary tables")
     def test_get_temp_table_indexes(self):
