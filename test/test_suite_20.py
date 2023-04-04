@@ -382,7 +382,7 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
         metadata.create_all(connection)
 
 
-class ComponentReflectionTest(_ComponentReflectionTest):
+class AAAAComponentReflectionTest(_ComponentReflectionTest):
     @pytest.mark.skip("Skip")
     def test_not_existing_table(self, method, connection):
         pass
@@ -592,6 +592,54 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             result = insp.get_multi_indexes(**kw)
             self._check_table_dict(result, exp, self._required_index_keys)
 
+    def exp_pks(
+        self,
+        schema=None,
+        scope=ObjectScope.ANY,
+        kind=ObjectKind.ANY,
+        filter_names=None,
+    ):
+        def pk(*cols, name=mock.ANY, comment=None):
+            return {
+                "constrained_columns": list(cols),
+                "name": name,
+                "comment": comment,
+            }
+
+        empty = pk(name=None)
+        if testing.requires.materialized_views_reflect_pk.enabled:
+            materialized = {(schema, "dingalings_v"): pk("dingaling_id")}
+        else:
+            materialized = {(schema, "dingalings_v"): empty}
+        views = {
+            (schema, "email_addresses_v"): empty,
+            (schema, "users_v"): empty,
+            (schema, "user_tmp_v"): empty,
+        }
+        self._resolve_views(views, materialized)
+        tables = {
+            (schema, "users"): pk("user_id"),
+            (schema, "dingalings"): pk("dingaling_id"),
+            (schema, "email_addresses"): pk(
+                "address_id", name="email_ad_pk", comment="ea pk comment"
+            ),
+            (schema, "comment_test"): pk("id"),
+            (schema, "no_constraints"): empty,
+            (schema, "local_table"): pk("id"),
+            (schema, "remote_table"): pk("id"),
+            (schema, "remote_table_2"): pk("id"),
+            (schema, "noncol_idx_test_nopk"): pk("q"),
+            (schema, "noncol_idx_test_pk"): pk("id"),
+            (schema, self.temp_table_name()): pk("id"),
+        }
+        if not testing.requires.reflects_pk_names.enabled:
+            for val in tables.values():
+                if val["name"] is not None:
+                    val["name"] = mock.ANY
+        res = self._resolve_kind(kind, tables, views, materialized)
+        res = self._resolve_names(schema, scope, filter_names, res)
+        return res
+
     @filter_name_values()
     @testing.requires.primary_key_constraint_reflection
     def test_get_multi_pk_constraint(
@@ -626,6 +674,84 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             result = insp.get_multi_pk_constraint(**kw)
             self._check_table_dict(result, exp, self._required_pk_keys, make_lists=True)
 
+    def exp_fks(
+        self,
+        schema=None,
+        scope=ObjectScope.ANY,
+        kind=ObjectKind.ANY,
+        filter_names=None,
+    ):
+        class tt:
+            def __eq__(self, other):
+                return (
+                    other is None
+                    or config.db.dialect.default_schema_name == other
+                )
+
+        def fk(
+            cols,
+            ref_col,
+            ref_table,
+            ref_schema=schema,
+            name=mock.ANY,
+            comment=None,
+        ):
+            return {
+                "constrained_columns": cols,
+                "referred_columns": ref_col,
+                "name": name,
+                "options": mock.ANY,
+                "referred_schema": ref_schema
+                if ref_schema is not None
+                else tt(),
+                "referred_table": ref_table,
+                "comment": comment,
+            }
+
+        materialized = {}
+        views = {}
+        self._resolve_views(views, materialized)
+        tables = {
+            (schema, "users"): [
+                fk(["parent_user_id"], ["user_id"], "users", name="user_id_fk")
+            ],
+            (schema, "dingalings"): [
+                fk(["id_user"], ["user_id"], "users"),
+                fk(
+                    ["address_id"],
+                    ["address_id"],
+                    "email_addresses",
+                    name="zz_email_add_id_fg",
+                    comment="di fk comment",
+                ),
+            ],
+            (schema, "email_addresses"): [
+                fk(["remote_user_id"], ["user_id"], "users")
+            ],
+            (schema, "local_table"): [
+                fk(
+                    ["remote_id"],
+                    ["id"],
+                    "remote_table_2",
+                    ref_schema=config.test_schema,
+                )
+            ],
+            (schema, "remote_table"): [
+                fk(["local_id"], ["id"], "local_table", ref_schema=None)
+            ],
+        }
+        if not testing.requires.self_referential_foreign_keys.enabled:
+            tables[(schema, "users")].clear()
+        if not testing.requires.named_constraints.enabled:
+            for vals in tables.values():
+                for val in vals:
+                    if val["name"] is not mock.ANY:
+                        val["name"] = mock.ANY
+
+        res = self._resolve_kind(kind, tables, views, materialized)
+        res = self._resolve_names(schema, scope, filter_names, res)
+        return res
+
     @filter_name_values()
     @testing.requires.foreign_key_constraint_reflection
     def test_get_multi_foreign_keys(
@@ -645,10 +771,108 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             self.exp_fks,
         )
         for kw in kws:
+            import pdb
+            pdb.set_trace()
             insp.clear_cache()
             result = insp.get_multi_foreign_keys(**kw)
             self._adjust_sort(result, exp, lambda d: tuple(d["constrained_columns"]))
             self._check_table_dict(result, exp, self._required_fk_keys)
+
+
+    def exp_columns(
+        self,
+        schema=None,
+        scope=ObjectScope.ANY,
+        kind=ObjectKind.ANY,
+        filter_names=None,
+    ):
+        def col(
+            name, auto=False, default=mock.ANY, comment=None, nullable=True
+        ):
+            res = {
+                "name": name,
+                "autoincrement": auto,
+                "type": mock.ANY,
+                "default": default,
+                "comment": comment,
+                "nullable": nullable,
+            }
+            if auto == "omit":
+                res.pop("autoincrement")
+            return res
+
+        def pk(name, **kw):
+            kw = {"auto": True, "default": mock.ANY, "nullable": False, **kw}
+            return col(name, **kw)
+
+        materialized = {
+            (schema, "dingalings_v"): [
+                col("dingaling_id", auto="omit", nullable=mock.ANY),
+                col("address_id"),
+                col("id_user"),
+                col("data"),
+            ]
+        }
+        views = {
+            (schema, "email_addresses_v"): [
+                col("address_id", auto="omit", nullable=mock.ANY),
+                col("remote_user_id"),
+                col("email_address"),
+            ],
+            (schema, "users_v"): [
+                col("user_id", auto="omit", nullable=mock.ANY),
+                col("test1", nullable=mock.ANY),
+                col("test2", nullable=mock.ANY),
+                col("parent_user_id"),
+            ],
+            (schema, "user_tmp_v"): [
+                col("id", auto="omit", nullable=mock.ANY),
+                col("name"),
+                col("foo"),
+            ],
+        }
+        self._resolve_views(views, materialized)
+        tables = {
+            (schema, "users"): [
+                pk("user_id"),
+                col("test1", nullable=False),
+                col("test2", nullable=False),
+                col("parent_user_id"),
+            ],
+            (schema, "dingalings"): [
+                pk("dingaling_id"),
+                col("address_id"),
+                col("id_user"),
+                col("data"),
+            ],
+            (schema, "email_addresses"): [
+                pk("address_id"),
+                col("remote_user_id"),
+                col("email_address"),
+            ],
+            (schema, "comment_test"): [
+                pk("id", comment="id comment"),
+                col("data", comment="data % comment"),
+                col(
+                    "d2",
+                    comment=r"""Comment types type speedily ' " \ '' Fun!""",
+                ),
+            ],
+            (schema, "no_constraints"): [col("data")],
+            (schema, "local_table"): [pk("id"), col("data"), col("remote_id")],
+            (schema, "remote_table"): [pk("id"), col("local_id"), col("data")],
+            (schema, "remote_table_2"): [pk("id"), col("data")],
+            (schema, "noncol_idx_test_nopk"): [pk("q")],
+            (schema, "noncol_idx_test_pk"): [pk("id"), col("q")],
+            (schema, self.temp_table_name()): [
+                pk("id"),
+                col("name"),
+                col("foo"),
+            ],
+        }
+        res = self._resolve_kind(kind, tables, views, materialized)
+        res = self._resolve_names(schema, scope, filter_names, res)
+        return res
 
     @filter_name_values()
     def test_get_multi_columns(
