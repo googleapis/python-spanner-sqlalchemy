@@ -2269,6 +2269,7 @@ class SimpleUpdateDeleteTest(_SimpleUpdateDeleteTest):
 
 
 class HasIndexTest(_HasIndexTest):
+    __backend__ = True
     kind = testing.combinations("dialect", "inspector", argnames="kind")
 
     @classmethod
@@ -2301,21 +2302,19 @@ class HasIndexTest(_HasIndexTest):
         )
         idx.create(connection)
         tbl.create(connection)
-        if kind == "dialect":
-                connection.connection.commit()
 
         try:
             if kind == "inspector":
                 assert not meth("test_table", "my_idx_2")
                 assert not meth("test_table_2", "my_idx_3")
                 meth.__self__.clear_cache()
+            connection.connection.commit()
             assert meth("test_table", "my_idx_2") is True
             assert meth("test_table_2", "my_idx_3") is True
         finally:
             tbl.drop(connection)
             idx.drop(connection)
-            if kind == "dialect":
-                connection.connection.commit()
+            connection.connection.commit()
 
 
 
