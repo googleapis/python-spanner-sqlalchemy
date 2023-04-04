@@ -2490,7 +2490,6 @@ class SimpleUpdateDeleteTest(_SimpleUpdateDeleteTest):
 
 
 class HasIndexTest(_HasIndexTest):
-    __backend__ = True
     kind = testing.combinations("dialect", "inspector", argnames="kind")
 
     @classmethod
@@ -2536,14 +2535,12 @@ class HasIndexTest(_HasIndexTest):
             tbl.drop(connection)
             idx.drop(connection)
             connection.connection.commit()
-
-
+            self.tables['test_table'].indexes.remove(idx)
 
     @pytest.mark.skip("Not supported by Cloud Spanner")
     @kind
-    def test_has_index_schema(self, kind, connection, metadata):
+    def test_has_index_schema(self, kind, connection):
         pass
-
 
 class HasTableTest(_HasTableTest):
     @classmethod
