@@ -384,7 +384,7 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
         metadata.create_all(connection)
 
 
-class ComponentReflectionTest(_ComponentReflectionTest):
+class AAAAComponentReflectionTest(_ComponentReflectionTest):
     @pytest.mark.skip("Skip")
     def test_not_existing_table(self, method, connection):
         pass
@@ -436,6 +436,11 @@ class ComponentReflectionTest(_ComponentReflectionTest):
                 "address_id",
                 sqlalchemy.Integer,
                 sqlalchemy.ForeignKey("%semail_addresses.address_id" % schema_prefix),
+            ),
+            Column(
+                "id_user",
+                sqlalchemy.Integer,
+                sqlalchemy.ForeignKey("%susers.user_id" % schema_prefix),
             ),
             Column("data", sqlalchemy.String(30)),
             schema=schema,
@@ -681,10 +686,6 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         "Requires an introspection method to be implemented in SQLAlchemy first"
     )
     def test_get_multi_check_constraints():
-        pass
-
-    @pytest.mark.skip("Spanner must add support of the feature first")
-    def test_get_view_names():
         pass
 
     @testing.combinations((False,), argnames="use_schema")

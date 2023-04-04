@@ -655,7 +655,6 @@ class SpannerDialect(DefaultDialect):
             table_filter_query=table_filter_query,
             schema_filter_query=schema_filter_query,
         )
-
         with connection.connection.database.snapshot() as snap:
             columns = list(snap.execute_sql(sql))
             result_dict = {}
