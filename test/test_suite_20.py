@@ -2491,6 +2491,7 @@ class SimpleUpdateDeleteTest(_SimpleUpdateDeleteTest):
 
 
 class HasIndexTest(_HasIndexTest):
+    __backend__ = True
     kind = testing.combinations("dialect", "inspector", argnames="kind")
 
     @classmethod
@@ -2518,7 +2519,7 @@ class HasIndexTest(_HasIndexTest):
         tbl = Table(
             "test_table_2",
             metadata,
-            Column("foo", Integer),
+            Column("foo", Integer, primary_key=True),
             Index("my_idx_3", "foo"),
         )
         idx.create(connection)
