@@ -382,7 +382,7 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
         metadata.create_all(connection)
 
 
-class AAAAComponentReflectionTest(_ComponentReflectionTest):
+class ComponentReflectionTest(_ComponentReflectionTest):
     @pytest.mark.skip("Skip")
     def test_not_existing_table(self, method, connection):
         pass
