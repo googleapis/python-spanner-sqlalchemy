@@ -771,8 +771,6 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             self.exp_fks,
         )
         for kw in kws:
-            import pdb
-            pdb.set_trace()
             insp.clear_cache()
             result = insp.get_multi_foreign_keys(**kw)
             self._adjust_sort(result, exp, lambda d: tuple(d["constrained_columns"]))
@@ -1996,6 +1994,9 @@ class StringTest(_StringTest):
                 connection.scalars(select(t.c.x).where(t.c.x.like(args[0]))).all(),
                 args[1],
             )
+        
+        t.drop(connection)
+        connection.connection.commit()
 
 
 class TextTest(_TextTest):
