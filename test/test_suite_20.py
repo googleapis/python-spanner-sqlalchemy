@@ -25,7 +25,6 @@ import time
 from unittest import mock
 
 from google.cloud.spanner_v1 import RequestOptions
-from sqlalchemy.testing.assertions import is_
 import sqlalchemy
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Inspector
@@ -63,7 +62,6 @@ from sqlalchemy.types import Numeric
 from sqlalchemy.types import Text
 from sqlalchemy.testing import requires
 from sqlalchemy.testing import is_true
-from sqlalchemy import exc
 from sqlalchemy import Index
 from sqlalchemy.testing.fixtures import (
     ComputedReflectionFixtureTest as _ComputedReflectionFixtureTest,
@@ -529,7 +527,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
                 noncol_idx_test_nopk = Table(
                     "noncol_idx_test_nopk",
                     metadata,
-                    Column("q", sqlalchemy.String(5)),
+                    Column("q", sqlalchemy.String(5), primary_key=True),
                     test_needs_fk=True,
                     extend_existing=True,
                 )
