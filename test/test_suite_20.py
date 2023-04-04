@@ -384,7 +384,7 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
         metadata.create_all(connection)
 
 
-class AAAAComponentReflectionTest(_ComponentReflectionTest):
+class ComponentReflectionTest(_ComponentReflectionTest):
     @pytest.mark.skip("Skip")
     def test_not_existing_table(self, method, connection):
         pass
@@ -529,7 +529,6 @@ class AAAAComponentReflectionTest(_ComponentReflectionTest):
                 noncol_idx_test_nopk = Table(
                     "noncol_idx_test_nopk",
                     metadata,
-                    Column("id", sqlalchemy.Integer, primary_key=True),
                     Column("q", sqlalchemy.String(5)),
                     test_needs_fk=True,
                     extend_existing=True,
