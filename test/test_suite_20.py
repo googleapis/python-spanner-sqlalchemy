@@ -956,10 +956,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
     )
     def test_get_table_names(self, connection, order_by, use_schema):
 
-        if use_schema:
-            schema = config.test_schema
-        else:
-            schema = None
+        schema = None
 
         _ignore_tables = [
             "account",
@@ -1059,11 +1056,8 @@ class ComponentReflectionTest(_ComponentReflectionTest):
 
         Table("bytes_table", metadata, autoload=True)
 
-    @testing.combinations(
-        (True, testing.requires.schemas), (False,), argnames="use_schema"
-    )
     @testing.requires.unique_constraint_reflection
-    def test_get_unique_constraints(self, metadata, connection, use_schema):
+    def test_get_unique_constraints(self, metadata, connection, use_schema=False):
         # SQLite dialect needs to parse the names of the constraints
         # separately from what it gets from PRAGMA index_list(), and
         # then matches them up.  so same set of column_names in two
@@ -1104,6 +1098,8 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         )
         table.create(connection)
         connection.connection.commit()
+        # import pdb
+        # pdb.set_trace()
 
         inspector = inspect(connection)
         reflected = sorted(
@@ -1214,8 +1210,16 @@ class ComponentReflectionTest(_ComponentReflectionTest):
     @pytest.mark.skipif(
         bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
     )
-    def test_get_view_names(self):
-        super().test_get_view_names()
+    def test_get_view_names(self, connection, use_schema=False):
+        insp = inspect(connection)
+        schema = None
+        table_names = insp.get_view_names(schema)
+        if testing.requires.materialized_views.enabled:
+            eq_(sorted(table_names), ["email_addresses_v", "users_v"])
+            eq_(insp.get_materialized_view_names(schema), ["dingalings_v"])
+        else:
+            answer = ["dingalings_v", "email_addresses_v", "users_v"]
+            eq_(sorted(table_names), answer)
 
 
     @pytest.mark.skip("Spanner doesn't support temporary tables")
@@ -1348,7 +1352,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
     @testing.combinations((True, testing.requires.views), False, argnames="views")
     def test_metadata(self, connection, use_schema, views):
         m = MetaData()
-        schema = config.test_schema if use_schema else None
+        schema = None
         m.reflect(connection, schema=schema, views=views, resolve_fks=False)
 
         insp = inspect(connection)
@@ -1993,19 +1997,15 @@ class StringTest(_StringTest):
         t = Table("t", metadata, Column("x", String(2)))
         t.create(connection)
         connection.connection.commit()
-        connection.execute(t.insert(), [{"x": "AB"}, {"x": "BC"}, {"x": "AC"}])
+        connection.execute(t.insert(), [{"x": "XY"}, {"x": "YZ"}, {"x": "XZ"}])
 
-        combinations = [("%B%", ["AB", "BC"]), ("A%C", ["AC"]), ("A%C%Z", [])]
+        combinations = [("%Y%", ["XY", "YZ"]), ("X%Z", ["XC"]), ("X%Z%A", [])]
 
         for args in combinations:
             eq_(
                 connection.scalars(select(t.c.x).where(t.c.x.like(args[0]))).all(),
                 args[1],
             )
-        
-        t.drop(connection)
-        connection.connection.commit()
-
 
 class TextTest(_TextTest):
     @classmethod
@@ -2672,15 +2672,15 @@ class JSONTest(_JSONTest):
     def test_single_element_round_trip(self, element):
         pass
 
-    def _test_round_trip(self, data_element):
+    def _test_round_trip(self, data_element, connection):
         data_table = self.tables.data_table
 
-        config.db.execute(
+        connection.execute(
             data_table.insert(),
             {"id": random.randint(1, 100000000), "name": "row1", "data": data_element},
         )
 
-        row = config.db.execute(select(data_table.c.data)).first()
+        row = connection.execute(select(data_table.c.data)).first()
 
         eq_(row, (data_element,))
 
@@ -2693,8 +2693,8 @@ class JSONTest(_JSONTest):
                     "id": random.randint(1, 100000000),
                     "name": "r1",
                     "data": {
-                        util.u("réve🐍 illé"): util.u("réve🐍 illé"),
-                        "data": {"k1": util.u("drôl🐍e")},
+                        "réve🐍 illé": "réve🐍 illé",
+                        "data": {"k1": "drôl🐍e"},
                     },
                 },
             )

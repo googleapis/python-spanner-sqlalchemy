@@ -964,6 +964,9 @@ class SpannerDialect(DefaultDialect):
                 for index, value in enumerate(sorted(row[6])):
                     row[6][index] = value.split("_____")[1]
 
+                # import pdb
+                # pdb.set_trace()
+
                 fk_info = {
                     "name": row[2],
                     "referred_table": row[3],
