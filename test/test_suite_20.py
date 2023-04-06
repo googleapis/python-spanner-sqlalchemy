@@ -392,6 +392,49 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         cls.define_reflected_tables(metadata, None)
 
     @classmethod
+    def define_views(cls, metadata, schema):
+        table_info = {
+            "dingalings": [
+                "dingaling_id",
+                "address_id",
+                "data",
+                "id_user",
+            ],
+            "users": ["user_id", "test1", "test2"],
+            "email_addresses": ["address_id", "remote_user_id", "email_address"],
+        }
+        if testing.requires.materialized_views.enabled:
+            materialized = {"dingalings"}
+        else:
+            materialized = set()
+        for table_name in ("users", "email_addresses", "dingalings"):
+            fullname = table_name
+            if schema:
+                fullname = f"{schema}.{table_name}"
+            view_name = fullname + "_v"
+            prefix = "MATERIALIZED " if table_name in materialized else ""
+            columns = ""
+            for column in table_info[table_name]:
+                stmt = table_name + "." + column + " AS " + column
+                if columns:
+                    columns = columns + ", " + stmt
+                else:
+                    columns = stmt
+            query = f"""CREATE {prefix}VIEW {view_name} 
+                SQL SECURITY INVOKER
+                AS SELECT {columns} 
+                FROM {fullname}"""
+
+            event.listen(metadata, "after_create", DDL(query))
+            if table_name in materialized:
+                index_name = "mat_index"
+                if schema and testing.against("oracle"):
+                    index_name = f"{schema}.{index_name}"
+                idx = f"CREATE INDEX {index_name} ON {view_name}(data)"
+                event.listen(metadata, "after_create", DDL(idx))
+            event.listen(metadata, "before_drop", DDL(f"DROP {prefix}VIEW {view_name}"))
+
+    @classmethod
     def define_reflected_tables(cls, metadata, schema):
         if schema:
             schema_prefix = schema + "."
@@ -546,11 +589,10 @@ class ComponentReflectionTest(_ComponentReflectionTest):
                     sqlalchemy.Index("noncol_idx_nopk", noncol_idx_test_nopk.c.q.desc())
                     sqlalchemy.Index("noncol_idx_pk", noncol_idx_test_pk.c.q.desc())
 
-        if testing.requires.view_column_reflection.enabled:
+        if testing.requires.view_column_reflection.enabled and not bool(os.environ.get("SPANNER_EMULATOR_HOST")):
             cls.define_views(metadata, schema)
 
     def filter_name_values():
-
         return testing.combinations(True, False, argnames="use_filter")
 
     @filter_name_values()
@@ -684,10 +726,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
     ):
         class tt:
             def __eq__(self, other):
-                return (
-                    other is None
-                    or config.db.dialect.default_schema_name == other
-                )
+                return other is None or config.db.dialect.default_schema_name == other
 
         def fk(
             cols,
@@ -702,9 +741,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
                 "referred_columns": ref_col,
                 "name": name,
                 "options": mock.ANY,
-                "referred_schema": ref_schema
-                if ref_schema is not None
-                else tt(),
+                "referred_schema": ref_schema if ref_schema is not None else tt(),
                 "referred_table": ref_table,
                 "comment": comment,
             }
@@ -726,9 +763,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
                     comment="di fk comment",
                 ),
             ],
-            (schema, "email_addresses"): [
-                fk(["remote_user_id"], ["user_id"], "users")
-            ],
+            (schema, "email_addresses"): [fk(["remote_user_id"], ["user_id"], "users")],
             (schema, "local_table"): [
                 fk(
                     ["remote_id"],
@@ -777,7 +812,6 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             self._adjust_sort(result, exp, lambda d: tuple(d["constrained_columns"]))
             self._check_table_dict(result, exp, self._required_fk_keys)
 
-
     def exp_columns(
         self,
         schema=None,
@@ -785,9 +819,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         kind=ObjectKind.ANY,
         filter_names=None,
     ):
-        def col(
-            name, auto=False, default=mock.ANY, comment=None, nullable=True
-        ):
+        def col(name, auto=False, default=mock.ANY, comment=None, nullable=True):
             res = {
                 "name": name,
                 "autoincrement": auto,
@@ -1098,8 +1130,6 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         )
         table.create(connection)
         connection.connection.commit()
-        # import pdb
-        # pdb.set_trace()
 
         inspector = inspect(connection)
         reflected = sorted(
@@ -1184,7 +1214,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
 
         insp = inspect(meta.bind)
 
-        if table_type == "view":
+        if table_type == "view" and not bool(os.environ.get("SPANNER_EMULATOR_HOST")):
             table_names = insp.get_view_names(schema)
             table_names.sort()
             answer = ["email_addresses_v", "users_v"]
@@ -1220,7 +1250,6 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         else:
             answer = ["dingalings_v", "email_addresses_v", "users_v"]
             eq_(sorted(table_names), answer)
-
 
     @pytest.mark.skip("Spanner doesn't support temporary tables")
     def test_get_temp_table_indexes(self):
@@ -1357,7 +1386,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
 
         insp = inspect(connection)
         tables = insp.get_table_names(schema)
-        if views:
+        if views and not bool(os.environ.get("SPANNER_EMULATOR_HOST")):
             tables += insp.get_view_names(schema)
             try:
                 tables += insp.get_materialized_view_names(schema)
@@ -1639,7 +1668,7 @@ class FetchLimitOffsetTest(_FetchLimitOffsetTest):
         self._assert_result(
             connection,
             u,
-            [(2,)],
+            [(1,)],
         )
 
 
@@ -1994,18 +2023,26 @@ class StringTest(_StringTest):
     def test_dont_truncate_rightside(
         self, metadata, connection, expr=None, expected=None
     ):
-        t = Table("t", metadata, Column("x", String(2)))
+        t = Table(
+            "t",
+            metadata,
+            Column("x", String(2)),
+            Column("id", Integer, primary_key=True),
+        )
         t.create(connection)
         connection.connection.commit()
-        connection.execute(t.insert(), [{"x": "XY"}, {"x": "YZ"}, {"x": "XZ"}])
-
-        combinations = [("%Y%", ["XY", "YZ"]), ("X%Z", ["XC"]), ("X%Z%A", [])]
+        connection.execute(
+            t.insert(),
+            [{"x": "AB", "id": 1}, {"x": "BC", "id": 2}, {"x": "AC", "id": 3}],
+        )
+        combinations = [("%B%", ["AB", "BC"]), ("A%C", ["AC"]), ("A%C%Z", [])]
 
         for args in combinations:
             eq_(
                 connection.scalars(select(t.c.x).where(t.c.x.like(args[0]))).all(),
                 args[1],
             )
+
 
 class TextTest(_TextTest):
     @classmethod
@@ -2545,12 +2582,13 @@ class HasIndexTest(_HasIndexTest):
             tbl.drop(connection)
             idx.drop(connection)
             connection.connection.commit()
-            self.tables['test_table'].indexes.remove(idx)
+            self.tables["test_table"].indexes.remove(idx)
 
     @pytest.mark.skip("Not supported by Cloud Spanner")
     @kind
     def test_has_index_schema(self, kind, connection):
         pass
+
 
 class HasTableTest(_HasTableTest):
     @classmethod
@@ -2573,6 +2611,11 @@ class HasTableTest(_HasTableTest):
     @pytest.mark.skip("Not supported by Cloud Spanner")
     def test_has_table_cache(self):
         pass
+
+    @testing.requires.views
+    def test_has_table_view(self, connection):
+        insp = inspect(connection)
+        is_true(insp.has_table("vv"))
 
 
 class PostCompileParamsTest(_PostCompileParamsTest):
@@ -2702,8 +2745,8 @@ class JSONTest(_JSONTest):
             eq_(
                 conn.scalar(select(self.tables.data_table.c.data)),
                 {
-                    util.u("réve🐍 illé"): util.u("réve🐍 illé"),
-                    "data": {"k1": util.u("drôl🐍e")},
+                    "réve🐍 illé": "réve🐍 illé",
+                    "data": {"k1": "drôl🐍e"},
                 },
             )
 

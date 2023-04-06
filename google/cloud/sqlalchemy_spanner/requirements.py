@@ -109,3 +109,7 @@ class Requirements(SuiteRequirements):  # pragma: no cover
         """target backend supports Decimal() objects using E notation
         to represent very large values."""
         return exclusions.open()
+
+    @property
+    def views(self):
+        return exclusions.open()
