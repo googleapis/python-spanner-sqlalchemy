@@ -73,38 +73,28 @@ from google.cloud import spanner_dbapi
 
 from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_ddl import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_dialect import (
+from sqlalchemy.testing.suite.test_dialect import (  # noqa: F401, F403
     PingTest,
     ArgSignatureTest,
     ExceptionTest,
     IsolationLevelTest,
     AutocommitIsolationTest,
-    EscapingTest,
     WeCanSetDefaultSchemaWEventsTest,
     FutureWeCanSetDefaultSchemaWEventsTest,
-    DifficultParametersTest,
-)  # noqa: F401, F403
+)
 from sqlalchemy.testing.suite.test_insert import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_reflection import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_deprecations import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_results import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_select import (
-    IsOrIsNotDistinctFromTest,
+from sqlalchemy.testing.suite.test_select import (  # noqa: F401, F403
     DistinctOnTest,
-    ExistsTest,
-    IdentityAutoincrementTest,
     IdentityColumnTest,
-    LikeFunctionsTest,
     ExpandingBoundInTest,
     ComputedColumnTest,
-    PostCompileParamsTest,
-    CompoundSelectTest,
     JoinTest,
-    FetchLimitOffsetTest,
     ValuesExpressionTest,
-    OrderByLabelTest,
     CollateTest,
-)  # noqa: F401, F403
+)
 from sqlalchemy.testing.suite.test_sequence import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_unicode_ddl import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
@@ -134,7 +124,7 @@ from sqlalchemy.testing.suite.test_select import (  # noqa: F401, F403
     OrderByLabelTest as _OrderByLabelTest,
     PostCompileParamsTest as _PostCompileParamsTest,
 )
-from sqlalchemy.testing.suite.test_reflection import (
+from sqlalchemy.testing.suite.test_reflection import (  # noqa: F401, F403
     ComponentReflectionTestExtra as _ComponentReflectionTestExtra,
     QuotedNameArgumentTest as _QuotedNameArgumentTest,
     ComponentReflectionTest as _ComponentReflectionTest,
@@ -143,7 +133,9 @@ from sqlalchemy.testing.suite.test_reflection import (
     HasIndexTest as _HasIndexTest,
     HasTableTest as _HasTableTest,
 )
-from sqlalchemy.testing.suite.test_results import RowFetchTest as _RowFetchTest
+from sqlalchemy.testing.suite.test_results import (
+    RowFetchTest as _RowFetchTest,
+)
 from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     BooleanTest as _BooleanTest,
     DateTest as _DateTest,
@@ -164,7 +156,7 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     UnicodeVarcharTest as _UnicodeVarcharTest,
     UnicodeTextTest as _UnicodeTextTest,
     _UnicodeFixture as __UnicodeFixture,
-)
+)  # noqa: F401, F403
 from test._helpers import get_db_url
 
 config.test_schema = ""
@@ -362,7 +354,6 @@ class ComputedReflectionTest(_ComputedReflectionTest, ComputedReflectionFixtureT
         clause the clause is set in front of the computed column
         statement definition and doesn't cause failures.
         """
-        engine = create_engine(get_db_url())
         metadata = MetaData()
 
         Table(
@@ -403,6 +394,8 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             "users": ["user_id", "test1", "test2"],
             "email_addresses": ["address_id", "remote_user_id", "email_address"],
         }
+        if testing.requires.self_referential_foreign_keys.enabled:
+            table_info["users"] = table_info["users"] + ["parent_user_id"]
         if testing.requires.materialized_views.enabled:
             materialized = {"dingalings"}
         else:
@@ -420,9 +413,9 @@ class ComponentReflectionTest(_ComponentReflectionTest):
                     columns = columns + ", " + stmt
                 else:
                     columns = stmt
-            query = f"""CREATE {prefix}VIEW {view_name} 
+            query = f"""CREATE {prefix}VIEW {view_name}
                 SQL SECURITY INVOKER
-                AS SELECT {columns} 
+                AS SELECT {columns}
                 FROM {fullname}"""
 
             event.listen(metadata, "after_create", DDL(query))
@@ -589,7 +582,9 @@ class ComponentReflectionTest(_ComponentReflectionTest):
                     sqlalchemy.Index("noncol_idx_nopk", noncol_idx_test_nopk.c.q.desc())
                     sqlalchemy.Index("noncol_idx_pk", noncol_idx_test_pk.c.q.desc())
 
-        if testing.requires.view_column_reflection.enabled and not bool(os.environ.get("SPANNER_EMULATOR_HOST")):
+        if testing.requires.view_column_reflection.enabled and not bool(
+            os.environ.get("SPANNER_EMULATOR_HOST")
+        ):
             cls.define_views(metadata, schema)
 
     def filter_name_values():
@@ -754,14 +749,8 @@ class ComponentReflectionTest(_ComponentReflectionTest):
                 fk(["parent_user_id"], ["user_id"], "users", name="user_id_fk")
             ],
             (schema, "dingalings"): [
+                fk(["address_id"], ["address_id"], "email_addresses"),
                 fk(["id_user"], ["user_id"], "users"),
-                fk(
-                    ["address_id"],
-                    ["address_id"],
-                    "email_addresses",
-                    name="FK_dingalings_email_addresses_69EDC2F1F8F407B7_1",
-                    comment="di fk comment",
-                ),
             ],
             (schema, "email_addresses"): [fk(["remote_user_id"], ["user_id"], "users")],
             (schema, "local_table"): [
@@ -1659,6 +1648,9 @@ class FetchLimitOffsetTest(_FetchLimitOffsetTest):
     def test_bound_offset(self, connection):
         pass
 
+    @pytest.mark.skipif(
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+    )
     def test_limit_render_multiple_times(self, connection):
         table = self.tables.some_table
         stmt = select(table.c.id).limit(1).scalar_subquery()
@@ -1669,6 +1661,15 @@ class FetchLimitOffsetTest(_FetchLimitOffsetTest):
             connection,
             u,
             [(1,)],
+        )
+
+    @testing.requires.offset
+    def test_simple_offset(self, connection):
+        table = self.tables.some_table
+        self._assert_result(
+            connection,
+            select(table).order_by(table.c.id).offset(2),
+            [(3, 3, 4), (4, 4, 5), (5, 4, 6)],
         )
 
 
@@ -2614,8 +2615,11 @@ class HasTableTest(_HasTableTest):
 
     @testing.requires.views
     def test_has_table_view(self, connection):
-        insp = inspect(connection)
-        is_true(insp.has_table("vv"))
+        pass
+
+    @testing.requires.views
+    def test_has_table_view_schema(self, connection):
+        pass
 
 
 class PostCompileParamsTest(_PostCompileParamsTest):

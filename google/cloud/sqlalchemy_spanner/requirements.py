@@ -15,6 +15,11 @@
 from sqlalchemy.testing import exclusions
 from sqlalchemy.testing.requirements import SuiteRequirements
 from sqlalchemy.testing.exclusions import against, only_on
+import sqlalchemy
+
+USING_SQLACLCHEMY_20 = False
+if sqlalchemy.__version__.split(".")[0] == "2":
+    USING_SQLACLCHEMY_20 = True
 
 
 class Requirements(SuiteRequirements):  # pragma: no cover
@@ -112,4 +117,4 @@ class Requirements(SuiteRequirements):  # pragma: no cover
 
     @property
     def views(self):
-        return exclusions.open()
+        return exclusions.open() if USING_SQLACLCHEMY_20 else exclusions.closed()

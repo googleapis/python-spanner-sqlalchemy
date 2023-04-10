@@ -22,6 +22,7 @@ from alembic.ddl.base import (
     alter_table,
     format_type,
 )
+from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy import ForeignKeyConstraint, types
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.engine.default import DefaultDialect, DefaultExecutionContext
@@ -51,7 +52,7 @@ if sqlalchemy.__version__.split(".")[0] == "2":
 
 
 @listens_for(Pool, "reset")
-def reset_connection(dbapi_conn, connection_record):
+def reset_connection(dbapi_conn, connection_record, reset_state):
     """An event of returning a connection back to a pool."""
     if hasattr(dbapi_conn, "connection"):
         dbapi_conn = dbapi_conn.connection
@@ -582,6 +583,44 @@ class SpannerDialect(DefaultDialect):
         """
         return ""
 
+    def _get_table_type_query(self, kind):
+        if not USING_SQLACLCHEMY_20:
+            return ""
+        from sqlalchemy.engine.reflection import ObjectKind
+
+        kind = ObjectKind.TABLE if kind is None else kind
+        if kind == ObjectKind.MATERIALIZED_VIEW:
+            raise NotImplementedError("Spanner does not support MATERIALIZED VIEWS")
+        switch_case = {
+            ObjectKind.ANY: ["BASE TABLE", "VIEW"],
+            ObjectKind.TABLE: ["BASE TABLE"],
+            ObjectKind.VIEW: ["VIEW"],
+            ObjectKind.ANY_VIEW: ["VIEW"],
+        }
+
+        table_type_query = ""
+        for table_type in switch_case[kind]:
+            query = f"t.table_type = '{table_type}'"
+            if table_type_query != "":
+                table_type_query = table_type_query + " OR " + query
+            else:
+                table_type_query = query
+        table_type_query = "AND (" + table_type_query + ")"
+        return table_type_query
+
+    def _get_table_filter_query(self, filter_names, info_schema_table):
+        table_filter_query = ""
+        if filter_names is not None:
+            for table_name in filter_names:
+                query = f"{info_schema_table}.table_name = '{table_name}'"
+                if table_filter_query != "":
+                    table_filter_query = table_filter_query + " OR " + query
+                else:
+                    table_filter_query = query
+            table_filter_query = "(" + table_filter_query + ") AND "
+
+        return table_filter_query
+
     def create_connect_args(self, url):
         """Parse connection args from the given URL.
 
@@ -622,37 +661,52 @@ class SpannerDialect(DefaultDialect):
         return all_views
 
     @engine_to_connection
+    def get_view_definition(self, connection, view_name, schema=None, **kw):
+        sql = """
+            SELECT view_definition
+            FROM information_schema.views
+            WHERE TABLE_SCHEMA='{schema_name}' AND TABLE_NAME='{view_name}'
+            """.format(
+            schema_name=schema or "", view_name=view_name
+        )
+
+        with connection.connection.database.snapshot() as snap:
+            rows = list(snap.execute_sql(sql))
+            if rows == []:
+                raise NoSuchTableError(f"{schema}.{view_name}")
+            result = rows[0][0]
+
+        return result
+
+    @engine_to_connection
     def get_multi_columns(
         self, connection, schema=None, filter_names=None, scope=None, kind=None, **kw
     ):
-        table_filter_query = ""
-        schema_filter_query = "AND table_schema = '{schema}'".format(
+        table_filter_query = self._get_table_filter_query(filter_names, "col")
+        schema_filter_query = "AND col.table_schema = '{schema}'".format(
             schema=schema or ""
         )
-        if filter_names is not None:
-            for table_name in filter_names:
-                query = "table_name = '{table_name}'".format(table_name=table_name)
-                if table_filter_query != "":
-                    table_filter_query = table_filter_query + " OR " + query
-                else:
-                    table_filter_query = query
-            table_filter_query = "(" + table_filter_query + ") AND "
+        table_type_query = self._get_table_type_query(kind)
 
         sql = """
-            SELECT table_schema, table_name, column_name, 
-                   spanner_type, is_nullable, generation_expression
-            FROM information_schema.columns
+            SELECT col.table_schema, col.table_name, col.column_name,
+                col.spanner_type, col.is_nullable, col.generation_expression
+            FROM information_schema.columns as col
+            JOIN information_schema.tables AS t
+                ON col.table_name = t.table_name
             WHERE
                 {table_filter_query}
-                table_catalog = ''
+                col.table_catalog = ''
+                {table_type_query}
                 {schema_filter_query}
             ORDER BY
-                table_catalog,
-                table_schema,
-                table_name,
-                ordinal_position
+                col.table_catalog,
+                col.table_schema,
+                col.table_name,
+                col.ordinal_position
         """.format(
             table_filter_query=table_filter_query,
+            table_type_query=table_type_query,
             schema_filter_query=schema_filter_query,
         )
         with connection.connection.database.snapshot() as snap:
@@ -694,8 +748,13 @@ class SpannerDialect(DefaultDialect):
         Returns:
             list: The table every column dict-like description.
         """
+        kind = None
+        if USING_SQLACLCHEMY_20:
+            from sqlalchemy.engine.reflection import ObjectKind
+
+            kind = ObjectKind.ANY
         dict = self.get_multi_columns(
-            connection, schema=schema, filter_names=[table_name]
+            connection, schema=schema, filter_names=[table_name], kind=kind
         )
         schema = schema or None
         return dict.get((schema, table_name), [])
@@ -731,18 +790,11 @@ class SpannerDialect(DefaultDialect):
     def get_multi_indexes(
         self, connection, schema=None, filter_names=None, scope=None, kind=None, **kw
     ):
-        table_filter_query = ""
+        table_filter_query = self._get_table_filter_query(filter_names, "i")
         schema_filter_query = "AND i.table_schema = '{schema}'".format(
             schema=schema or ""
         )
-        if filter_names is not None:
-            for table_name in filter_names:
-                query = "i.table_name = '{table_name}'".format(table_name=table_name)
-                if table_filter_query != "":
-                    table_filter_query = table_filter_query + " OR " + query
-                else:
-                    table_filter_query = query
-            table_filter_query = "(" + table_filter_query + ") AND "
+        table_type_query = self._get_table_type_query(kind)
 
         sql = """
             SELECT
@@ -755,15 +807,19 @@ class SpannerDialect(DefaultDialect):
             FROM information_schema.indexes as i
             JOIN information_schema.index_columns AS ic
                 ON ic.index_name = i.index_name AND ic.table_name = i.table_name
+            JOIN information_schema.tables AS t
+                ON i.table_name = t.table_name
             WHERE
                 {table_filter_query}
                 i.index_type != 'PRIMARY_KEY'
                 AND i.spanner_is_managed = FALSE
+                {table_type_query}
                 {schema_filter_query}
             GROUP BY i.table_schema, i.table_name, i.index_name, i.is_unique
             ORDER BY i.index_name
         """.format(
             table_filter_query=table_filter_query,
+            table_type_query=table_type_query,
             schema_filter_query=schema_filter_query,
         )
 
@@ -802,8 +858,13 @@ class SpannerDialect(DefaultDialect):
         Returns:
             list: List with indexes description.
         """
+        kind = None
+        if USING_SQLACLCHEMY_20:
+            from sqlalchemy.engine.reflection import ObjectKind
+
+            kind = ObjectKind.ANY
         dict = self.get_multi_indexes(
-            connection, schema=schema, filter_names=[table_name]
+            connection, schema=schema, filter_names=[table_name], kind=kind
         )
         schema = schema or None
         return dict.get((schema, table_name), [])
@@ -812,27 +873,24 @@ class SpannerDialect(DefaultDialect):
     def get_multi_pk_constraint(
         self, connection, schema=None, filter_names=None, scope=None, kind=None, **kw
     ):
-        table_filter_query = ""
+        table_filter_query = self._get_table_filter_query(filter_names, "tc")
         schema_filter_query = "AND tc.table_schema = '{schema}'".format(
             schema=schema or ""
         )
-        if filter_names is not None:
-            for table_name in filter_names:
-                query = "tc.TABLE_NAME = '{table_name}'".format(table_name=table_name)
-                if table_filter_query != "":
-                    table_filter_query = table_filter_query + " OR " + query
-                else:
-                    table_filter_query = query
-            table_filter_query = "(" + table_filter_query + ") AND "
+        table_type_query = self._get_table_type_query(kind)
 
         sql = """
             SELECT tc.table_schema, tc.table_name, ccu.COLUMN_NAME
             FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc
             JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS ccu
                 ON ccu.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
-            WHERE {table_filter_query} tc.CONSTRAINT_TYPE = "PRIMARY KEY" {schema_filter_query}
+            JOIN information_schema.tables AS t
+                ON tc.table_name = t.table_name
+            WHERE {table_filter_query} tc.CONSTRAINT_TYPE = "PRIMARY KEY"
+            {table_type_query} {schema_filter_query}
         """.format(
             table_filter_query=table_filter_query,
+            table_type_query=table_type_query,
             schema_filter_query=schema_filter_query,
         )
 
@@ -865,8 +923,13 @@ class SpannerDialect(DefaultDialect):
         Returns:
             dict: Dict with the primary key constraint description.
         """
+        kind = None
+        if USING_SQLACLCHEMY_20:
+            from sqlalchemy.engine.reflection import ObjectKind
+
+            kind = ObjectKind.ANY
         dict = self.get_multi_pk_constraint(
-            connection, schema=schema, filter_names=[table_name]
+            connection, schema=schema, filter_names=[table_name], kind=kind
         )
         schema = schema or None
         return dict.get((schema, table_name), [])
@@ -897,18 +960,11 @@ class SpannerDialect(DefaultDialect):
     def get_multi_foreign_keys(
         self, connection, schema=None, filter_names=None, scope=None, kind=None, **kw
     ):
-        table_filter_query = ""
+        table_filter_query = self._get_table_filter_query(filter_names, "tc")
         schema_filter_query = "AND tc.table_schema = '{schema}'".format(
             schema=schema or ""
         )
-        if filter_names is not None:
-            for table_name in filter_names:
-                query = "tc.TABLE_NAME = '{table_name}'".format(table_name=table_name)
-                if table_filter_query != "":
-                    table_filter_query = table_filter_query + " OR " + query
-                else:
-                    table_filter_query = query
-            table_filter_query = "(" + table_filter_query + ") AND "
+        table_type_query = self._get_table_type_query(kind)
 
         sql = """
         SELECT
@@ -932,13 +988,18 @@ class SpannerDialect(DefaultDialect):
                 ON ctu.constraint_name = tc.constraint_name
             JOIN information_schema.key_column_usage AS kcu
                 ON kcu.constraint_name = tc.constraint_name
+            JOIN information_schema.tables AS t
+                ON tc.table_name = t.table_name
             WHERE
                 {table_filter_query}
                 tc.constraint_type = "FOREIGN KEY"
+                {table_type_query}
                 {schema_filter_query}
-            GROUP BY tc.table_name, tc.table_schema, tc.constraint_name, ctu.table_name, ctu.table_schema
+            GROUP BY tc.table_name, tc.table_schema, tc.constraint_name,
+            ctu.table_name, ctu.table_schema
             """.format(
             table_filter_query=table_filter_query,
+            table_type_query=table_type_query,
             schema_filter_query=schema_filter_query,
         )
 
@@ -963,9 +1024,6 @@ class SpannerDialect(DefaultDialect):
                 table_info = result_dict.get((row[0], row[1]), [])
                 for index, value in enumerate(sorted(row[6])):
                     row[6][index] = value.split("_____")[1]
-
-                # import pdb
-                # pdb.set_trace()
 
                 fk_info = {
                     "name": row[2],
@@ -995,8 +1053,13 @@ class SpannerDialect(DefaultDialect):
         Returns:
             list: Dicts, each of which describes a foreign key constraint.
         """
+        kind = None
+        if USING_SQLACLCHEMY_20:
+            from sqlalchemy.engine.reflection import ObjectKind
+
+            kind = ObjectKind.ANY
         dict = self.get_multi_foreign_keys(
-            connection, schema=schema, filter_names=[table_name]
+            connection, schema=schema, filter_names=[table_name], kind=kind
         )
         schema = schema or None
         return dict.get((schema, table_name), [])
@@ -1018,9 +1081,9 @@ class SpannerDialect(DefaultDialect):
         sql = """
 SELECT table_name
 FROM information_schema.tables
-WHERE table_schema = '{}'
+WHERE table_type = 'BASE TABLE' AND table_schema = '{schema}'
 """.format(
-            schema or ""
+            schema=schema or ""
         )
 
         table_names = []
