@@ -587,8 +587,40 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         ):
             cls.define_views(metadata, schema)
 
+    @testing.combinations(
+        (False, False),
+        (False, True, testing.requires.schemas),
+        (True, False, testing.requires.view_reflection),
+        (
+            True,
+            True,
+            testing.requires.schemas + testing.requires.view_reflection,
+        ),
+        argnames="use_views,use_schema",
+    )
+    def test_get_columns(self, connection, use_views, use_schema):
+        if use_views and bool(os.environ.get("SPANNER_EMULATOR_HOST")):
+            pytest.skip("Skipped on emulator")
+
+    @pytest.mark.skipif(
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+    )
+    @testing.requires.view_reflection
+    @testing.combinations(
+        (False,), (True, testing.requires.schemas), argnames="use_schema"
+    )
+    def test_get_view_definition(self, connection, use_schema):
+        super.test_get_view_definition(self, connection, use_schema)
+
     def filter_name_values():
         return testing.combinations(True, False, argnames="use_filter")
+
+    @pytest.mark.skipif(
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+    )
+    @testing.requires.view_reflection
+    def test_get_view_definition_does_not_exist(self, connection):
+        super.test_get_view_definition_does_not_exist(self, connection)
 
     @filter_name_values()
     @testing.requires.index_reflection
@@ -799,7 +831,11 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             insp.clear_cache()
             result = insp.get_multi_foreign_keys(**kw)
             self._adjust_sort(result, exp, lambda d: tuple(d["constrained_columns"]))
-            self._check_table_dict(result, exp, self._required_fk_keys)
+            self._check_table_dict(
+                sorted(result, key=lambda x: x["name"]),
+                sorted(exp, key=lambda x: x["name"]),
+                self._required_fk_keys,
+            )
 
     def exp_columns(
         self,
@@ -1366,6 +1402,9 @@ class ComponentReflectionTest(_ComponentReflectionTest):
                             e[k].sort()
                         eq_(r[k], e[k], f"{msg} - {k} - {r}")
 
+    @pytest.mark.skipif(
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+    )
     @testing.combinations(True, False, argnames="use_schema")
     @testing.combinations((True, testing.requires.views), False, argnames="views")
     def test_metadata(self, connection, use_schema, views):
@@ -1375,7 +1414,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
 
         insp = inspect(connection)
         tables = insp.get_table_names(schema)
-        if views and not bool(os.environ.get("SPANNER_EMULATOR_HOST")):
+        if views:
             tables += insp.get_view_names(schema)
             try:
                 tables += insp.get_materialized_view_names(schema)

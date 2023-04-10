@@ -52,7 +52,7 @@ if sqlalchemy.__version__.split(".")[0] == "2":
 
 
 @listens_for(Pool, "reset")
-def reset_connection(dbapi_conn, connection_record, reset_state):
+def reset_connection(dbapi_conn, connection_record, reset_state=None):
     """An event of returning a connection back to a pool."""
     if hasattr(dbapi_conn, "connection"):
         dbapi_conn = dbapi_conn.connection
