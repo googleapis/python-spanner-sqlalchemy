@@ -886,8 +886,11 @@ class SpannerDialect(DefaultDialect):
                 ON ccu.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
             JOIN information_schema.tables AS t
                 ON tc.table_name = t.table_name
+            JOIN information_schema.columns as c
+                ON c.column_name =ccu.COLUMN_NAME  and  c.table_name = tc.table_name
             WHERE {table_filter_query} tc.CONSTRAINT_TYPE = "PRIMARY KEY"
             {table_type_query} {schema_filter_query}
+            ORDER BY tc.CONSTRAINT_NAME, c.ORDINAL_POSITION
         """.format(
             table_filter_query=table_filter_query,
             table_type_query=table_type_query,
