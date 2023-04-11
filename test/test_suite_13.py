@@ -973,7 +973,7 @@ class CompositeKeyReflectionTest(_CompositeKeyReflectionTest):
     def test_pk_column_order(self, connection):
         """
         SPANNER OVERRIDE:
-        Emultor is not able to return pk sorted by ordinal value
+        Emultor doesn't support returning pk sorted by ordinal value
         of columns.
         """
         insp = inspect(connection)

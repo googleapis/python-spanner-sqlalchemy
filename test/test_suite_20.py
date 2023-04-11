@@ -881,6 +881,15 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         scope=ObjectScope.DEFAULT,
         kind=ObjectKind.TABLE,
     ):
+
+        """
+        SPANNER OVERRIDE:
+
+        Spanner doesn't support temporary tables, so real tables are
+        used for testing. As the original test expects only real
+        tables to be read, and in Spanner all the tables are real,
+        expected results override is required.
+        """
         insp, kws, exp = get_multi_exp(
             schema,
             scope,
@@ -1007,6 +1016,14 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         scope=ObjectScope.DEFAULT,
         kind=ObjectKind.TABLE,
     ):
+        """
+        SPANNER OVERRIDE:
+
+        Spanner doesn't support temporary tables, so real tables are
+        used for testing. As the original test expects only real
+        tables to be read, and in Spanner all the tables are real,
+        expected results override is required.
+        """
         insp, kws, exp = get_multi_exp(
             schema,
             scope,
@@ -1513,7 +1530,11 @@ class CompositeKeyReflectionTest(_CompositeKeyReflectionTest):
 
     @testing.requires.primary_key_constraint_reflection
     def test_pk_column_order(self, connection):
-        # test for issue #5661
+        """
+        SPANNER OVERRIDE:
+        Emultor doesn't support returning pk sorted by ordinal value
+        of columns.
+        """
         insp = inspect(connection)
         primary_key = insp.get_pk_constraint(self.tables.tb1.name)
         exp = (

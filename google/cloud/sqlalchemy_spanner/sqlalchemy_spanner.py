@@ -584,6 +584,10 @@ class SpannerDialect(DefaultDialect):
         return ""
 
     def _get_table_type_query(self, kind):
+        """
+        Generates WHERE condition for Kind of Object.
+        Spanner supports Table and View.
+        """
         if not USING_SQLACLCHEMY_20:
             return ""
         from sqlalchemy.engine.reflection import ObjectKind
@@ -609,6 +613,10 @@ class SpannerDialect(DefaultDialect):
         return table_type_query
 
     def _get_table_filter_query(self, filter_names, info_schema_table):
+        """
+        Generates WHERE query for tables or views for which
+        information is reflected.
+        """
         table_filter_query = ""
         if filter_names is not None:
             for table_name in filter_names:
@@ -644,6 +652,19 @@ class SpannerDialect(DefaultDialect):
 
     @engine_to_connection
     def get_view_names(self, connection, schema=None, **kw):
+        """
+        Gets a list of view name.
+
+        The method is used by SQLAlchemy introspection systems.
+
+        Args:
+            connection (sqlalchemy.engine.base.Connection):
+                SQLAlchemy connection or engine object.
+            schema (str): Optional. Schema name
+
+        Returns:
+            list: List of view names.
+        """
         sql = """
             SELECT table_name
             FROM information_schema.views
@@ -662,6 +683,20 @@ class SpannerDialect(DefaultDialect):
 
     @engine_to_connection
     def get_view_definition(self, connection, view_name, schema=None, **kw):
+        """
+        Gets definition of a particular view.
+
+        The method is used by SQLAlchemy introspection systems.
+
+        Args:
+            connection (sqlalchemy.engine.base.Connection):
+                SQLAlchemy connection or engine object.
+            view_name (str): Name of the view.
+            schema (str): Optional. Schema name
+
+        Returns:
+            str: Definition of view.
+        """
         sql = """
             SELECT view_definition
             FROM information_schema.views
@@ -682,6 +717,30 @@ class SpannerDialect(DefaultDialect):
     def get_multi_columns(
         self, connection, schema=None, filter_names=None, scope=None, kind=None, **kw
     ):
+        """
+        Return information about columns in all objects in the given
+        schema.
+
+        The method is used by SQLAlchemy introspection systems.
+
+        Args:
+            connection (sqlalchemy.engine.base.Connection):
+                SQLAlchemy connection or engine object.
+            schema (str): Optional. Schema name
+            filter_names (Sequence[str): Optional. Optionally return information
+                only for the objects listed here.
+            scope (sqlalchemy.engine.reflection.ObjectScope): Optional. Specifies
+                if columns of default, temporary or any tables
+                should be reflected. Spanner does not support temporary.
+            kind (sqlalchemy.engine.reflection.ObjectKind): Optional. Specifies the
+                type of objects to reflect.
+
+        Returns:
+            dictionary: a dictionary where the keys are two-tuple schema,table-name
+                and the values are list of dictionaries, each representing the
+                definition of a database column.
+                The schema is ``None`` if no schema is provided.
+        """
         table_filter_query = self._get_table_filter_query(filter_names, "col")
         schema_filter_query = "AND col.table_schema = '{schema}'".format(
             schema=schema or ""
@@ -790,6 +849,30 @@ class SpannerDialect(DefaultDialect):
     def get_multi_indexes(
         self, connection, schema=None, filter_names=None, scope=None, kind=None, **kw
     ):
+        """
+        Return information about indexes in in all objects
+        in the given schema.
+
+        The method is used by SQLAlchemy introspection systems.
+
+        Args:
+            connection (sqlalchemy.engine.base.Connection):
+                SQLAlchemy connection or engine object.
+            schema (str): Optional. Schema name.
+            filter_names (Sequence[str): Optional. Optionally return information
+                only for the objects listed here.
+            scope (sqlalchemy.engine.reflection.ObjectScope): Optional. Specifies
+                if columns of default, temporary or any tables
+                should be reflected. Spanner does not support temporary.
+            kind (sqlalchemy.engine.reflection.ObjectKind): Optional. Specifies the
+                type of objects to reflect.
+
+        Returns:
+            dictionary: a dictionary where the keys are two-tuple schema,table-name
+                and the values are list of dictionaries, each representing the
+                definition of an index.
+                The schema is ``None`` if no schema is provided.
+        """
         table_filter_query = self._get_table_filter_query(filter_names, "i")
         schema_filter_query = "AND i.table_schema = '{schema}'".format(
             schema=schema or ""
@@ -873,6 +956,30 @@ class SpannerDialect(DefaultDialect):
     def get_multi_pk_constraint(
         self, connection, schema=None, filter_names=None, scope=None, kind=None, **kw
     ):
+        """
+        Return information about primary key constraints in
+        all tables in the given schema.
+
+        The method is used by SQLAlchemy introspection systems.
+
+        Args:
+            connection (sqlalchemy.engine.base.Connection):
+                SQLAlchemy connection or engine object.
+            schema (str): Optional. Schema name
+            filter_names (Sequence[str): Optional. Optionally return information
+                only for the objects listed here.
+            scope (sqlalchemy.engine.reflection.ObjectScope): Optional. Specifies
+                if columns of default, temporary or any tables
+                should be reflected. Spanner does not support temporary.
+            kind (sqlalchemy.engine.reflection.ObjectKind): Optional. Specifies the
+                type of objects to reflect.
+
+        Returns:
+            dictionary: a dictionary where the keys are two-tuple schema,table-name
+                and the values are list of dictionaries, each representing the
+                definition of a primary key constraint.
+                The schema is ``None`` if no schema is provided.
+        """
         table_filter_query = self._get_table_filter_query(filter_names, "tc")
         schema_filter_query = "AND tc.table_schema = '{schema}'".format(
             schema=schema or ""
@@ -960,6 +1067,30 @@ class SpannerDialect(DefaultDialect):
     def get_multi_foreign_keys(
         self, connection, schema=None, filter_names=None, scope=None, kind=None, **kw
     ):
+        """
+        Return information about foreign_keys in all tables
+        in the given schema.
+
+        The method is used by SQLAlchemy introspection systems.
+
+        Args:
+            connection (sqlalchemy.engine.base.Connection):
+                SQLAlchemy connection or engine object.
+            schema (str): Optional. Schema name
+            filter_names (Sequence[str): Optional. Optionally return information
+                only for the objects listed here.
+            scope (sqlalchemy.engine.reflection.ObjectScope): Optional. Specifies
+                if columns of default, temporary or any tables
+                should be reflected. Spanner does not support temporary.
+            kind (sqlalchemy.engine.reflection.ObjectKind): Optional. Specifies the
+                type of objects to reflect.
+
+        Returns:
+            dictionary: a dictionary where the keys are two-tuple schema,table-name
+                and the values are list of dictionaries, each representing
+                a foreign key definition.
+                The schema is ``None`` if no schema is provided.
+        """
         table_filter_query = self._get_table_filter_query(filter_names, "tc")
         schema_filter_query = "AND tc.table_schema = '{schema}'".format(
             schema=schema or ""

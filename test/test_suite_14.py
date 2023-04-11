@@ -732,7 +732,11 @@ class CompositeKeyReflectionTest(_CompositeKeyReflectionTest):
 
     @testing.requires.primary_key_constraint_reflection
     def test_pk_column_order(self, connection):
-        # test for issue #5661
+        """
+        SPANNER OVERRIDE:
+        Emultor doesn't support returning pk sorted by ordinal value
+        of columns.
+        """
         insp = inspect(connection)
         primary_key = insp.get_pk_constraint(self.tables.tb1.name)
         exp = (
