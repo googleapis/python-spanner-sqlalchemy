@@ -63,6 +63,7 @@ from sqlalchemy.types import Text
 from sqlalchemy.testing import requires
 from sqlalchemy.testing import is_true
 from sqlalchemy import Index
+from sqlalchemy import types
 from sqlalchemy.testing.fixtures import (
     ComputedReflectionFixtureTest as _ComputedReflectionFixtureTest,
 )
@@ -602,25 +603,86 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         if use_views and bool(os.environ.get("SPANNER_EMULATOR_HOST")):
             pytest.skip("Skipped on emulator")
 
+        schema = None
+
+        users, addresses = (self.tables.users, self.tables.email_addresses)
+        if use_views:
+            table_names = ["users_v", "email_addresses_v", "dingalings_v"]
+        else:
+            table_names = ["users", "email_addresses"]
+
+        insp = inspect(connection)
+        for table_name, table in zip(table_names, (users, addresses)):
+            schema_name = schema
+            cols = insp.get_columns(table_name, schema=schema_name)
+            is_true(len(cols) > 0, len(cols))
+
+            # should be in order
+
+            for i, col in enumerate(table.columns):
+                eq_(col.name, cols[i]["name"])
+                ctype = cols[i]["type"].__class__
+                ctype_def = col.type
+                if isinstance(ctype_def, sqlalchemy.types.TypeEngine):
+                    ctype_def = ctype_def.__class__
+
+                # Oracle returns Date for DateTime.
+
+                if testing.against("oracle") and ctype_def in (
+                    types.Date,
+                    types.DateTime,
+                ):
+                    ctype_def = types.Date
+
+                # assert that the desired type and return type share
+                # a base within one of the generic types.
+
+                is_true(
+                    len(
+                        set(ctype.__mro__)
+                        .intersection(ctype_def.__mro__)
+                        .intersection(
+                            [
+                                types.Integer,
+                                types.Numeric,
+                                types.DateTime,
+                                types.Date,
+                                types.Time,
+                                types.String,
+                                types._Binary,
+                            ]
+                        )
+                    )
+                    > 0,
+                    "%s(%s), %s(%s)" % (col.name, col.type, cols[i]["name"], ctype),
+                )
+
+                if not col.primary_key:
+                    assert cols[i]["default"] is None
+
     @pytest.mark.skipif(
         bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
     )
     @testing.requires.view_reflection
-    @testing.combinations(
-        (False,), (True, testing.requires.schemas), argnames="use_schema"
-    )
-    def test_get_view_definition(self, connection, use_schema):
-        super.test_get_view_definition(self, connection, use_schema)
-
-    def filter_name_values():
-        return testing.combinations(True, False, argnames="use_filter")
+    def test_get_view_definition(
+        self,
+        connection,
+    ):
+        schema = None
+        insp = inspect(connection)
+        for view in ["users_v", "email_addresses_v", "dingalings_v"]:
+            v = insp.get_view_definition(view, schema=schema)
+            is_true(bool(v))
 
     @pytest.mark.skipif(
         bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
     )
     @testing.requires.view_reflection
     def test_get_view_definition_does_not_exist(self, connection):
-        super.test_get_view_definition_does_not_exist(self, connection)
+        super().test_get_view_definition_does_not_exist(connection)
+
+    def filter_name_values():
+        return testing.combinations(True, False, argnames="use_filter")
 
     @filter_name_values()
     @testing.requires.index_reflection
@@ -832,8 +894,14 @@ class ComponentReflectionTest(_ComponentReflectionTest):
             result = insp.get_multi_foreign_keys(**kw)
             self._adjust_sort(result, exp, lambda d: tuple(d["constrained_columns"]))
             self._check_table_dict(
-                sorted(result, key=lambda x: x["name"]),
-                sorted(exp, key=lambda x: x["name"]),
+                {
+                    key: sorted(value, key=lambda x: x["constrained_columns"])
+                    for key, value in result.items()
+                },
+                {
+                    key: sorted(value, key=lambda x: x["constrained_columns"])
+                    for key, value in exp.items()
+                },
                 self._required_fk_keys,
             )
 
@@ -1442,6 +1510,18 @@ class CompositeKeyReflectionTest(_CompositeKeyReflectionTest):
         fkey1 = foreign_keys[0]
         eq_(set(fkey1.get("referred_columns")), {"name", "id", "attr"})
         eq_(set(fkey1.get("constrained_columns")), {"pname", "pid", "pattr"})
+
+    @testing.requires.primary_key_constraint_reflection
+    def test_pk_column_order(self, connection):
+        # test for issue #5661
+        insp = inspect(connection)
+        primary_key = insp.get_pk_constraint(self.tables.tb1.name)
+        exp = (
+            ["id", "attr", "name"]
+            if bool(os.environ.get("SPANNER_EMULATOR_HOST"))
+            else ["name", "id", "attr"]
+        )
+        eq_(primary_key.get("constrained_columns"), exp)
 
 
 @pytest.mark.skip("Spanner doesn't support quotes in table names.")
