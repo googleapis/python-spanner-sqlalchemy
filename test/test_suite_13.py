@@ -979,7 +979,7 @@ class CompositeKeyReflectionTest(_CompositeKeyReflectionTest):
         insp = inspect(connection)
         primary_key = insp.get_pk_constraint(self.tables.tb1.name)
         exp = (
-            ["id", "attr", "name"]
+            ['id', 'name', 'attr']
             if bool(os.environ.get("SPANNER_EMULATOR_HOST"))
             else ["name", "id", "attr"]
         )
