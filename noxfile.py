@@ -165,6 +165,7 @@ def compliance_test_13(session):
         "--cov-fail-under=0",
         "--asyncio-mode=auto",
         "test/test_suite_13.py",
+        *session.posargs,
     )
 
 
@@ -203,6 +204,7 @@ def compliance_test_14(session):
         "--cov-fail-under=0",
         "--asyncio-mode=auto",
         "test/test_suite_14.py",
+        *session.posargs,
     )
 
 
@@ -240,6 +242,7 @@ def compliance_test_20(session):
         "--cov-fail-under=0",
         "--asyncio-mode=auto",
         "test/test_suite_20.py",
+        *session.posargs,
     )
 
 

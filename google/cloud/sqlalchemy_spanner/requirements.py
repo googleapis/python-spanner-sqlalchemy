@@ -117,4 +117,5 @@ class Requirements(SuiteRequirements):  # pragma: no cover
 
     @property
     def views(self):
+        """Target database must support VIEWs."""
         return exclusions.open() if USING_SQLACLCHEMY_20 else exclusions.closed()

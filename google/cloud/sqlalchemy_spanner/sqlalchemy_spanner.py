@@ -50,6 +50,9 @@ USING_SQLACLCHEMY_20 = False
 if sqlalchemy.__version__.split(".")[0] == "2":
     USING_SQLACLCHEMY_20 = True
 
+if USING_SQLACLCHEMY_20:
+    from sqlalchemy.engine.reflection import ObjectKind
+
 
 @listens_for(Pool, "reset")
 def reset_connection(dbapi_conn, connection_record, reset_state=None):
@@ -590,7 +593,6 @@ class SpannerDialect(DefaultDialect):
         """
         if not USING_SQLACLCHEMY_20:
             return ""
-        from sqlalchemy.engine.reflection import ObjectKind
 
         kind = ObjectKind.TABLE if kind is None else kind
         if kind == ObjectKind.MATERIALIZED_VIEW:
@@ -708,7 +710,7 @@ class SpannerDialect(DefaultDialect):
         with connection.connection.database.snapshot() as snap:
             rows = list(snap.execute_sql(sql))
             if rows == []:
-                raise NoSuchTableError(f"{schema}.{view_name}")
+                raise NoSuchTableError(f"{schema if schema else ''}.{view_name}")
             result = rows[0][0]
 
         return result
@@ -807,11 +809,7 @@ class SpannerDialect(DefaultDialect):
         Returns:
             list: The table every column dict-like description.
         """
-        kind = None
-        if USING_SQLACLCHEMY_20:
-            from sqlalchemy.engine.reflection import ObjectKind
-
-            kind = ObjectKind.ANY
+        kind = None if not USING_SQLACLCHEMY_20 else ObjectKind.ANY
         dict = self.get_multi_columns(
             connection, schema=schema, filter_names=[table_name], kind=kind
         )
@@ -941,11 +939,7 @@ class SpannerDialect(DefaultDialect):
         Returns:
             list: List with indexes description.
         """
-        kind = None
-        if USING_SQLACLCHEMY_20:
-            from sqlalchemy.engine.reflection import ObjectKind
-
-            kind = ObjectKind.ANY
+        kind = None if not USING_SQLACLCHEMY_20 else ObjectKind.ANY
         dict = self.get_multi_indexes(
             connection, schema=schema, filter_names=[table_name], kind=kind
         )
@@ -1030,11 +1024,7 @@ class SpannerDialect(DefaultDialect):
         Returns:
             dict: Dict with the primary key constraint description.
         """
-        kind = None
-        if USING_SQLACLCHEMY_20:
-            from sqlalchemy.engine.reflection import ObjectKind
-
-            kind = ObjectKind.ANY
+        kind = None if not USING_SQLACLCHEMY_20 else ObjectKind.ANY
         dict = self.get_multi_pk_constraint(
             connection, schema=schema, filter_names=[table_name], kind=kind
         )
@@ -1184,11 +1174,7 @@ class SpannerDialect(DefaultDialect):
         Returns:
             list: Dicts, each of which describes a foreign key constraint.
         """
-        kind = None
-        if USING_SQLACLCHEMY_20:
-            from sqlalchemy.engine.reflection import ObjectKind
-
-            kind = ObjectKind.ANY
+        kind = None if not USING_SQLACLCHEMY_20 else ObjectKind.ANY
         dict = self.get_multi_foreign_keys(
             connection, schema=schema, filter_names=[table_name], kind=kind
         )
