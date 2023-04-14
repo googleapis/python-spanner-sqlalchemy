@@ -655,7 +655,7 @@ class SpannerDialect(DefaultDialect):
     @engine_to_connection
     def get_view_names(self, connection, schema=None, **kw):
         """
-        Gets a list of view name.
+        Gets a list of view names.
 
         The method is used by SQLAlchemy introspection systems.
 

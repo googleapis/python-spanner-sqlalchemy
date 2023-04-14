@@ -60,6 +60,7 @@ from sqlalchemy.types import Numeric
 from sqlalchemy.types import Text
 from sqlalchemy.testing import requires
 from sqlalchemy.testing import is_true
+from sqlalchemy import types as sql_types
 from sqlalchemy.testing.fixtures import (
     ComputedReflectionFixtureTest as _ComputedReflectionFixtureTest,
 )
@@ -230,6 +231,34 @@ class ComponentReflectionTestExtra(_ComponentReflectionTestExtra):
 
 class ComponentReflectionTest(_ComponentReflectionTest):
     @classmethod
+    def define_views(cls, metadata, schema):
+        table_info = {
+            "users": ["user_id", "test1", "test2"],
+            "email_addresses": ["address_id", "remote_user_id", "email_address"],
+        }
+        if testing.requires.self_referential_foreign_keys.enabled:
+            table_info["users"] = table_info["users"] + ["parent_user_id"]
+        for table_name in ("users", "email_addresses"):
+            fullname = table_name
+            if schema:
+                fullname = "%s.%s" % (schema, table_name)
+            view_name = fullname + "_v"
+            columns = ""
+            for column in table_info[table_name]:
+                stmt = table_name + "." + column + " AS " + column
+                if columns:
+                    columns = columns + ", " + stmt
+                else:
+                    columns = stmt
+            query = f"""CREATE VIEW {view_name}
+                SQL SECURITY INVOKER
+                AS SELECT {columns}
+                FROM {fullname}"""
+
+            event.listen(metadata, "after_create", DDL(query))
+            event.listen(metadata, "before_drop", DDL("DROP VIEW %s" % view_name))
+
+    @classmethod
     def define_tables(cls, metadata):
         cls.define_reflected_tables(metadata, None)
 
@@ -374,8 +403,101 @@ class ComponentReflectionTest(_ComponentReflectionTest):
                     sqlalchemy.Index("noncol_idx_nopk", noncol_idx_test_nopk.c.q.desc())
                     sqlalchemy.Index("noncol_idx_pk", noncol_idx_test_pk.c.q.desc())
 
-        if testing.requires.view_column_reflection.enabled:
+        if testing.requires.view_column_reflection.enabled and not bool(
+            os.environ.get("SPANNER_EMULATOR_HOST")
+        ):
             cls.define_views(metadata, schema)
+
+    @pytest.mark.skipif(
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+    )
+    @testing.requires.view_reflection
+    @testing.combinations(
+        (False,), (True, testing.requires.schemas), argnames="use_schema"
+    )
+    def test_get_view_definition(self, connection, use_schema):
+        if use_schema:
+            schema = config.test_schema
+        else:
+            schema = None
+        view_name1 = "users_v"
+        view_name2 = "email_addresses_v"
+        insp = inspect(connection)
+        v1 = insp.get_view_definition(view_name1, schema=schema)
+        self.assert_(v1)
+        v2 = insp.get_view_definition(view_name2, schema=schema)
+        self.assert_(v2)
+
+    @testing.combinations(
+        (False, False),
+        (False, True, testing.requires.schemas),
+        (True, False, testing.requires.view_reflection),
+        (
+            True,
+            True,
+            testing.requires.schemas + testing.requires.view_reflection,
+        ),
+        argnames="use_views,use_schema",
+    )
+    def test_get_columns(self, connection, use_views, use_schema):
+        if use_views and bool(os.environ.get("SPANNER_EMULATOR_HOST")):
+            pytest.skip("Skipped on emulator")
+
+        schema = None
+        users, addresses = (self.tables.users, self.tables.email_addresses)
+        if use_views:
+            table_names = ["users_v", "email_addresses_v"]
+        else:
+            table_names = ["users", "email_addresses"]
+
+        insp = inspect(connection)
+        for table_name, table in zip(table_names, (users, addresses)):
+            schema_name = schema
+            cols = insp.get_columns(table_name, schema=schema_name)
+            self.assert_(len(cols) > 0, len(cols))
+
+            # should be in order
+
+            for i, col in enumerate(table.columns):
+                eq_(col.name, cols[i]["name"])
+                ctype = cols[i]["type"].__class__
+                ctype_def = col.type
+                if isinstance(ctype_def, sqlalchemy.types.TypeEngine):
+                    ctype_def = ctype_def.__class__
+
+                # Oracle returns Date for DateTime.
+
+                if testing.against("oracle") and ctype_def in (
+                    sql_types.Date,
+                    sql_types.DateTime,
+                ):
+                    ctype_def = sql_types.Date
+
+                # assert that the desired type and return type share
+                # a base within one of the generic types.
+
+                self.assert_(
+                    len(
+                        set(ctype.__mro__)
+                        .intersection(ctype_def.__mro__)
+                        .intersection(
+                            [
+                                sql_types.Integer,
+                                sql_types.Numeric,
+                                sql_types.DateTime,
+                                sql_types.Date,
+                                sql_types.Time,
+                                sql_types.String,
+                                sql_types._Binary,
+                            ]
+                        )
+                    )
+                    > 0,
+                    "%s(%s), %s(%s)" % (col.name, col.type, cols[i]["name"], ctype),
+                )
+
+                if not col.primary_key:
+                    assert cols[i]["default"] is None
 
     @testing.combinations((False,), argnames="use_schema")
     @testing.requires.foreign_key_constraint_reflection
@@ -669,7 +791,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
 
         insp = inspect(meta.bind)
 
-        if table_type == "view":
+        if table_type == "view" and not bool(os.environ.get("SPANNER_EMULATOR_HOST")):
             table_names = insp.get_view_names(schema)
             table_names.sort()
             answer = ["email_addresses_v", "users_v"]
@@ -988,6 +1110,9 @@ class FetchLimitOffsetTest(_FetchLimitOffsetTest):
     def test_bound_offset(self, connection):
         pass
 
+    @pytest.mark.skipif(
+        bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+    )
     def test_limit_render_multiple_times(self, connection):
         table = self.tables.some_table
         stmt = select(table.c.id).limit(1).scalar_subquery()
@@ -997,7 +1122,16 @@ class FetchLimitOffsetTest(_FetchLimitOffsetTest):
         self._assert_result(
             connection,
             u,
-            [(2,)],
+            [(1,)],
+        )
+
+    @testing.requires.offset
+    def test_simple_offset(self, connection):
+        table = self.tables.some_table
+        self._assert_result(
+            connection,
+            select(table).order_by(table.c.id).offset(2),
+            [(3, 3, 4), (4, 4, 5), (5, 4, 6)],
         )
 
 
@@ -1843,6 +1977,14 @@ class HasTableTest(_HasTableTest):
     def test_has_table_schema(self):
         pass
 
+    @testing.requires.views
+    def test_has_table_view(self, connection):
+        pass
+
+    @testing.requires.views
+    def test_has_table_view_schema(self, connection):
+        pass
+
 
 class PostCompileParamsTest(_PostCompileParamsTest):
     def test_execute(self):
@@ -2064,7 +2206,7 @@ class JSONTest(_JSONTest):
     def test_single_element_round_trip(self, element):
         pass
 
-    def _test_round_trip(self, data_element):
+    def _test_round_trip(self, data_element, connection):
         data_table = self.tables.data_table
 
         config.db.execute(

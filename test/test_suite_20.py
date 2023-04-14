@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -74,28 +74,12 @@ from google.cloud import spanner_dbapi
 
 from sqlalchemy.testing.suite.test_cte import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_ddl import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_dialect import (  # noqa: F401, F403
-    PingTest,
-    ArgSignatureTest,
-    ExceptionTest,
-    IsolationLevelTest,
-    AutocommitIsolationTest,
-    WeCanSetDefaultSchemaWEventsTest,
-    FutureWeCanSetDefaultSchemaWEventsTest,
-)
+from sqlalchemy.testing.suite.test_dialect import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_insert import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_reflection import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_deprecations import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_results import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_select import (  # noqa: F401, F403
-    DistinctOnTest,
-    IdentityColumnTest,
-    ExpandingBoundInTest,
-    ComputedColumnTest,
-    JoinTest,
-    ValuesExpressionTest,
-    CollateTest,
-)
+from sqlalchemy.testing.suite.test_select import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_sequence import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_unicode_ddl import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
@@ -111,6 +95,7 @@ from sqlalchemy.testing.suite.test_update_delete import (
 from sqlalchemy.testing.suite.test_dialect import (
     DifficultParametersTest as _DifficultParametersTest,
     EscapingTest as _EscapingTest,
+    ReturningGuardsTest as _ReturningGuardsTest,
 )
 from sqlalchemy.testing.suite.test_insert import (
     InsertBehaviorTest as _InsertBehaviorTest,
@@ -124,6 +109,7 @@ from sqlalchemy.testing.suite.test_select import (  # noqa: F401, F403
     LikeFunctionsTest as _LikeFunctionsTest,
     OrderByLabelTest as _OrderByLabelTest,
     PostCompileParamsTest as _PostCompileParamsTest,
+    SameNamedSchemaTableTest as _SameNamedSchemaTableTest,
 )
 from sqlalchemy.testing.suite.test_reflection import (  # noqa: F401, F403
     ComponentReflectionTestExtra as _ComponentReflectionTestExtra,
@@ -1815,6 +1801,16 @@ class FetchLimitOffsetTest(_FetchLimitOffsetTest):
 
 @pytest.mark.skip("Spanner doesn't support autoincrement")
 class IdentityAutoincrementTest(_IdentityAutoincrementTest):
+    pass
+
+
+@pytest.mark.skip("Spanner doesn't support returning")
+class ReturningGuardsTest(_ReturningGuardsTest):
+    pass
+
+
+@pytest.mark.skip("Spanner doesn't support user made schemas")
+class SameNamedSchemaTableTestt(_SameNamedSchemaTableTest):
     pass
 
 
