@@ -699,7 +699,9 @@ class ComponentReflectionTest(_ComponentReflectionTest):
                     sqlalchemy.Index("noncol_idx_nopk", noncol_idx_test_nopk.c.q.desc())
                     sqlalchemy.Index("noncol_idx_pk", noncol_idx_test_pk.c.q.desc())
 
-        if testing.requires.view_column_reflection.enabled:
+        if testing.requires.view_column_reflection.enabled and not bool(
+            os.environ.get("SPANNER_EMULATOR_HOST")
+        ):
             cls.define_views(metadata, schema)
         if not schema and testing.requires.temp_table_reflection.enabled:
             cls.define_temp_tables(metadata)

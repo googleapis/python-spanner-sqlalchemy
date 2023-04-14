@@ -1810,7 +1810,7 @@ class ReturningGuardsTest(_ReturningGuardsTest):
 
 
 @pytest.mark.skip("Spanner doesn't support user made schemas")
-class SameNamedSchemaTableTestt(_SameNamedSchemaTableTest):
+class SameNamedSchemaTableTest(_SameNamedSchemaTableTest):
     pass
 
 
