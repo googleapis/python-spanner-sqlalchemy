@@ -526,12 +526,6 @@ class UnicodeTextTest(UnicodeFixtureTest, _UnicodeTextTest):
 
 
 class ComponentReflectionTest(_ComponentReflectionTest):
-    def quote_fixtures(fn):
-        return testing.combinations(
-            ("quote ' one",),
-            ('quote " two', testing.requires.symbol_names_w_double_quote),
-        )(fn)
-
     @classmethod
     def define_views(cls, metadata, schema):
         table_info = {
