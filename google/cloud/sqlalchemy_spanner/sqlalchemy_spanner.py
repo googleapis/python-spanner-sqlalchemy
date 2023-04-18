@@ -586,7 +586,7 @@ class SpannerDialect(DefaultDialect):
         """
         return ""
 
-    def _get_table_type_query(self, kind):
+    def _get_table_type_query(self, kind, append_query):
         """
         Generates WHERE condition for Kind of Object.
         Spanner supports Table and View.
@@ -611,10 +611,15 @@ class SpannerDialect(DefaultDialect):
                 table_type_query = table_type_query + " OR " + query
             else:
                 table_type_query = query
-        table_type_query = "AND (" + table_type_query + ")"
+
+        table_type_query = "(" + table_type_query + ") "
+        if append_query:
+            table_type_query = table_type_query + " AND "
         return table_type_query
 
-    def _get_table_filter_query(self, filter_names, info_schema_table):
+    def _get_table_filter_query(
+        self, filter_names, info_schema_table, append_query=False
+    ):
         """
         Generates WHERE query for tables or views for which
         information is reflected.
@@ -627,7 +632,9 @@ class SpannerDialect(DefaultDialect):
                     table_filter_query = table_filter_query + " OR " + query
                 else:
                     table_filter_query = query
-            table_filter_query = "(" + table_filter_query + ") AND "
+            table_filter_query = "(" + table_filter_query + ") "
+            if append_query:
+                table_filter_query = table_filter_query + " AND "
 
         return table_filter_query
 
@@ -729,7 +736,7 @@ class SpannerDialect(DefaultDialect):
             connection (sqlalchemy.engine.base.Connection):
                 SQLAlchemy connection or engine object.
             schema (str): Optional. Schema name
-            filter_names (Sequence[str): Optional. Optionally return information
+            filter_names (Sequence[str]): Optional. Optionally return information
                 only for the objects listed here.
             scope (sqlalchemy.engine.reflection.ObjectScope): Optional. Specifies
                 if columns of default, temporary or any tables
@@ -743,11 +750,11 @@ class SpannerDialect(DefaultDialect):
                 definition of a database column.
                 The schema is ``None`` if no schema is provided.
         """
-        table_filter_query = self._get_table_filter_query(filter_names, "col")
-        schema_filter_query = "AND col.table_schema = '{schema}'".format(
+        table_filter_query = self._get_table_filter_query(filter_names, "col", True)
+        schema_filter_query = " col.table_schema = '{schema}' AND ".format(
             schema=schema or ""
         )
-        table_type_query = self._get_table_type_query(kind)
+        table_type_query = self._get_table_type_query(kind, True)
 
         sql = """
             SELECT col.table_schema, col.table_name, col.column_name,
@@ -757,9 +764,9 @@ class SpannerDialect(DefaultDialect):
                 ON col.table_name = t.table_name
             WHERE
                 {table_filter_query}
-                col.table_catalog = ''
                 {table_type_query}
                 {schema_filter_query}
+                col.table_catalog = ''
             ORDER BY
                 col.table_catalog,
                 col.table_schema,
@@ -848,7 +855,7 @@ class SpannerDialect(DefaultDialect):
         self, connection, schema=None, filter_names=None, scope=None, kind=None, **kw
     ):
         """
-        Return information about indexes in in all objects
+        Return information about indexes in all objects
         in the given schema.
 
         The method is used by SQLAlchemy introspection systems.
@@ -857,7 +864,7 @@ class SpannerDialect(DefaultDialect):
             connection (sqlalchemy.engine.base.Connection):
                 SQLAlchemy connection or engine object.
             schema (str): Optional. Schema name.
-            filter_names (Sequence[str): Optional. Optionally return information
+            filter_names (Sequence[str]): Optional. Optionally return information
                 only for the objects listed here.
             scope (sqlalchemy.engine.reflection.ObjectScope): Optional. Specifies
                 if columns of default, temporary or any tables
@@ -871,11 +878,11 @@ class SpannerDialect(DefaultDialect):
                 definition of an index.
                 The schema is ``None`` if no schema is provided.
         """
-        table_filter_query = self._get_table_filter_query(filter_names, "i")
-        schema_filter_query = "AND i.table_schema = '{schema}'".format(
+        table_filter_query = self._get_table_filter_query(filter_names, "i", True)
+        schema_filter_query = " i.table_schema = '{schema}' AND ".format(
             schema=schema or ""
         )
-        table_type_query = self._get_table_type_query(kind)
+        table_type_query = self._get_table_type_query(kind, True)
 
         sql = """
             SELECT
@@ -892,10 +899,10 @@ class SpannerDialect(DefaultDialect):
                 ON i.table_name = t.table_name
             WHERE
                 {table_filter_query}
-                i.index_type != 'PRIMARY_KEY'
-                AND i.spanner_is_managed = FALSE
                 {table_type_query}
                 {schema_filter_query}
+                i.index_type != 'PRIMARY_KEY'
+                AND i.spanner_is_managed = FALSE
             GROUP BY i.table_schema, i.table_name, i.index_name, i.is_unique
             ORDER BY i.index_name
         """.format(
@@ -960,7 +967,7 @@ class SpannerDialect(DefaultDialect):
             connection (sqlalchemy.engine.base.Connection):
                 SQLAlchemy connection or engine object.
             schema (str): Optional. Schema name
-            filter_names (Sequence[str): Optional. Optionally return information
+            filter_names (Sequence[str]): Optional. Optionally return information
                 only for the objects listed here.
             scope (sqlalchemy.engine.reflection.ObjectScope): Optional. Specifies
                 if columns of default, temporary or any tables
@@ -974,11 +981,11 @@ class SpannerDialect(DefaultDialect):
                 definition of a primary key constraint.
                 The schema is ``None`` if no schema is provided.
         """
-        table_filter_query = self._get_table_filter_query(filter_names, "tc")
-        schema_filter_query = "AND tc.table_schema = '{schema}'".format(
+        table_filter_query = self._get_table_filter_query(filter_names, "tc", True)
+        schema_filter_query = " tc.table_schema = '{schema}' AND ".format(
             schema=schema or ""
         )
-        table_type_query = self._get_table_type_query(kind)
+        table_type_query = self._get_table_type_query(kind, True)
 
         sql = """
             SELECT tc.table_schema, tc.table_name, ccu.COLUMN_NAME
@@ -987,8 +994,8 @@ class SpannerDialect(DefaultDialect):
                 ON ccu.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
             JOIN information_schema.tables AS t
                 ON tc.table_name = t.table_name
-            WHERE {table_filter_query} tc.CONSTRAINT_TYPE = "PRIMARY KEY"
-            {table_type_query} {schema_filter_query}
+            WHERE {table_filter_query} {table_type_query}
+            {schema_filter_query} tc.CONSTRAINT_TYPE = "PRIMARY KEY"
         """.format(
             table_filter_query=table_filter_query,
             table_type_query=table_type_query,
@@ -1067,7 +1074,7 @@ class SpannerDialect(DefaultDialect):
             connection (sqlalchemy.engine.base.Connection):
                 SQLAlchemy connection or engine object.
             schema (str): Optional. Schema name
-            filter_names (Sequence[str): Optional. Optionally return information
+            filter_names (Sequence[str]): Optional. Optionally return information
                 only for the objects listed here.
             scope (sqlalchemy.engine.reflection.ObjectScope): Optional. Specifies
                 if columns of default, temporary or any tables
@@ -1081,11 +1088,11 @@ class SpannerDialect(DefaultDialect):
                 a foreign key definition.
                 The schema is ``None`` if no schema is provided.
         """
-        table_filter_query = self._get_table_filter_query(filter_names, "tc")
-        schema_filter_query = "AND tc.table_schema = '{schema}'".format(
+        table_filter_query = self._get_table_filter_query(filter_names, "tc", True)
+        schema_filter_query = " tc.table_schema = '{schema}' AND".format(
             schema=schema or ""
         )
-        table_type_query = self._get_table_type_query(kind)
+        table_type_query = self._get_table_type_query(kind, True)
 
         sql = """
         SELECT
@@ -1113,9 +1120,9 @@ class SpannerDialect(DefaultDialect):
                 ON tc.table_name = t.table_name
             WHERE
                 {table_filter_query}
-                tc.constraint_type = "FOREIGN KEY"
                 {table_type_query}
                 {schema_filter_query}
+                tc.constraint_type = "FOREIGN KEY"
             GROUP BY tc.table_name, tc.table_schema, tc.constraint_name,
             ctu.table_name, ctu.table_schema
             """.format(
