@@ -646,7 +646,7 @@ class SpannerDialect(DefaultDialect):
         The given URL follows the style:
         `spanner:///projects/{project-id}/instances/{instance-id}/databases/{database-id}`
         or `spanner:///projects/{project-id}/instances/{instance-id}`. For the latter,
-        database operatopns will be not be possible and if required a new engine with
+        database operations will be not be possible and if required a new engine with
         database-id set will need to be created.
         """
         match = re.match(
