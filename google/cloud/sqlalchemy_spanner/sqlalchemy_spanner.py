@@ -182,7 +182,7 @@ class SpannerIdentifierPreparer(IdentifierPreparer):
 
     reserved_words = RESERVED_WORDS.copy()
     reserved_words.update(spanner_dbapi.parse_utils.SPANNER_RESERVED_KEYWORDS)
-    reserved_words_lc = set(map(lambda x: x.lower(), reserved_words))
+    reserved_words_lc = set(map(str.lower, reserved_words))
 
     def __init__(self, dialect):
         super(SpannerIdentifierPreparer, self).__init__(
