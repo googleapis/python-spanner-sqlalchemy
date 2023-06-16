@@ -1425,4 +1425,5 @@ def visit_column_type(
         alter_table(compiler, element.table_name, element.schema),
         alter_column(compiler, element.column_name),
         "%s" % format_type(compiler, element.type_),
+        "" if element.existing_nullable else "NOT NULL",
     )
