@@ -182,6 +182,7 @@ class SpannerIdentifierPreparer(IdentifierPreparer):
 
     reserved_words = RESERVED_WORDS.copy()
     reserved_words.update(spanner_dbapi.parse_utils.SPANNER_RESERVED_KEYWORDS)
+    reserved_words_lc = set(map(str.lower, reserved_words))
 
     def __init__(self, dialect):
         super(SpannerIdentifierPreparer, self).__init__(
@@ -195,7 +196,7 @@ class SpannerIdentifierPreparer(IdentifierPreparer):
             return False
 
         return (
-            lc_value in self.reserved_words
+            lc_value in self.reserved_words_lc
             or value[0] in self.illegal_initial_characters
             or not self.legal_characters.match(str(value))
             or (lc_value != value)
@@ -530,7 +531,7 @@ class SpannerDialect(DefaultDialect):
     supports_sane_rowcount = False
     supports_sane_multi_rowcount = False
     supports_default_values = False
-    supports_sequences = True
+    supports_sequences = False
     supports_native_enum = True
     supports_native_boolean = True
     supports_native_decimal = True
