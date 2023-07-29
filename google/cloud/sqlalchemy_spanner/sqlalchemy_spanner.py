@@ -40,6 +40,7 @@ from sqlalchemy.sql.compiler import (
 )
 from sqlalchemy.sql.default_comparator import operator_lookup
 from sqlalchemy.sql.operators import json_getitem_op
+from sqlalchemy.sql import expression
 
 from google.cloud.spanner_v1.data_types import JsonObject
 from google.cloud import spanner_dbapi
@@ -342,6 +343,14 @@ class SpannerSQLCompiler(SQLCompiler):
                 text += f"\n LIMIT {9223372036854775807-select._offset}"
             text += " OFFSET " + self.process(select._offset_clause, **kw)
         return text
+
+    def returning_clause(self, stmt, returning_cols):
+        columns = [
+            self._label_returning_column(stmt, c)
+            for c in expression._select_iterables(returning_cols)
+        ]
+
+        return "THEN RETURN " + ", ".join(columns)
 
 
 class SpannerDDLCompiler(DDLCompiler):
