@@ -2063,7 +2063,7 @@ class CreateEngineWithoutDatabaseTest(fixtures.TestBase):
 
 class ReturningTest(fixtures.TestBase):
     def setUp(self):
-        self._engine = create_engine(get_db_url(), future=True)
+        self._engine = create_engine(get_db_url())
         metadata = MetaData()
 
         self._table = Table(
@@ -2088,7 +2088,6 @@ class ReturningTest(fixtures.TestBase):
                 row,
                 [(random_id,)],
             )
-            connection.commit()
 
         with self._engine.begin() as connection:
             update_text = "some + value"
