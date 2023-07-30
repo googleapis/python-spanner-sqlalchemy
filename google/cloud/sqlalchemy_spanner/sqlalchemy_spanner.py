@@ -344,7 +344,7 @@ class SpannerSQLCompiler(SQLCompiler):
             text += " OFFSET " + self.process(select._offset_clause, **kw)
         return text
 
-    def returning_clause(self, stmt, returning_cols):
+    def returning_clause(self, stmt, returning_cols, **kw):
         columns = [
             self._label_select_column(None, c, True, False, {})
             for c in expression._select_iterables(returning_cols)

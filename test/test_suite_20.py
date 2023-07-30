@@ -3056,15 +3056,31 @@ class ReturningTest(fixtures.TestBase):
         )
 
         metadata.create_all(self._engine)
-        time.sleep(1)
 
-    def test_returning_for_insert(self):
-        with self._engine.connect() as connection:
-            random_id = random.randint(1, 100000000)
+    def test_returning_for_insert_and_update(self):
+        random_id = random.randint(1, 1000)
+        with self._engine.begin() as connection:
             stmt = (
                 self._table.insert()
                 .values(id=random_id, data="some % value")
                 .returning(self._table.c.id)
             )
-            row = list(connection.execute(stmt))
-            eq_(row[0], random_id)
+            row = connection.execute(stmt).fetchall()
+            eq_(
+                row,
+                [(random_id,)],
+            )
+
+        with self._engine.begin() as connection:
+            update_text = "some + value"
+            stmt = (
+                self._table.update()
+                .values(data=update_text)
+                .where(self._table.c.id == random_id)
+                .returning(self._table.c.data)
+            )
+            row = connection.execute(stmt).fetchall()
+            eq_(
+                row,
+                [(update_text,)],
+            )
