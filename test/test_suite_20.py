@@ -3041,3 +3041,30 @@ class CreateEngineWithoutDatabaseTest(fixtures.TestBase):
         engine = create_engine(get_db_url().split("/database")[0])
         with engine.connect() as connection:
             assert connection.connection.database is None
+
+
+class ReturningTest(fixtures.TestBase):
+    def setUp(self):
+        self._engine = create_engine(get_db_url())
+        metadata = MetaData()
+
+        self._table = Table(
+            "returning_test",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("data", String(16), nullable=False),
+        )
+
+        metadata.create_all(self._engine)
+        time.sleep(1)
+
+    def test_returning_for_insert(self):
+        with self._engine.connect() as connection:
+            random_id = random.randint(1, 100000000)
+            stmt = (
+                self._table.insert()
+                .values(id=random_id, data="some % value")
+                .returning(self._table.c.id)
+            )
+            row = list(connection.execute(stmt))
+            eq_(row[0], random_id)
