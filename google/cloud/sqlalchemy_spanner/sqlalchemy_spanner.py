@@ -346,7 +346,7 @@ class SpannerSQLCompiler(SQLCompiler):
 
     def returning_clause(self, stmt, returning_cols):
         columns = [
-            self._label_returning_column(stmt, c)
+            self._label_select_column(None, c, True, False, {})
             for c in expression._select_iterables(returning_cols)
         ]
 
