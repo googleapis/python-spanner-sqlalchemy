@@ -2059,3 +2059,47 @@ class CreateEngineWithoutDatabaseTest(fixtures.TestBase):
         engine = create_engine(get_db_url().split("/database")[0])
         with engine.connect() as connection:
             assert connection.connection.database is None
+
+
+class ReturningTest(fixtures.TestBase):
+    def setUp(self):
+        self._engine = create_engine(get_db_url(), future=True)
+        metadata = MetaData()
+
+        self._table = Table(
+            "returning_test",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("data", String(16), nullable=False),
+        )
+
+        metadata.create_all(self._engine)
+
+    def test_returning_for_insert_and_update(self):
+        random_id = random.randint(1, 1000)
+        with self._engine.begin() as connection:
+            stmt = (
+                self._table.insert()
+                .values(id=random_id, data="some % value")
+                .returning(self._table.c.id)
+            )
+            row = connection.execute(stmt).fetchall()
+            eq_(
+                row,
+                [(random_id,)],
+            )
+            connection.commit()
+
+        with self._engine.begin() as connection:
+            update_text = "some + value"
+            stmt = (
+                self._table.update()
+                .values(data=update_text)
+                .where(self._table.c.id == random_id)
+                .returning(self._table.c.data)
+            )
+            row = connection.execute(stmt).fetchall()
+            eq_(
+                row,
+                [(update_text,)],
+            )
