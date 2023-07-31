@@ -37,6 +37,7 @@ from sqlalchemy.schema import Computed
 from sqlalchemy.testing import config
 from sqlalchemy.testing import engines
 from sqlalchemy.testing import eq_
+from sqlalchemy.testing import is_instance_of
 from sqlalchemy.testing import provide_metadata, emits_warning
 from sqlalchemy.testing import fixtures
 from sqlalchemy.testing.provision import temp_table_keyword_args
@@ -76,7 +77,12 @@ from sqlalchemy.testing.suite.test_insert import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_reflection import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_results import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_select import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_sequence import *  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_sequence import (
+    SequenceTest as _SequenceTest,
+    HasSequenceTest as _HasSequenceTest,
+    HasSequenceTestEmpty,
+    SequenceCompilerTest,
+)  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_cte import CTETest as _CTETest
 from sqlalchemy.testing.suite.test_ddl import TableDDLTest as _TableDDLTest
@@ -2392,3 +2398,118 @@ class CreateEngineWithoutDatabaseTest(fixtures.TestBase):
         engine = create_engine(get_db_url().split("/database")[0])
         with engine.connect() as connection:
             assert connection.connection.database is None
+
+
+class SequenceTest(_SequenceTest):
+    @classmethod
+    def define_tables(cls, metadata):
+        Table(
+            "seq_pk",
+            metadata,
+            Column(
+                "id",
+                Integer,
+                sqlalchemy.Sequence("tab_id_seq"),
+                primary_key=True,
+            ),
+            Column("data", String(50)),
+        )
+
+        Table(
+            "seq_opt_pk",
+            metadata,
+            Column(
+                "id",
+                Integer,
+                sqlalchemy.Sequence("tab_id_seq_opt", data_type=Integer, optional=True),
+                primary_key=True,
+            ),
+            Column("data", String(50)),
+        )
+
+        Table(
+            "seq_no_returning",
+            metadata,
+            Column(
+                "id",
+                Integer,
+                sqlalchemy.Sequence("noret_id_seq"),
+                primary_key=True,
+            ),
+            Column("data", String(50)),
+            implicit_returning=False,
+        )
+
+    def test_insert_roundtrip(self, connection):
+        connection.execute(self.tables.seq_pk.insert(), dict(data="some data"))
+        self._assert_round_trip(self.tables.seq_pk, connection)
+
+    def test_insert_lastrowid(self, connection):
+        r = connection.execute(self.tables.seq_pk.insert(), dict(data="some data"))
+        assert len(r.inserted_primary_key) == 1
+        is_instance_of(r.inserted_primary_key[0], int)
+
+    def test_nextval_direct(self, connection):
+        r = connection.execute(self.tables.seq_pk.c.id.default)
+        is_instance_of(r, int)
+
+    def _assert_round_trip(self, table, conn):
+        row = conn.execute(table.select()).first()
+        id, name = row
+        is_instance_of(id, int)
+        eq_(name, "some data")
+
+    @testing.combinations((True,), (False,), argnames="implicit_returning")
+    @testing.requires.schemas
+    @pytest.mark.skip("Spanner doesn't support user defined schemas")
+    def test_insert_roundtrip_translate(self, connection, implicit_returning):
+        pass
+
+    @testing.requires.schemas
+    @pytest.mark.skip("Spanner doesn't support user defined schemas")
+    def test_nextval_direct_schema_translate(self, connection):
+        pass
+
+
+class HasSequenceTest(_HasSequenceTest):
+    @classmethod
+    def define_tables(cls, metadata):
+        sqlalchemy.Sequence("user_id_seq", metadata=metadata)
+        sqlalchemy.Sequence(
+            "other_seq", metadata=metadata, nomaxvalue=True, nominvalue=True
+        )
+        Table(
+            "user_id_table",
+            metadata,
+            Column("id", Integer, primary_key=True),
+        )
+
+    @testing.requires.schemas
+    @pytest.mark.skip("Spanner doesn't support user defined schemas")
+    def test_has_sequence_schema(self, connection):
+        pass
+
+    @testing.requires.schemas
+    @pytest.mark.skip("Spanner doesn't support user defined schemas")
+    def test_has_sequence_schemas_neg(self, connection):
+        pass
+
+    @testing.requires.schemas
+    @pytest.mark.skip("Spanner doesn't support user defined schemas")
+    def test_has_sequence_default_not_in_remote(self, connection):
+        pass
+
+    @testing.requires.schemas
+    @pytest.mark.skip("Spanner doesn't support user defined schemas")
+    def test_has_sequence_remote_not_in_default(self, connection):
+        pass
+
+    @testing.requires.schemas
+    @pytest.mark.skip("Spanner doesn't support user defined schemas")
+    def test_get_sequence_names_no_sequence_schema(self, connection):
+        pass
+
+    @testing.requires.schemas
+    @pytest.mark.skip("Spanner doesn't support user defined schemas")
+    def test_get_sequence_names_sequences_schema(self, connection):
+        pass
