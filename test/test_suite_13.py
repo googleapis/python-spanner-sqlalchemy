@@ -78,7 +78,6 @@ from sqlalchemy.testing.suite.test_sequence import (
     SequenceTest as _SequenceTest,
     HasSequenceTest as _HasSequenceTest,
     SequenceCompilerTest,
-    HasSequenceTestEmpty,
 )  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 
@@ -2066,7 +2065,9 @@ class CreateEngineWithoutDatabaseTest(fixtures.TestBase):
         with engine.connect() as connection:
             assert connection.connection.database is None
 
-
+@pytest.mark.skipif(
+    bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+)
 class SequenceTest(_SequenceTest):
     @classmethod
     def define_tables(cls, metadata):
@@ -2137,7 +2138,9 @@ class SequenceTest(_SequenceTest):
     def test_nextval_direct_schema_translate(self, connection):
         pass
 
-
+@pytest.mark.skipif(
+    bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+)
 class HasSequenceTest(_HasSequenceTest):
     @classmethod
     def define_tables(cls, metadata):

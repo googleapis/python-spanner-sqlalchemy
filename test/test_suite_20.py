@@ -84,7 +84,7 @@ from sqlalchemy.testing.suite.test_select import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_sequence import (
     SequenceTest as _SequenceTest,
     HasSequenceTest as _HasSequenceTest,
-    HasSequenceTestEmpty,
+    HasSequenceTestEmpty as _HasSequenceTestEmpty,
     SequenceCompilerTest,
 )  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_unicode_ddl import *  # noqa: F401, F403
@@ -3048,7 +3048,9 @@ class CreateEngineWithoutDatabaseTest(fixtures.TestBase):
         with engine.connect() as connection:
             assert connection.connection.database is None
 
-
+@pytest.mark.skipif(
+    bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+)
 class SequenceTest(_SequenceTest):
     @classmethod
     def define_tables(cls, metadata):
@@ -3119,7 +3121,9 @@ class SequenceTest(_SequenceTest):
     def test_nextval_direct_schema_translate(self, connection):
         pass
 
-
+@pytest.mark.skipif(
+    bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+)
 class HasSequenceTest(_HasSequenceTest):
     @classmethod
     def define_tables(cls, metadata):
@@ -3166,3 +3170,10 @@ class HasSequenceTest(_HasSequenceTest):
     @pytest.mark.skip("Not supported by Cloud Spanner")
     def test_get_sequence_names_sequences_schema(self, connection):
         pass
+
+@pytest.mark.skipif(
+    bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+)
+class HasSequenceTestEmpty(_HasSequenceTestEmpty):
+    def test_get_sequence_names_no_sequence(self, connection):
+        super().test_get_sequence_names_no_sequence(connection)
