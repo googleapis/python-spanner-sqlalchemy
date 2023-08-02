@@ -2065,6 +2065,7 @@ class CreateEngineWithoutDatabaseTest(fixtures.TestBase):
         with engine.connect() as connection:
             assert connection.connection.database is None
 
+
 @pytest.mark.skipif(
     bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
 )
@@ -2137,6 +2138,7 @@ class SequenceTest(_SequenceTest):
     @pytest.mark.skip("Not supported by Cloud Spanner")
     def test_nextval_direct_schema_translate(self, connection):
         pass
+
 
 @pytest.mark.skipif(
     bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
