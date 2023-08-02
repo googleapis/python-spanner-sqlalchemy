@@ -81,7 +81,7 @@ from sqlalchemy.testing.suite.test_sequence import (
     SequenceTest as _SequenceTest,
     HasSequenceTest as _HasSequenceTest,
     HasSequenceTestEmpty as _HasSequenceTestEmpty,
-)  # noqa: F401, F403 
+)  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_cte import CTETest as _CTETest
 from sqlalchemy.testing.suite.test_ddl import TableDDLTest as _TableDDLTest
