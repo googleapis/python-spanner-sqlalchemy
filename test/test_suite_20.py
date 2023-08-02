@@ -85,7 +85,6 @@ from sqlalchemy.testing.suite.test_sequence import (
     SequenceTest as _SequenceTest,
     HasSequenceTest as _HasSequenceTest,
     HasSequenceTestEmpty as _HasSequenceTestEmpty,
-    SequenceCompilerTest,
 )  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_unicode_ddl import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
