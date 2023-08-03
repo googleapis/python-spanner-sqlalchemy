@@ -175,6 +175,7 @@ class SpannerExecutionContext(DefaultExecutionContext):
             self._dbapi_connection.connection.request_priority = priority
 
     def fire_sequence(self, seq, type_):
+        """Builds a statement for fetching next value of the sequence."""
         return self._execute_scalar(
             (
                 "SELECT GET_NEXT_SEQUENCE_VALUE(SEQUENCE %s)"
@@ -362,6 +363,7 @@ class SpannerSQLCompiler(SQLCompiler):
         return "THEN RETURN " + ", ".join(columns)
 
     def visit_sequence(self, seq, **kw):
+        """Builds a statement for fetching next value of the sequence."""
         return " GET_NEXT_SEQUENCE_VALUE(SEQUENCE %s)" % self.preparer.format_sequence(
             seq
         )
@@ -487,6 +489,7 @@ class SpannerDDLCompiler(DDLCompiler):
         return ", ".join(text)
 
     def visit_create_sequence(self, create, prefix=None, **kw):
+        """Builds a ``CREATE SEQUENCE`` statement for the sequence."""
         text = "CREATE SEQUENCE %s" % self.preparer.format_sequence(create.element)
         options = self.get_identity_options(create.element)
         if options:
@@ -494,6 +497,7 @@ class SpannerDDLCompiler(DDLCompiler):
         return text
 
     def visit_drop_sequence(self, drop, **kw):
+        """Builds a ``DROP SEQUENCE`` statement for the sequence."""
         return "DROP SEQUENCE %s" % self.preparer.format_sequence(drop.element)
 
 
