@@ -1376,11 +1376,11 @@ LIMIT 1
         with connection.connection.database.snapshot() as snap:
             rows = snap.execute_sql(
                 """
-SELECT true
-FROM INFORMATION_SCHEMA.SEQUENCES
-WHERE NAME="{sequence_name}"
-LIMIT 1
-""".format(
+                SELECT true
+                FROM INFORMATION_SCHEMA.SEQUENCES
+                WHERE NAME="{sequence_name}"
+                LIMIT 1
+                """.format(
                     sequence_name=sequence_name
                 )
             )

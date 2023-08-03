@@ -2108,10 +2108,6 @@ class SequenceTest(_SequenceTest):
             implicit_returning=False,
         )
 
-    def test_insert_roundtrip(self, connection):
-        connection.execute(self.tables.seq_pk.insert(), dict(data="some data"))
-        self._assert_round_trip(self.tables.seq_pk, connection)
-
     def test_insert_lastrowid(self, connection):
         r = connection.execute(self.tables.seq_pk.insert(), dict(data="some data"))
         assert len(r.inserted_primary_key) == 1
