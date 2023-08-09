@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pkg_resources
 import re
 
 from alembic.ddl.base import (
@@ -304,7 +303,7 @@ class SpannerSQLCompiler(SQLCompiler):
         generate a SQL statement.
         """
         raw = ["\\", "'", '"', "\n", "\t", "\r"]
-        if type(value) == str and any(single in value for single in raw):
+        if isinstance(value, str) and any(single in value for single in raw):
             value = 'r"""{}"""'.format(value)
             return value
         else:
@@ -646,11 +645,13 @@ class SpannerDialect(DefaultDialect):
 
         The given URL follows the style:
         `spanner:///projects/{project-id}/instances/{instance-id}/databases/{database-id}`
-         or `spanner:///projects/{project-id}/instances/{instance-id}`. For the latter,
+        or `spanner:///projects/{project-id}/instances/{instance-id}`. For the latter,
         database operations will be not be possible and if required a new engine with
         database-id set will need to be created.
-        If you want to disble route to leader add it to the url as following:
-        `spanner:///projects/{project-id}/instances/{instance-id}/databases/{database-id}?route_to_leader_enabled=False`
+        If you want to disble route to leader, pass options as following:
+        engine = create_engine(
+        "spanner+spanner:///projects/project-id/instances/instance-id/databases/database-id",
+        connect_args={'route_to_leader_enabled': False})
         """
         match = re.match(
             (
@@ -659,17 +660,8 @@ class SpannerDialect(DefaultDialect):
             ),
             url.database,
         )
-        dist = pkg_resources.get_distribution("sqlalchemy-spanner")
-        options = {"user_agent": f"gl-{dist.project_name}/{dist.version}"}
-        options.update(url.query)
-        if "route_to_leader_enabled" in options:
-            if options["route_to_leader_enabled"].lower() == "false":
-                options["route_to_leader_enabled"] = False
-            else:
-                options["route_to_leader_enabled"] = True
         return (
             [match.group("instance"), match.group("database"), match.group("project")],
-            options,
         )
 
     @engine_to_connection

@@ -1919,19 +1919,19 @@ class UserAgentTest(fixtures.TestBase):
 
 class RouteToLeaderEnabledTest(fixtures.TestBase):
     """
+    SPANNER TEST:
+
     Check that SQLAlchemy dialect passes correct
     route_to_leader_enabled to Client.
     """
 
-    def setUp(self):
-        self._engine = create_engine(
-            "spanner:///projects/appdev-soda-spanner-staging/instances/"
-            "sqlalchemy-dialect-test/databases/compliance-test"
-            "?route_to_leader_enabled=False"
+    def test_route_to_leader(self):
+        engine = create_engine(
+            "spanner:///projects/project-id/instances/instance-id/"
+            + "databases/database-id",
+            connect_args={"route_to_leader_enabled": False},
         )
-
-    def test_route_to_leader_enabled(self):
-        with self._engine.connect() as connection:
+        with engine.connect() as connection:
             assert (
                 connection.connection.instance._client.route_to_leader_enabled is False
             )
