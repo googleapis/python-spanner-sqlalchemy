@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pkg_resources
 import re
 
 from alembic.ddl.base import (
@@ -660,8 +661,10 @@ class SpannerDialect(DefaultDialect):
             ),
             url.database,
         )
+        dist = pkg_resources.get_distribution("sqlalchemy-spanner")
         return (
             [match.group("instance"), match.group("database"), match.group("project")],
+            {"user_agent": f"gl-{dist.project_name}/{dist.version}"},
         )
 
     @engine_to_connection
