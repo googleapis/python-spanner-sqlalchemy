@@ -3053,8 +3053,7 @@ class RouteToLeaderEnabledTest(fixtures.TestBase):
 
     def test_route_to_leader(self):
         engine = create_engine(
-            "spanner:///projects/project-id/instances/instance-id/"
-            + "databases/database-id",
+            "spanner:///projects/project-id/instances/instance-id/databases/database-id",
             connect_args={"route_to_leader_enabled": False},
         )
         with engine.connect() as connection:
