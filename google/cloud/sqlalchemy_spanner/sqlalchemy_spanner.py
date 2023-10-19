@@ -406,7 +406,12 @@ class SpannerDDLCompiler(DDLCompiler):
         for index in drop_table.element.indexes:
             indexes += "DROP INDEX {};".format(self.preparer.quote(index.name))
 
-        return indexes + constrs + str(drop_table)
+        text = "\nDROP TABLE "
+        if drop_table.if_exists:
+            text += "IF EXISTS "
+        text += self.preparer.format_table(drop_table.element)
+
+        return indexes + constrs + text
 
     def visit_primary_key_constraint(self, constraint, **kw):
         """Build primary key definition.
