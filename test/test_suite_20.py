@@ -2504,6 +2504,12 @@ class BizarroCharacterFKResolutionTest(fixtures.TestBase):
     pass
 
 
+class IsolationLevelTest(fixtures.TestBase):
+    @pytest.mark.skip("Cloud Spanner does not support different isolation levels")
+    def test_dialect_user_setting_is_restored(self, testing_engine):
+        pass
+
+
 class OrderByLabelTest(_OrderByLabelTest):
     @pytest.mark.skip(
         "Spanner requires an alias for the GROUP BY list when specifying derived "
