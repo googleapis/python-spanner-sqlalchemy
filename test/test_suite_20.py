@@ -2495,6 +2495,11 @@ class IsOrIsNotDistinctFromTest(_IsOrIsNotDistinctFromTest):
     pass
 
 
+@pytest.mark.skip("Spanner doesn't bizarre characters in foreign key names")
+class BizarroCharacterFKResolutionTest(fixtures.TestBase):
+    pass
+
+
 class OrderByLabelTest(_OrderByLabelTest):
     @pytest.mark.skip(
         "Spanner requires an alias for the GROUP BY list when specifying derived "
