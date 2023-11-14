@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pkg_resources
 import re
 
 from alembic.ddl.base import (
@@ -45,6 +44,7 @@ from sqlalchemy.sql import expression
 from google.cloud.spanner_v1.data_types import JsonObject
 from google.cloud import spanner_dbapi
 from google.cloud.sqlalchemy_spanner._opentelemetry_tracing import trace_call
+from google.cloud.sqlalchemy_spanner import version as sqlalchemy_spanner_version
 import sqlalchemy
 
 USING_SQLACLCHEMY_20 = False
@@ -701,10 +701,12 @@ class SpannerDialect(DefaultDialect):
             ),
             url.database,
         )
-        dist = pkg_resources.get_distribution("sqlalchemy-spanner")
         return (
             [match.group("instance"), match.group("database"), match.group("project")],
-            {"user_agent": f"gl-{dist.project_name}/{dist.version}"},
+            {
+                "user_agent": "gl-sqlalchemy-spanner/"
+                + sqlalchemy_spanner_version.__version__
+            },
         )
 
     @engine_to_connection

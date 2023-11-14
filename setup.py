@@ -14,6 +14,7 @@
 
 import io
 import os
+import re
 import setuptools
 
 
@@ -34,14 +35,17 @@ extras = {
     ]
 }
 
-BASE_DIR = os.path.dirname(__file__)
-VERSION_FILENAME = os.path.join(BASE_DIR, "version.py")
-PACKAGE_INFO = {}
-with open(VERSION_FILENAME) as f:
-    exec(f.read(), PACKAGE_INFO)
-version = PACKAGE_INFO["__version__"]
-
 package_root = os.path.abspath(os.path.dirname(__file__))
+
+version = None
+
+with open(
+    os.path.join(package_root, "google/cloud/sqlalchemy_spanner/version.py")
+) as fp:
+    version_candidates = re.findall(r"(?<=\")\d+.\d+.\d+(?=\")", fp.read())
+    assert len(version_candidates) == 1
+    version = version_candidates[0]
+
 readme_filename = os.path.join(package_root, "README.rst")
 with io.open(readme_filename, encoding="utf-8") as readme_file:
     readme = readme_file.read()
@@ -50,18 +54,13 @@ with io.open(readme_filename, encoding="utf-8") as readme_file:
 # benchmarks, etc.
 packages = [
     package
-    for package in setuptools.PEP420PackageFinder.find()
+    for package in setuptools.find_namespace_packages()
     if package.startswith("google")
 ]
 
-# Determine which namespaces are needed.
-namespaces = ["google"]
-if "google.cloud" in packages:
-    namespaces.append("google.cloud")
-
 setuptools.setup(
     author="Google LLC",
-    author_email="cloud-spanner-developers@googlegroups.com",
+    author_email="googleapis-packages@google.com",
     classifiers=["Intended Audience :: Developers"],
     description=description,
     long_description=readme,
@@ -73,9 +72,8 @@ setuptools.setup(
     install_requires=dependencies,
     extras_require=extras,
     name=name,
-    namespace_packages=namespaces,
     packages=packages,
-    url="https://github.com/cloudspannerecosystem/python-spanner-sqlalchemy",
+    url="https://github.com/googleapis/python-spanner-sqlalchemy",
     version=version,
     include_package_data=True,
     zip_safe=False,

@@ -18,7 +18,6 @@ from datetime import timezone
 import decimal
 import operator
 import os
-import pkg_resources
 import pytest
 import random
 import time
@@ -150,6 +149,9 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     _UnicodeFixture as __UnicodeFixture,
 )  # noqa: F401, F403
 from test._helpers import get_db_url, get_project
+
+from google.cloud.sqlalchemy_spanner import version as sqlalchemy_spanner_version
+
 
 config.test_schema = ""
 
@@ -872,7 +874,6 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         scope=ObjectScope.DEFAULT,
         kind=ObjectKind.TABLE,
     ):
-
         """
         SPANNER OVERRIDE:
 
@@ -1088,7 +1089,6 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         (True, testing.requires.schemas), False, argnames="use_schema"
     )
     def test_get_table_names(self, connection, order_by, use_schema):
-
         schema = None
 
         _ignore_tables = [
@@ -1977,7 +1977,6 @@ class IntegerTest(_IntegerTest):
             assert isinstance(row[0], (long, int))  # noqa
 
     def _huge_ints():
-
         return testing.combinations(
             2147483649,  # 32 bits
             2147483648,  # 32 bits
@@ -2653,12 +2652,10 @@ class UserAgentTest(fixtures.TestBase):
         self._metadata = MetaData()
 
     def test_user_agent(self):
-        dist = pkg_resources.get_distribution("sqlalchemy-spanner")
-
         with self._engine.connect() as connection:
             assert (
                 connection.connection.instance._client._client_info.user_agent
-                == "gl-" + dist.project_name + "/" + dist.version
+                == f"gl-sqlalchemy-spanner/{sqlalchemy_spanner_version.__version__}"
             )
 
 
