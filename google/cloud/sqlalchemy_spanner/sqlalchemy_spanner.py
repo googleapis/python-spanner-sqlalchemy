@@ -1254,7 +1254,7 @@ class SpannerDialect(DefaultDialect):
             connection (sqlalchemy.engine.base.Connection):
                 SQLAlchemy connection or engine object.
             table_name (str): Name of the table to introspect.
-            schema (str): Optional. Schema name
+            schema (str): Optional. Schema name. Defaults to "".
 
         Returns:
             list: Dicts, each of which describes a foreign key constraint.
