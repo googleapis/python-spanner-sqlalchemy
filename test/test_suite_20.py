@@ -2006,6 +2006,9 @@ class IntegerTest(_IntegerTest):
             intvalue,
         )
 
+    def test_literal(self, literal_round_trip_spanner):
+        literal_round_trip_spanner(Integer, [5], [5])
+
 
 class _UnicodeFixture(__UnicodeFixture):
     @classmethod
