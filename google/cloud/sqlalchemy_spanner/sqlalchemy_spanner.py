@@ -1343,8 +1343,7 @@ WHERE
     AND tc.CONSTRAINT_TYPE = "UNIQUE"
     AND tc.CONSTRAINT_NAME IS NOT NULL
 """.format(
-            table_schema=schema or "",
-            table_name=table_name
+            table_schema=schema or "", table_name=table_name
         )
 
         cols = []
@@ -1379,8 +1378,7 @@ FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_SCHEMA="{table_schema}" AND TABLE_NAME="{table_name}"
 LIMIT 1
 """.format(
-                    table_schema=schema or "",
-                    table_name=table_name
+                    table_schema=schema or "", table_name=table_name
                 )
             )
 
@@ -1407,8 +1405,7 @@ LIMIT 1
                 AND SCHEMA="{schema}"
                 LIMIT 1
                 """.format(
-                    sequence_name=sequence_name,
-                    schema=schema or ""
+                    sequence_name=sequence_name, schema=schema or ""
                 )
             )
 
