@@ -1011,7 +1011,9 @@ class SpannerDialect(DefaultDialect):
                     "column_names": row[3],
                     "unique": row[4],
                     "column_sorting": {
-                        col: order for col, order in zip(row[3], row[5])
+                        col: order.lower()
+                        for col, order in zip(row[3], row[5])
+                        if order is not None
                     },
                 }
                 row[0] = row[0] or None
