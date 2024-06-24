@@ -245,9 +245,9 @@ gcp-releasetool==1.16.0 \
     --hash=sha256:27bf19d2e87aaa884096ff941aa3c592c482be3d6a2bfe6f06afafa6af2353e3 \
     --hash=sha256:a316b197a543fd036209d0caba7a8eb4d236d8e65381c80cbc6d7efaa7606d63
     # via -r .kokoro/requirements.in
-google-api-core==2.10.2 \
-    --hash=sha256:10c06f7739fe57781f87523375e8e1a3a4674bf6392cd6131a3222182b971320 \
-    --hash=sha256:34f24bd1d5f72a8c4519773d99ca6bf080a6c4e041b4e9f024fe230191dda62e
+google-api-core==2.19.1 \
+    --hash=sha256:f12a9b8309b5e21d92483bbd47ce2c445861ec7d269ef6784ecc0ea8c1fa6125 \
+    --hash=sha256:f4695f1e3650b316a795108a76a1c416e6afb036199d1c1f1f110916df479ffd
     # via
     #   google-cloud-core
     #   google-cloud-storage
