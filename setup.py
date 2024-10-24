@@ -61,7 +61,8 @@ namespaces = ["google"]
 if "google.cloud" in packages:
     namespaces.append("google.cloud")
 
-with warnings.catch_warnings(action="ignore"):
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
     setuptools.setup(
         author="Google LLC",
         author_email="cloud-spanner-developers@googlegroups.com",
