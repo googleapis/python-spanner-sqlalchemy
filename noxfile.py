@@ -78,6 +78,7 @@ UPGRADE_CODE = """def upgrade():
 BLACK_VERSION = "black==22.3.0"
 BLACK_PATHS = ["google", "test", "noxfile.py", "setup.py", "samples"]
 DEFAULT_PYTHON_VERSION = "3.8"
+DEFAULT_PYTHON_VERSION_FOR_SQLALCHEMY_20 = "3.12"
 
 
 @nox.session(python=DEFAULT_PYTHON_VERSION)
@@ -208,7 +209,7 @@ def compliance_test_14(session):
     )
 
 
-@nox.session(python=DEFAULT_PYTHON_VERSION)
+@nox.session(python=DEFAULT_PYTHON_VERSION_FOR_SQLALCHEMY_20)
 def compliance_test_20(session):
     """Run SQLAlchemy dialect compliance test suite."""
 
@@ -255,12 +256,13 @@ def compliance_test_20(session):
 def unit(session):
     """Run unit tests."""
     # Run SQLAlchemy dialect compliance test suite with OpenTelemetry.
+    session.install("setuptools")
     session.install("pytest")
     session.install("mock")
     session.install(".")
-    session.install("opentelemetry-api==1.1.0")
-    session.install("opentelemetry-sdk==1.1.0")
-    session.install("opentelemetry-instrumentation==0.20b0")
+    session.install("opentelemetry-api==1.27.0")
+    session.install("opentelemetry-sdk==1.27.0")
+    session.install("opentelemetry-instrumentation==0.48b0")
     session.run("python", "create_test_config.py", "my-project", "my-instance")
     session.run("py.test", "--quiet", os.path.join("test/unit"), *session.posargs)
 
