@@ -193,10 +193,12 @@ class BooleanTest(_BooleanTest):
     def test_whereclause(self):
         pass
 
+
 class BitwiseTest(_BitwiseTest):
     @pytest.mark.skip("Causes too many problems with other tests")
     def test_bitwise(self, case, expected, connection):
         pass
+
 
 class ComponentReflectionTestExtra(_ComponentReflectionTestExtra):
     @testing.requires.table_reflection

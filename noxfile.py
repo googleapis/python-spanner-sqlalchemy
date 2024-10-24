@@ -81,7 +81,7 @@ DEFAULT_PYTHON_VERSION = "3.8"
 DEFAULT_PYTHON_VERSION_FOR_SQLALCHEMY_20 = "3.12"
 
 
-@nox.session(python=DEFAULT_PYTHON_VERSION)
+@nox.session(python=DEFAULT_PYTHON_VERSION_FOR_SQLALCHEMY_20)
 def lint(session):
     """Run linters.
 
@@ -102,7 +102,7 @@ def lint(session):
     )
 
 
-@nox.session(python=DEFAULT_PYTHON_VERSION)
+@nox.session(python=DEFAULT_PYTHON_VERSION_FOR_SQLALCHEMY_20)
 def blacken(session):
     """Run black.
 
