@@ -252,7 +252,7 @@ def compliance_test_20(session):
     )
 
 
-@nox.session(python=DEFAULT_PYTHON_VERSION)
+@nox.session(python=DEFAULT_PYTHON_VERSION_FOR_SQLALCHEMY_20)
 def unit(session):
     """Run unit tests."""
     # Run SQLAlchemy dialect compliance test suite with OpenTelemetry.
@@ -265,6 +265,18 @@ def unit(session):
     session.install("opentelemetry-instrumentation==0.48b0")
     session.run("python", "create_test_config.py", "my-project", "my-instance")
     session.run("py.test", "--quiet", os.path.join("test/unit"), *session.posargs)
+
+
+@nox.session(python=DEFAULT_PYTHON_VERSION_FOR_SQLALCHEMY_20)
+def mockserver(session):
+    """Run mockserver tests."""
+    # Run SQLAlchemy dialect tests using an in-mem mocked Spanner server.
+    session.install("setuptools")
+    session.install("pytest")
+    session.install("mock")
+    session.install(".")
+    session.run("python", "create_test_config.py", "my-project", "my-instance")
+    session.run("py.test", "--quiet", os.path.join("test/mockserver_tests"), *session.posargs)
 
 
 @nox.session(python=DEFAULT_PYTHON_VERSION)
