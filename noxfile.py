@@ -275,8 +275,11 @@ def mockserver(session):
     session.install("pytest")
     session.install("mock")
     session.install(".")
+    session.install("sqlalchemy>=2.0")
     session.run("python", "create_test_config.py", "my-project", "my-instance")
-    session.run("py.test", "--quiet", os.path.join("test/mockserver_tests"), *session.posargs)
+    session.run(
+        "py.test", "--quiet", os.path.join("test/mockserver_tests"), *session.posargs
+    )
 
 
 @nox.session(python=DEFAULT_PYTHON_VERSION)

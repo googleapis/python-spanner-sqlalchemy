@@ -10,9 +10,10 @@
 #     --python_out=. --pyi_out=. --grpc_python_out=. \
 #     ./google/spanner/v1/*.proto
 
+# flake8: noqa
+
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
-import warnings
 
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 from google.cloud.spanner_v1.types import (
