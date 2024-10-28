@@ -40,6 +40,7 @@ if [[ $KOKORO_BUILD_ARTIFACTS_SUBDIR = *"continuous"* ]]; then
 fi
 
 pip install --upgrade pip
+pip install --upgrade setuptools
 
 # If NOX_SESSION is set, it only runs the specified session,
 # otherwise run all the sessions.
