@@ -276,7 +276,7 @@ def mockserver(session):
     session.install("mock")
     session.install(".")
     session.install("sqlalchemy>=2.0")
-    session.run("python", "create_test_config.py", "my-project", "my-instance")
+    session.run("python", "create_test_config.py", "my-project", "my-instance", "none", "AnonymousCredentials", "localhost", "9999")
     session.run(
         "py.test", "--quiet", os.path.join("test/mockserver_tests"), *session.posargs
     )

@@ -25,6 +25,7 @@ from concurrent import futures
 import grpc
 import base64
 
+
 class MockSpanner:
     def __init__(self):
         self.results = {}
@@ -165,7 +166,9 @@ class SpannerServicer(spanner_grpc.SpannerServicer):
         if session is None:
             raise ValueError(f"Session not found: {session}")
         self.transaction_counter += 1
-        id_bytes = bytes(f"{session.name}/transactions/{self.transaction_counter}", 'UTF-8')
+        id_bytes = bytes(
+            f"{session.name}/transactions/{self.transaction_counter}", "UTF-8"
+        )
         transaction_id = base64.urlsafe_b64encode(id_bytes)
         self.transactions[transaction_id] = options
         return transaction.Transaction(dict(id=transaction_id))
