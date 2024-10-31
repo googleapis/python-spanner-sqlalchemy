@@ -252,6 +252,36 @@ def compliance_test_20(session):
     )
 
 
+@nox.session(python=DEFAULT_PYTHON_VERSION_FOR_SQLALCHEMY_20)
+def system(session):
+    """Run SQLAlchemy dialect system test suite."""
+
+    # Sanity check: Only run tests if the environment variable is set.
+    if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "") and not os.environ.get(
+        "SPANNER_EMULATOR_HOST", ""
+    ):
+        session.skip(
+            "Credentials or emulator host must be set via environment variable"
+        )
+
+    session.install(
+        "pytest",
+        "pytest-cov",
+        "pytest-asyncio",
+    )
+
+    session.install("mock")
+    session.install(".[tracing]")
+    session.install("opentelemetry-api==1.27.0")
+    session.install("opentelemetry-sdk==1.27.0")
+    session.install("opentelemetry-instrumentation==0.48b0")
+    session.run("python", "create_test_database.py")
+
+    session.install("sqlalchemy>=2.0")
+
+    session.run("py.test", "--quiet", os.path.join("test", "system"), *session.posargs)
+
+
 @nox.session(python=DEFAULT_PYTHON_VERSION)
 def unit(session):
     """Run unit tests."""
