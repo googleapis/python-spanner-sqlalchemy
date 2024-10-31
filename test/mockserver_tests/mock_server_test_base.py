@@ -102,7 +102,7 @@ class MockServerTestBase(fixtures.TestBase):
     def client(self) -> Client:
         if self._client is None:
             self._client = Client(
-                project="test-project",
+                project="p",
                 credentials=AnonymousCredentials(),
                 client_options=ClientOptions(
                     api_endpoint="localhost:" + str(MockServerTestBase.port),

@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from google.cloud.spanner_v1 import TransactionOptions, ResultSetMetadata
 from google.protobuf import empty_pb2
 import test.mockserver_tests.spanner_pb2_grpc as spanner_grpc
@@ -22,7 +23,7 @@ import google.cloud.spanner_v1.types.commit_response as commit
 import google.cloud.spanner_v1.types.spanner as spanner
 from concurrent import futures
 import grpc
-
+import base64
 
 class MockSpanner:
     def __init__(self):
@@ -164,12 +165,17 @@ class SpannerServicer(spanner_grpc.SpannerServicer):
         if session is None:
             raise ValueError(f"Session not found: {session}")
         self.transaction_counter += 1
-        transaction_id = f"{session.name}/transactions/{self.transaction_counter}"
+        id_bytes = bytes(f"{session.name}/transactions/{self.transaction_counter}", 'UTF-8')
+        transaction_id = base64.urlsafe_b64encode(id_bytes)
         self.transactions[transaction_id] = options
         return transaction.Transaction(dict(id=transaction_id))
 
     def Commit(self, request, context):
         self._requests.append(request)
+        tx = self.transactions[request.transaction_id]
+        if tx is None:
+            raise ValueError(f"Transaction not found: {request.transaction_id}")
+        del self.transactions[request.transaction_id]
         return commit.CommitResponse()
 
     def Rollback(self, request, context):

@@ -252,7 +252,7 @@ def compliance_test_20(session):
     )
 
 
-@nox.session(python=DEFAULT_PYTHON_VERSION_FOR_SQLALCHEMY_20)
+@nox.session(python=DEFAULT_PYTHON_VERSION)
 def unit(session):
     """Run unit tests."""
     # Run SQLAlchemy dialect compliance test suite with OpenTelemetry.
