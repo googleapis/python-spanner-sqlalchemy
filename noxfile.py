@@ -293,7 +293,7 @@ def unit(session):
     session.install("opentelemetry-api==1.27.0")
     session.install("opentelemetry-sdk==1.27.0")
     session.install("opentelemetry-instrumentation==0.48b0")
-    session.run("python", "create_test_config.py", "my-project", "my-instance")
+    session.run("python", "create_test_config.py", "my-project", "my-instance", "my-database")
     session.run("py.test", "--quiet", os.path.join("test/unit"), *session.posargs)
 
 
@@ -311,6 +311,7 @@ def mockserver(session):
         "create_test_config.py",
         "my-project",
         "my-instance",
+        "my-database",
         "none",
         "AnonymousCredentials",
         "localhost",
