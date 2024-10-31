@@ -39,6 +39,7 @@ from sqlalchemy.schema import Computed
 from sqlalchemy.testing import config
 from sqlalchemy.testing import engines
 from sqlalchemy.testing import eq_
+from sqlalchemy.testing import is_instance_of
 from sqlalchemy.testing import provide_metadata, emits_warning
 from sqlalchemy.testing import fixtures
 from sqlalchemy.testing.provision import temp_table_keyword_args
@@ -79,8 +80,14 @@ from sqlalchemy.testing.suite.test_insert import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_reflection import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_deprecations import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_results import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_select import *  # noqa: F401, F403
-from sqlalchemy.testing.suite.test_sequence import *  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_select import (
+    BitwiseTest as _BitwiseTest,
+)  # noqa: F401, F403
+from sqlalchemy.testing.suite.test_sequence import (
+    SequenceTest as _SequenceTest,
+    HasSequenceTest as _HasSequenceTest,
+    HasSequenceTestEmpty as _HasSequenceTestEmpty,
+)  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_unicode_ddl import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_update_delete import *  # noqa: F401, F403
 from sqlalchemy.testing.suite.test_cte import CTETest as _CTETest
@@ -144,7 +151,10 @@ from sqlalchemy.testing.suite.test_types import (  # noqa: F401, F403
     UnicodeTextTest as _UnicodeTextTest,
     _UnicodeFixture as __UnicodeFixture,
 )  # noqa: F401, F403
-from test._helpers import get_db_url, get_project
+from test._helpers import (
+    get_db_url,
+    get_project,
+)
 
 config.test_schema = ""
 
@@ -157,7 +167,7 @@ class BooleanTest(_BooleanTest):
     def test_render_literal_bool(self):
         pass
 
-    def test_render_literal_bool_true(self, literal_round_trip):
+    def test_render_literal_bool_true(self, literal_round_trip_spanner):
         """
         SPANNER OVERRIDE:
 
@@ -166,9 +176,9 @@ class BooleanTest(_BooleanTest):
         following insertions will fail with `Row [] already exists".
         Overriding the test to avoid the same failure.
         """
-        literal_round_trip(Boolean(), [True], [True])
+        literal_round_trip_spanner(Boolean(), [True], [True])
 
-    def test_render_literal_bool_false(self, literal_round_trip):
+    def test_render_literal_bool_false(self, literal_round_trip_spanner):
         """
         SPANNER OVERRIDE:
 
@@ -177,10 +187,16 @@ class BooleanTest(_BooleanTest):
         following insertions will fail with `Row [] already exists".
         Overriding the test to avoid the same failure.
         """
-        literal_round_trip(Boolean(), [False], [False])
+        literal_round_trip_spanner(Boolean(), [False], [False])
 
     @pytest.mark.skip("Not supported by Cloud Spanner")
     def test_whereclause(self):
+        pass
+
+
+class BitwiseTest(_BitwiseTest):
+    @pytest.mark.skip("Causes too many problems with other tests")
+    def test_bitwise(self, case, expected, connection):
         pass
 
 
@@ -1010,6 +1026,10 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         tables to be read, and in Spanner all the tables are real,
         expected results override is required.
         """
+        _ignore_tables = [
+            "bitwise",
+        ]
+
         insp, kws, exp = get_multi_exp(
             schema,
             scope,
@@ -1022,6 +1042,8 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         for kw in kws:
             insp.clear_cache()
             result = insp.get_multi_columns(**kw)
+            for t in _ignore_tables:
+                result.pop((schema, t), None)
             self._check_table_dict(result, exp, self._required_column_keys)
 
     @pytest.mark.skip(
@@ -1089,6 +1111,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         _ignore_tables = [
             "account",
             "alembic_version",
+            "bitwise",
             "bytes_table",
             "comment_test",
             "date_table",
@@ -1298,6 +1321,7 @@ class ComponentReflectionTest(_ComponentReflectionTest):
         expected results override is required.
         """
         _ignore_tables = [
+            "bitwise",
             "comment_test",
             "noncol_idx_test_pk",
             "noncol_idx_test_nopk",
@@ -1680,7 +1704,7 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest, DateTest):
             connection.execute(date_table.insert(), {"date_data": self.data, "id": 250})
             row = connection.execute(select(date_table.c.date_data)).first()
 
-        compare = self.compare or self.data
+        compare = self.compare or self.data.astimezone(timezone.utc)
         compare = compare.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         eq_(row[0].rfc3339(), compare)
         assert isinstance(row[0], DatetimeWithNanoseconds)
@@ -1700,7 +1724,7 @@ class DateTimeMicrosecondsTest(_DateTimeMicrosecondsTest, DateTest):
 
         row = connection.execute(select(date_table.c.decorated_date_data)).first()
 
-        compare = self.compare or self.data
+        compare = self.compare or self.data.astimezone(timezone.utc)
         compare = compare.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         eq_(row[0].rfc3339(), compare)
         assert isinstance(row[0], DatetimeWithNanoseconds)
@@ -1998,6 +2022,9 @@ class IntegerTest(_IntegerTest):
             intvalue,
         )
 
+    def test_literal(self, literal_round_trip_spanner):
+        literal_round_trip_spanner(Integer, [5], [5])
+
 
 class _UnicodeFixture(__UnicodeFixture):
     @classmethod
@@ -2094,7 +2121,7 @@ class RowFetchTest(_RowFetchTest):
 
         eq_(
             row.somelabel,
-            DatetimeWithNanoseconds(2006, 5, 12, 12, 0, 0, tzinfo=timezone.utc),
+            DatetimeWithNanoseconds(2006, 5, 12, 12, 0, 0).astimezone(timezone.utc),
         )
 
 
@@ -2109,6 +2136,10 @@ class InsertBehaviorTest(_InsertBehaviorTest):
 
     @pytest.mark.skip("Spanner doesn't support auto increment")
     def test_insert_from_select_autoinc(self):
+        pass
+
+    @pytest.mark.skip("Spanner does not support auto increment")
+    def test_no_results_for_non_returning_insert(self, connection, style, executemany):
         pass
 
     def test_autoclose_on_insert(self):
@@ -2180,6 +2211,19 @@ class StringTest(_StringTest):
                 args[1],
             )
 
+    def test_literal(self, literal_round_trip_spanner):
+        # note that in Python 3, this invokes the Unicode
+        # datatype for the literal part because all strings are unicode
+        literal_round_trip_spanner(String(40), ["some text"], ["some text"])
+
+    def test_literal_quoting(self, literal_round_trip_spanner):
+        data = """some 'text' hey "hi there" that's text"""
+        literal_round_trip_spanner(String(40), [data], [data])
+
+    def test_literal_backslashes(self, literal_round_trip_spanner):
+        data = r"backslash one \ backslash two \\ end"
+        literal_round_trip_spanner(String(40), [data], [data])
+
 
 class TextTest(_TextTest):
     @classmethod
@@ -2215,6 +2259,21 @@ class TextTest(_TextTest):
     def test_text_null_strings(self, connection):
         pass
 
+    def test_literal(self, literal_round_trip_spanner):
+        literal_round_trip_spanner(Text, ["some text"], ["some text"])
+
+    def test_literal_quoting(self, literal_round_trip_spanner):
+        data = """some 'text' hey "hi there" that's text"""
+        literal_round_trip_spanner(Text, [data], [data])
+
+    def test_literal_backslashes(self, literal_round_trip_spanner):
+        data = r"backslash one \ backslash two \\ end"
+        literal_round_trip_spanner(Text, [data], [data])
+
+    def test_literal_percentsigns(self, literal_round_trip_spanner):
+        data = r"percent % signs %% percent"
+        literal_round_trip_spanner(Text, [data], [data])
+
 
 class NumericTest(_NumericTest):
     @testing.fixture
@@ -2245,7 +2304,7 @@ class NumericTest(_NumericTest):
         return run
 
     @emits_warning(r".*does \*not\* support Decimal objects natively")
-    def test_render_literal_numeric(self, literal_round_trip):
+    def test_render_literal_numeric(self, literal_round_trip_spanner):
         """
         SPANNER OVERRIDE:
 
@@ -2254,14 +2313,14 @@ class NumericTest(_NumericTest):
         following insertions will fail with `Row [] already exists".
         Overriding the test to avoid the same failure.
         """
-        literal_round_trip(
+        literal_round_trip_spanner(
             Numeric(precision=8, scale=4),
             [decimal.Decimal("15.7563")],
             [decimal.Decimal("15.7563")],
         )
 
     @emits_warning(r".*does \*not\* support Decimal objects natively")
-    def test_render_literal_numeric_asfloat(self, literal_round_trip):
+    def test_render_literal_numeric_asfloat(self, literal_round_trip_spanner):
         """
         SPANNER OVERRIDE:
 
@@ -2270,13 +2329,13 @@ class NumericTest(_NumericTest):
         following insertions will fail with `Row [] already exists".
         Overriding the test to avoid the same failure.
         """
-        literal_round_trip(
+        literal_round_trip_spanner(
             Numeric(precision=8, scale=4, asdecimal=False),
             [decimal.Decimal("15.7563")],
             [15.7563],
         )
 
-    def test_render_literal_float(self, literal_round_trip):
+    def test_render_literal_float(self, literal_round_trip_spanner):
         """
         SPANNER OVERRIDE:
 
@@ -2285,7 +2344,7 @@ class NumericTest(_NumericTest):
         following insertions will fail with `Row [] already exists".
         Overriding the test to avoid the same failure.
         """
-        literal_round_trip(
+        literal_round_trip_spanner(
             Float(4),
             [decimal.Decimal("15.7563")],
             [15.7563],
@@ -2493,6 +2552,17 @@ class LikeFunctionsTest(_LikeFunctionsTest):
 @pytest.mark.skip("Spanner doesn't support IS DISTINCT FROM clause")
 class IsOrIsNotDistinctFromTest(_IsOrIsNotDistinctFromTest):
     pass
+
+
+@pytest.mark.skip("Spanner doesn't bizarre characters in foreign key names")
+class BizarroCharacterFKResolutionTest(fixtures.TestBase):
+    pass
+
+
+class IsolationLevelTest(fixtures.TestBase):
+    @pytest.mark.skip("Cloud Spanner does not support different isolation levels")
+    def test_dialect_user_setting_is_restored(self, testing_engine):
+        pass
 
 
 class OrderByLabelTest(_OrderByLabelTest):
@@ -3041,3 +3111,132 @@ class CreateEngineWithoutDatabaseTest(fixtures.TestBase):
         engine = create_engine(get_db_url().split("/database")[0])
         with engine.connect() as connection:
             assert connection.connection.database is None
+
+
+@pytest.mark.skipif(
+    bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+)
+class SequenceTest(_SequenceTest):
+    @classmethod
+    def define_tables(cls, metadata):
+        Table(
+            "seq_pk",
+            metadata,
+            Column(
+                "id",
+                Integer,
+                sqlalchemy.Sequence("tab_id_seq"),
+                primary_key=True,
+            ),
+            Column("data", String(50)),
+        )
+
+        Table(
+            "seq_opt_pk",
+            metadata,
+            Column(
+                "id",
+                Integer,
+                sqlalchemy.Sequence("tab_id_seq_opt", data_type=Integer, optional=True),
+                primary_key=True,
+            ),
+            Column("data", String(50)),
+        )
+
+        Table(
+            "seq_no_returning",
+            metadata,
+            Column(
+                "id",
+                Integer,
+                sqlalchemy.Sequence("noret_id_seq"),
+                primary_key=True,
+            ),
+            Column("data", String(50)),
+            implicit_returning=False,
+        )
+
+    def test_insert_lastrowid(self, connection):
+        r = connection.execute(self.tables.seq_pk.insert(), dict(data="some data"))
+        assert len(r.inserted_primary_key) == 1
+        is_instance_of(r.inserted_primary_key[0], int)
+
+    def test_nextval_direct(self, connection):
+        r = connection.execute(self.tables.seq_pk.c.id.default)
+        is_instance_of(r, int)
+
+    def _assert_round_trip(self, table, conn):
+        row = conn.execute(table.select()).first()
+        id, name = row
+        is_instance_of(id, int)
+        eq_(name, "some data")
+
+    @testing.combinations((True,), (False,), argnames="implicit_returning")
+    @testing.requires.schemas
+    @pytest.mark.skip("Not supported by Cloud Spanner")
+    def test_insert_roundtrip_translate(self, connection, implicit_returning):
+        pass
+
+    @testing.requires.schemas
+    @pytest.mark.skip("Not supported by Cloud Spanner")
+    def test_nextval_direct_schema_translate(self, connection):
+        pass
+
+
+@pytest.mark.skipif(
+    bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+)
+class HasSequenceTest(_HasSequenceTest):
+    @classmethod
+    def define_tables(cls, metadata):
+        sqlalchemy.Sequence("user_id_seq", metadata=metadata)
+        sqlalchemy.Sequence(
+            "other_seq", metadata=metadata, nomaxvalue=True, nominvalue=True
+        )
+        Table(
+            "user_id_table",
+            metadata,
+            Column("id", Integer, primary_key=True),
+        )
+
+    @pytest.mark.skip("Not supported by Cloud Spanner")
+    def test_has_sequence_cache(self, connection, metadata):
+        pass
+
+    @testing.requires.schemas
+    @pytest.mark.skip("Not supported by Cloud Spanner")
+    def test_has_sequence_schema(self, connection):
+        pass
+
+    @testing.requires.schemas
+    @pytest.mark.skip("Not supported by Cloud Spanner")
+    def test_has_sequence_schemas_neg(self, connection):
+        pass
+
+    @testing.requires.schemas
+    @pytest.mark.skip("Not supported by Cloud Spanner")
+    def test_has_sequence_default_not_in_remote(self, connection):
+        pass
+
+    @testing.requires.schemas
+    @pytest.mark.skip("Not supported by Cloud Spanner")
+    def test_has_sequence_remote_not_in_default(self, connection):
+        pass
+
+    @testing.requires.schemas
+    @pytest.mark.skip("Not supported by Cloud Spanner")
+    def test_get_sequence_names_no_sequence_schema(self, connection):
+        pass
+
+    @testing.requires.schemas
+    @pytest.mark.skip("Not supported by Cloud Spanner")
+    def test_get_sequence_names_sequences_schema(self, connection):
+        pass
+
+
+@pytest.mark.skipif(
+    bool(os.environ.get("SPANNER_EMULATOR_HOST")), reason="Skipped on emulator"
+)
+class HasSequenceTestEmpty(_HasSequenceTestEmpty):
+    def test_get_sequence_names_no_sequence(self, connection):
+        super().test_get_sequence_names_no_sequence(connection)

@@ -78,9 +78,10 @@ UPGRADE_CODE = """def upgrade():
 BLACK_VERSION = "black==22.3.0"
 BLACK_PATHS = ["google", "test", "noxfile.py", "setup.py", "samples"]
 DEFAULT_PYTHON_VERSION = "3.8"
+DEFAULT_PYTHON_VERSION_FOR_SQLALCHEMY_20 = "3.12"
 
 
-@nox.session(python=DEFAULT_PYTHON_VERSION)
+@nox.session(python=DEFAULT_PYTHON_VERSION_FOR_SQLALCHEMY_20)
 def lint(session):
     """Run linters.
 
@@ -101,7 +102,7 @@ def lint(session):
     )
 
 
-@nox.session(python=DEFAULT_PYTHON_VERSION)
+@nox.session(python=DEFAULT_PYTHON_VERSION_FOR_SQLALCHEMY_20)
 def blacken(session):
     """Run black.
 
@@ -118,10 +119,10 @@ def blacken(session):
     )
 
 
-@nox.session(python=DEFAULT_PYTHON_VERSION)
+@nox.session(python=DEFAULT_PYTHON_VERSION_FOR_SQLALCHEMY_20)
 def lint_setup_py(session):
     """Verify that setup.py is valid (including RST check)."""
-    session.install("docutils", "pygments")
+    session.install("docutils", "pygments", "setuptools")
     session.run("python", "setup.py", "check", "--restructuredtext", "--strict")
 
 
@@ -145,7 +146,7 @@ def compliance_test_13(session):
     )
 
     session.install("mock")
-    session.install("-e", ".[tracing]")
+    session.install(".[tracing]")
     session.run("pip", "install", "sqlalchemy>=1.1.13,<=1.3.24", "--force-reinstall")
     session.run("pip", "install", "opentelemetry-api<=1.10", "--force-reinstall")
     session.run("pip", "install", "opentelemetry-sdk<=1.10", "--force-reinstall")
@@ -191,7 +192,7 @@ def compliance_test_14(session):
     )
 
     session.install("mock")
-    session.install("-e", ".[tracing]")
+    session.install(".[tracing]")
     session.run("pip", "install", "sqlalchemy>=1.4,<2.0", "--force-reinstall")
     session.run("python", "create_test_database.py")
     session.run(
@@ -208,7 +209,7 @@ def compliance_test_14(session):
     )
 
 
-@nox.session(python=DEFAULT_PYTHON_VERSION)
+@nox.session(python=DEFAULT_PYTHON_VERSION_FOR_SQLALCHEMY_20)
 def compliance_test_20(session):
     """Run SQLAlchemy dialect compliance test suite."""
 
@@ -231,7 +232,7 @@ def compliance_test_20(session):
     )
 
     session.install("mock")
-    session.install("-e", ".[tracing]")
+    session.install(".[tracing]")
     session.run("pip", "install", "opentelemetry-api<=1.10", "--force-reinstall")
     session.run("python", "create_test_database.py")
 
@@ -255,14 +256,39 @@ def compliance_test_20(session):
 def unit(session):
     """Run unit tests."""
     # Run SQLAlchemy dialect compliance test suite with OpenTelemetry.
+    session.install("setuptools")
     session.install("pytest")
     session.install("mock")
-    session.install("-e", ".")
-    session.install("opentelemetry-api==1.1.0")
-    session.install("opentelemetry-sdk==1.1.0")
-    session.install("opentelemetry-instrumentation==0.20b0")
+    session.install(".")
+    session.install("opentelemetry-api==1.27.0")
+    session.install("opentelemetry-sdk==1.27.0")
+    session.install("opentelemetry-instrumentation==0.48b0")
     session.run("python", "create_test_config.py", "my-project", "my-instance")
     session.run("py.test", "--quiet", os.path.join("test/unit"), *session.posargs)
+
+
+@nox.session(python=DEFAULT_PYTHON_VERSION_FOR_SQLALCHEMY_20)
+def mockserver(session):
+    """Run mockserver tests."""
+    # Run SQLAlchemy dialect tests using an in-mem mocked Spanner server.
+    session.install("setuptools")
+    session.install("pytest")
+    session.install("mock")
+    session.install(".")
+    session.install("sqlalchemy>=2.0")
+    session.run(
+        "python",
+        "create_test_config.py",
+        "my-project",
+        "my-instance",
+        "none",
+        "AnonymousCredentials",
+        "localhost",
+        "9999",
+    )
+    session.run(
+        "py.test", "--quiet", os.path.join("test/mockserver_tests"), *session.posargs
+    )
 
 
 @nox.session(python=DEFAULT_PYTHON_VERSION)
@@ -292,7 +318,7 @@ def _migration_test(session):
         session.run("pip", "install", "sqlalchemy>=1.3.11,<2.0", "--force-reinstall")
 
     session.install("pytest")
-    session.install("-e", ".")
+    session.install(".")
     session.install("alembic")
 
     session.run("python", "create_test_database.py")
@@ -360,7 +386,7 @@ def snippets(session):
     session.install(
         "git+https://github.com/googleapis/python-spanner.git#egg=google-cloud-spanner"
     )
-    session.install("-e", ".")
+    session.install(".")
     session.run("python", "create_test_database.py")
     session.run(
         "py.test",
