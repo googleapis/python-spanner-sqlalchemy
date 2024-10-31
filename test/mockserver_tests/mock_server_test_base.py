@@ -30,6 +30,7 @@ import grpc
 from test.mockserver_tests.mock_spanner import SpannerServicer, start_mock_server
 from test.mockserver_tests.mock_database_admin import DatabaseAdminServicer
 
+
 def add_result(sql: str, result: ResultSet):
     MockServerTestBase.spanner_service.mock_spanner.add_result(sql, result)
 
