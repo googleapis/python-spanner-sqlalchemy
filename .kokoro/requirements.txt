@@ -340,12 +340,19 @@ jaraco-classes==3.2.3 \
     --hash=sha256:2353de3288bc6b82120752201c6b1c1a14b058267fa424ed5ce5984e3b922158 \
     --hash=sha256:89559fa5c1d3c34eff6f631ad80bb21f378dbcbb35dd161fd2c6b93f5be2f98a
     # via keyring
+jaraco-context==6.0.1 \
+    --hash=sha256:9bae4ea555cf0b14938dc0aee7c9f32ed303aa20a3b73e7dc80111628792d1b3 \
+    --hash=sha256:f797fc481b490edb305122c9181830a3a5b76d84ef6d1aef2fb9b47ab956f9e4
+    # via
+    #   -r requirements.in
+    #   keyring
+jaraco-functools==4.1.0 \
+    --hash=sha256:70f7e0e2ae076498e212562325e805204fc092d7b4c17e0e86c959e249701a9d \
+    --hash=sha256:ad159f13428bc4acbf5541ad6dec511f91573b90fba04df61dafa2a1231cf649
+    # via keyring
 jeepney==0.8.0 \
     --hash=sha256:5efe48d255973902f6badc3ce55e2aa6c5c3b3bc642059ef3a91247bcfcc5806 \
     --hash=sha256:c0a454ad016ca575060802ee4d590dd912e35c122fa04e70306de3d076cce755
-    # via
-    #   keyring
-    #   secretstorage
 jinja2==3.1.4 \
     --hash=sha256:4a3aee7acbbe7303aede8e9648d13b8bf88a429282aa6122a993f0ac800cb369 \
     --hash=sha256:bc5dd2abb727a5319567b7a813e6a2e7318c39f4f487cfe6c89c6f9c7d25197d
@@ -430,7 +437,9 @@ mdurl==0.1.2 \
 more-itertools==10.5.0 \
     --hash=sha256:037b0d3203ce90cca8ab1defbbdac29d5f993fc20131f3664dc8d6acfa872aef \
     --hash=sha256:5482bfef7849c25dc3c6dd53a6173ae4795da2a41a80faea6700d9f5846c5da6
-    # via jaraco-classes
+    # via
+    #   jaraco-classes
+    #   jaraco-functools
 nh3==0.2.18 \
     --hash=sha256:0411beb0589eacb6734f28d5497ca2ed379eafab8ad8c84b31bb5c34072b7164 \
     --hash=sha256:14c5a72e9fe82aea5fe3072116ad4661af5cf8e8ff8fc5ad3450f123e4925e86 \
@@ -492,6 +501,7 @@ protobuf==5.28.3 \
     #   gcp-releasetool
     #   google-api-core
     #   googleapis-common-protos
+    #   proto-plus
 py==1.11.0 \
     --hash=sha256:51c75c4126074b472f746a24399ad32f6053d1b34b68d2fa41e558e6f4a98719 \
     --hash=sha256:607c53218732647dff4acdfcd50cb62615cedf612e72d1724fb1a0cc6405b378
