@@ -492,6 +492,22 @@ class SpannerDDLCompiler(DDLCompiler):
 
         return post_cmds
 
+    def visit_create_index(
+        self, create, include_schema=False, include_table_schema=True, **kw
+    ):
+        text = super().visit_create_index(create, include_schema, include_table_schema, **kw)
+        index = create.element
+        storing = index.dialect_options["spanner"]["storing"]
+        if storing:
+            storing_columns = [
+                index.table.c[col] if isinstance(col, str) else col
+                for col in storing
+            ]
+            text += " STORING (%s)" % ", ".join(
+                [self.preparer.quote(c.name) for c in storing_columns]
+            )
+        return text
+
     def get_identity_options(self, identity_options):
         text = ["sequence_kind = 'bit_reversed_positive'"]
         if identity_options.start is not None:

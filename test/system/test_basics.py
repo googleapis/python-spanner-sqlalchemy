@@ -11,20 +11,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from sqlalchemy import text, Table, Column, Integer, PrimaryKeyConstraint, String
+from sqlalchemy import text, Table, Column, Integer, PrimaryKeyConstraint, \
+    String, Index, inspect, MetaData
 from sqlalchemy.testing import eq_
 from sqlalchemy.testing.plugin.plugin_base import fixtures
+from sqlalchemy.testing.suite.test_reflection import metadata
 
 
 class TestBasics(fixtures.TablesTest):
     @classmethod
     def define_tables(cls, metadata):
-        Table(
+        numbers = Table(
             "numbers",
             metadata,
             Column("number", Integer),
             Column("name", String(20)),
+            Column("alternative_name", String(20)),
             PrimaryKeyConstraint("number"),
+        )
+        Index(
+            "idx_numbers_name",
+            numbers.c.name,
+            spanner_storing=[numbers.c.alternative_name],
         )
 
     def test_hello_world(self, connection):
@@ -37,3 +45,13 @@ class TestBasics(fixtures.TablesTest):
         )
         name = connection.execute(text("select name from numbers where number=1"))
         eq_("One", name.fetchone()[0])
+
+    def test_reflect(self, connection):
+        engine = connection.engine
+        meta: MetaData = MetaData()
+        meta.reflect(bind=engine)
+        eq_(1, len(meta.tables))
+        table = meta.tables["numbers"]
+        eq_(1, len(table.indexes))
+        index = meta.tables["numbers"].index("idx_numbers_name")
+
