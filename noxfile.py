@@ -252,7 +252,7 @@ def compliance_test_20(session):
     )
 
 
-@nox.session()
+@nox.session(python=DEFAULT_PYTHON_VERSION)
 def system(session):
     """Run SQLAlchemy dialect system test suite."""
 
