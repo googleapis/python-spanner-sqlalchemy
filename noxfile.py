@@ -264,6 +264,11 @@ def system(session):
             "Credentials or emulator host must be set via environment variable"
         )
 
+    if os.environ.get("RUN_COMPLIANCE_TESTS", "true") == "false" and not os.environ.get(
+        "SPANNER_EMULATOR_HOST", ""
+    ):
+        session.skip("RUN_COMPLIANCE_TESTS is set to false, skipping")
+
     session.install(
         "pytest",
         "pytest-cov",
