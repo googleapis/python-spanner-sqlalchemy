@@ -41,7 +41,7 @@ class TestBasics(fixtures.TablesTest):
         Index(
             "idx_numbers_name",
             numbers.c.name,
-            numbers.c.prime,
+            numbers.c.prime.desc(),
             spanner_storing=[numbers.c.alternative_name],
         )
 

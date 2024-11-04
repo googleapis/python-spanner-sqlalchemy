@@ -1079,7 +1079,7 @@ class SpannerDialect(DefaultDialect):
                     "column_names": row[3],
                     "unique": row[4],
                     "column_sorting": {
-                        col: order for col, order in zip(row[3], row[5])
+                        col: order.lower() for col, order in zip(row[3], row[5])
                     },
                     "include_columns": include_columns if include_columns else [],
                     "dialect_options": dialect_options,
