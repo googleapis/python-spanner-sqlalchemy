@@ -22,7 +22,11 @@ from alembic.ddl.base import (
     alter_table,
     format_type,
 )
+from google.api_core.client_options import ClientOptions
+from google.auth.credentials import AnonymousCredentials
+from google.cloud.spanner_v1 import Client
 from sqlalchemy.exc import NoSuchTableError
+from sqlalchemy.sql import elements
 from sqlalchemy import ForeignKeyConstraint, types
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.engine.default import DefaultDialect, DefaultExecutionContext
@@ -40,6 +44,7 @@ from sqlalchemy.sql.compiler import (
 )
 from sqlalchemy.sql.default_comparator import operator_lookup
 from sqlalchemy.sql.operators import json_getitem_op
+from sqlalchemy.sql import expression
 
 from google.cloud.spanner_v1.data_types import JsonObject
 from google.cloud import spanner_dbapi
@@ -173,6 +178,16 @@ class SpannerExecutionContext(DefaultExecutionContext):
         if priority is not None:
             self._dbapi_connection.connection.request_priority = priority
 
+    def fire_sequence(self, seq, type_):
+        """Builds a statement for fetching next value of the sequence."""
+        return self._execute_scalar(
+            (
+                "SELECT GET_NEXT_SEQUENCE_VALUE(SEQUENCE %s)"
+                % self.identifier_preparer.format_sequence(seq)
+            ),
+            type_,
+        )
+
 
 class SpannerIdentifierPreparer(IdentifierPreparer):
     """Identifiers compiler.
@@ -303,8 +318,14 @@ class SpannerSQLCompiler(SQLCompiler):
         in string. Override the method to add  additional escape before using it to
         generate a SQL statement.
         """
+        if value is None and not type_.should_evaluate_none:
+            # issue #10535 - handle NULL in the compiler without placing
+            # this onto each type, except for "evaluate None" types
+            # (e.g. JSON)
+            return self.process(elements.Null._instance())
+
         raw = ["\\", "'", '"', "\n", "\t", "\r"]
-        if type(value) == str and any(single in value for single in raw):
+        if isinstance(value, str) and any(single in value for single in raw):
             value = 'r"""{}"""'.format(value)
             return value
         else:
@@ -342,6 +363,20 @@ class SpannerSQLCompiler(SQLCompiler):
                 text += f"\n LIMIT {9223372036854775807-select._offset}"
             text += " OFFSET " + self.process(select._offset_clause, **kw)
         return text
+
+    def returning_clause(self, stmt, returning_cols, **kw):
+        columns = [
+            self._label_select_column(None, c, True, False, {})
+            for c in expression._select_iterables(returning_cols)
+        ]
+
+        return "THEN RETURN " + ", ".join(columns)
+
+    def visit_sequence(self, seq, **kw):
+        """Builds a statement for fetching next value of the sequence."""
+        return " GET_NEXT_SEQUENCE_VALUE(SEQUENCE %s)" % self.preparer.format_sequence(
+            seq
+        )
 
 
 class SpannerDDLCompiler(DDLCompiler):
@@ -406,7 +441,7 @@ class SpannerDDLCompiler(DDLCompiler):
         for index in drop_table.element.indexes:
             indexes += "DROP INDEX {};".format(self.preparer.quote(index.name))
 
-        return indexes + constrs + str(drop_table)
+        return indexes + constrs + super().visit_drop_table(drop_table)
 
     def visit_primary_key_constraint(self, constraint, **kw):
         """Build primary key definition.
@@ -456,6 +491,24 @@ class SpannerDDLCompiler(DDLCompiler):
                 post_cmds += " ON DELETE CASCADE"
 
         return post_cmds
+
+    def get_identity_options(self, identity_options):
+        text = ["sequence_kind = 'bit_reversed_positive'"]
+        if identity_options.start is not None:
+            text.append("start_with_counter = %d" % identity_options.start)
+        return ", ".join(text)
+
+    def visit_create_sequence(self, create, prefix=None, **kw):
+        """Builds a ``CREATE SEQUENCE`` statement for the sequence."""
+        text = "CREATE SEQUENCE %s" % self.preparer.format_sequence(create.element)
+        options = self.get_identity_options(create.element)
+        if options:
+            text += " OPTIONS (" + options + ")"
+        return text
+
+    def visit_drop_sequence(self, drop, **kw):
+        """Builds a ``DROP SEQUENCE`` statement for the sequence."""
+        return "DROP SEQUENCE %s" % self.preparer.format_sequence(drop.element)
 
 
 class SpannerTypeCompiler(GenericTypeCompiler):
@@ -531,7 +584,8 @@ class SpannerDialect(DefaultDialect):
     supports_sane_rowcount = False
     supports_sane_multi_rowcount = False
     supports_default_values = False
-    supports_sequences = False
+    supports_sequences = True
+    sequences_optional = False
     supports_native_enum = True
     supports_native_boolean = True
     supports_native_decimal = True
@@ -658,9 +712,29 @@ class SpannerDialect(DefaultDialect):
             url.database,
         )
         dist = pkg_resources.get_distribution("sqlalchemy-spanner")
+        options = {"user_agent": f"gl-{dist.project_name}/{dist.version}"}
+        connect_opts = url.translate_connect_args()
+        if (
+            "host" in connect_opts
+            and "port" in connect_opts
+            and "password" in connect_opts
+        ):
+            # Create a test client that connects to a local Spanner (mock) server.
+            if (
+                connect_opts["host"] == "localhost"
+                and connect_opts["password"] == "AnonymousCredentials"
+            ):
+                client = Client(
+                    project=match.group("project"),
+                    credentials=AnonymousCredentials(),
+                    client_options=ClientOptions(
+                        api_endpoint=f"{connect_opts['host']}:{connect_opts['port']}",
+                    ),
+                )
+                options["client"] = client
         return (
             [match.group("instance"), match.group("database"), match.group("project")],
-            {"user_agent": f"gl-{dist.project_name}/{dist.version}"},
+            options,
         )
 
     @engine_to_connection
@@ -693,6 +767,36 @@ class SpannerDialect(DefaultDialect):
                 all_views.append(view[0])
 
         return all_views
+
+    @engine_to_connection
+    def get_sequence_names(self, connection, schema=None, **kw):
+        """
+        Return a list of all sequence names available in the database.
+
+        The method is used by SQLAlchemy introspection systems.
+
+        Args:
+            connection (sqlalchemy.engine.base.Connection):
+                SQLAlchemy connection or engine object.
+            schema (str): Optional. Schema name
+
+        Returns:
+            list: List of sequence names.
+        """
+        sql = """
+            SELECT name
+            FROM information_schema.sequences
+            WHERE SCHEMA='{}'
+            """.format(
+            schema or ""
+        )
+        all_sequences = []
+        with connection.connection.database.snapshot() as snap:
+            rows = list(snap.execute_sql(sql))
+            for seq in rows:
+                all_sequences.append(seq[0])
+
+        return all_sequences
 
     @engine_to_connection
     def get_view_definition(self, connection, view_name, schema=None, **kw):
@@ -765,7 +869,7 @@ class SpannerDialect(DefaultDialect):
                 col.spanner_type, col.is_nullable, col.generation_expression
             FROM information_schema.columns as col
             JOIN information_schema.tables AS t
-                ON col.table_name = t.table_name
+                USING (TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME)
             WHERE
                 {table_filter_query}
                 {table_type_query}
@@ -898,9 +1002,14 @@ class SpannerDialect(DefaultDialect):
                ARRAY_AGG(ic.column_ordering)
             FROM information_schema.indexes as i
             JOIN information_schema.index_columns AS ic
-                ON ic.index_name = i.index_name AND ic.table_name = i.table_name
+                ON  ic.index_name = i.index_name
+                AND ic.table_catalog = i.table_catalog
+                AND ic.table_schema = i.table_schema
+                AND ic.table_name = i.table_name
             JOIN information_schema.tables AS t
-                ON i.table_name = t.table_name
+                ON  i.table_catalog = t.table_catalog
+                AND i.table_schema = t.table_schema
+                AND i.table_name = t.table_name
             WHERE
                 {table_filter_query}
                 {table_type_query}
@@ -995,9 +1104,11 @@ class SpannerDialect(DefaultDialect):
             SELECT tc.table_schema, tc.table_name, ccu.COLUMN_NAME
             FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc
             JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS ccu
-                ON ccu.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
+                USING (TABLE_CATALOG, TABLE_SCHEMA, CONSTRAINT_NAME)
             JOIN information_schema.tables AS t
-                ON tc.table_name = t.table_name
+                ON  tc.TABLE_CATALOG = t.TABLE_CATALOG
+                AND tc.TABLE_SCHEMA = t.TABLE_SCHEMA
+                AND tc.TABLE_NAME = t.TABLE_NAME
             WHERE {table_filter_query} {table_type_query}
             {schema_filter_query} tc.CONSTRAINT_TYPE = "PRIMARY KEY"
         """.format(
@@ -1115,13 +1226,19 @@ class SpannerDialect(DefaultDialect):
             )
             FROM information_schema.table_constraints AS tc
             JOIN information_schema.constraint_column_usage AS ccu
-                ON ccu.constraint_name = tc.constraint_name
+                USING (table_catalog, table_schema, constraint_name)
             JOIN information_schema.constraint_table_usage AS ctu
-                ON ctu.constraint_name = tc.constraint_name
+                ON ctu.table_catalog = tc.table_catalog
+                and ctu.table_schema = tc.table_schema
+                and ctu.constraint_name = tc.constraint_name
             JOIN information_schema.key_column_usage AS kcu
-                ON kcu.constraint_name = tc.constraint_name
+                ON kcu.table_catalog = tc.table_catalog
+                and kcu.table_schema = tc.table_schema
+                and kcu.constraint_name = tc.constraint_name
             JOIN information_schema.tables AS t
-                ON tc.table_name = t.table_name
+                ON t.table_catalog = tc.table_catalog
+                and t.table_schema = tc.table_schema
+                and t.table_name = tc.table_name
             WHERE
                 {table_filter_query}
                 {table_type_query}
@@ -1242,15 +1359,14 @@ WHERE table_type = 'BASE TABLE' AND table_schema = '{schema}'
 SELECT ccu.CONSTRAINT_NAME, ccu.COLUMN_NAME
 FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc
 JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS ccu
-    ON ccu.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
-LEFT JOIN INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS AS rc
-    on tc.CONSTRAINT_NAME = rc.CONSTRAINT_NAME
+    USING (TABLE_CATALOG, TABLE_SCHEMA, CONSTRAINT_NAME)
 WHERE
     tc.TABLE_NAME="{table_name}"
+    AND tc.TABLE_SCHEMA="{table_schema}"
     AND tc.CONSTRAINT_TYPE = "UNIQUE"
-    AND rc.CONSTRAINT_NAME IS NOT NULL
+    AND tc.CONSTRAINT_NAME IS NOT NULL
 """.format(
-            table_name=table_name
+            table_schema=schema or "", table_name=table_name
         )
 
         cols = []
@@ -1282,10 +1398,37 @@ WHERE
                 """
 SELECT true
 FROM INFORMATION_SCHEMA.TABLES
-WHERE TABLE_NAME="{table_name}"
+WHERE TABLE_SCHEMA="{table_schema}" AND TABLE_NAME="{table_name}"
 LIMIT 1
 """.format(
-                    table_name=table_name
+                    table_schema=schema or "", table_name=table_name
+                )
+            )
+
+            for _ in rows:
+                return True
+
+        return False
+
+    @engine_to_connection
+    def has_sequence(self, connection, sequence_name, schema=None, **kw):
+        """Check the existence of a particular sequence in the database.
+
+        Given a :class:`_engine.Connection` object and a string
+        `sequence_name`, return True if the given sequence exists in
+        the database, False otherwise.
+        """
+
+        with connection.connection.database.snapshot() as snap:
+            rows = snap.execute_sql(
+                """
+                SELECT true
+                FROM INFORMATION_SCHEMA.SEQUENCES
+                WHERE NAME="{sequence_name}"
+                AND SCHEMA="{schema}"
+                LIMIT 1
+                """.format(
+                    sequence_name=sequence_name, schema=schema or ""
                 )
             )
 
