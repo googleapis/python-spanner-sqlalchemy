@@ -499,14 +499,17 @@ class SpannerDDLCompiler(DDLCompiler):
             create, include_schema, include_table_schema, **kw
         )
         index = create.element
-        storing = index.dialect_options["spanner"]["storing"]
-        if storing:
-            storing_columns = [
-                index.table.c[col] if isinstance(col, str) else col for col in storing
-            ]
-            text += " STORING (%s)" % ", ".join(
-                [self.preparer.quote(c.name) for c in storing_columns]
-            )
+        if "spanner" in index.dialect_options:
+            options = index.dialect_options["spanner"]
+            if "storing" in options:
+                storing = options["storing"]
+                storing_columns = [
+                    index.table.c[col] if isinstance(col, str) else col
+                    for col in storing
+                ]
+                text += " STORING (%s)" % ", ".join(
+                    [self.preparer.quote(c.name) for c in storing_columns]
+                )
         return text
 
     def get_identity_options(self, identity_options):
@@ -1066,6 +1069,10 @@ class SpannerDialect(DefaultDialect):
             result_dict = {}
 
             for row in rows:
+                dialect_options = {}
+                include_columns = row[6]
+                if include_columns:
+                    dialect_options["spanner_storing"] = include_columns
                 index_info = {
                     "name": row[2],
                     "column_names": row[3],
@@ -1073,8 +1080,8 @@ class SpannerDialect(DefaultDialect):
                     "column_sorting": {
                         col: order for col, order in zip(row[3], row[5])
                     },
-                    "include_columns": row[6],
-                    "dialect_options": {"spanner_storing": row[6]},
+                    "include_columns": include_columns if include_columns else [],
+                    "dialect_options": dialect_options,
                 }
                 row[0] = row[0] or None
                 table_info = result_dict.get((row[0], row[1]), [])
