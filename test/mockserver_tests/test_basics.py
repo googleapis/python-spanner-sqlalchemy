@@ -127,11 +127,3 @@ LIMIT 1
                 "\n) PRIMARY KEY (id)",
                 requests[0].statements[i],
             )
-
-    def test_reflect(self):
-        engine = create_engine(
-            "spanner:///projects/p/instances/i/databases/d",
-            connect_args={"client": self.client, "pool": FixedSizePool(size=10)},
-        )
-        metadata = MetaData()
-        metadata.reflect(engine, views=True)

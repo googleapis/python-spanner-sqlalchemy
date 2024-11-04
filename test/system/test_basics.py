@@ -19,13 +19,11 @@ from sqlalchemy import (
     PrimaryKeyConstraint,
     String,
     Index,
-    inspect,
     MetaData,
     Boolean,
 )
 from sqlalchemy.testing import eq_
 from sqlalchemy.testing.plugin.plugin_base import fixtures
-from sqlalchemy.testing.suite.test_reflection import metadata
 
 
 class TestBasics(fixtures.TablesTest):
@@ -54,7 +52,8 @@ class TestBasics(fixtures.TablesTest):
     def test_insert_number(self, connection):
         connection.execute(
             text(
-                "insert or update into numbers(number, name, prime) values (1, 'One', false)"
+                """insert or update into numbers (number, name, prime)
+                   values (1, 'One', false)"""
             )
         )
         name = connection.execute(text("select name from numbers where number=1"))

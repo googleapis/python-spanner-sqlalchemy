@@ -1056,7 +1056,8 @@ class SpannerDialect(DefaultDialect):
                 {schema_filter_query}
                 i.index_type != 'PRIMARY_KEY'
                 AND i.spanner_is_managed = FALSE
-            GROUP BY i.table_catalog, i.table_schema, i.table_name, i.index_name, i.is_unique
+            GROUP BY i.table_catalog, i.table_schema, i.table_name,
+                     i.index_name, i.is_unique
             ORDER BY i.index_name
         """.format(
             table_filter_query=table_filter_query,
