@@ -3121,7 +3121,7 @@ class RouteToLeaderEnabledTest(fixtures.TestBase):
     route_to_leader_enabled to Client.
     """
 
-    def test_route_to_leader(self):
+    def test_route_to_leader_disabled(self):
         engine = create_engine(
             "spanner:///projects/project-id/instances/instance-id/"
             + "databases/database-id",
@@ -3131,6 +3131,28 @@ class RouteToLeaderEnabledTest(fixtures.TestBase):
             assert (
                 connection.connection.instance._client.route_to_leader_enabled is False
             )
+
+    def test_route_to_leader_enabled(self):
+        engine = create_engine(
+            "spanner:///projects/project-id/instances/instance-id/"
+            + "databases/database-id",
+            connect_args={"route_to_leader_enabled": True},
+        )
+        with engine.connect() as connection:
+            assert (
+                connection.connection.instance._client.route_to_leader_enabled is True
+            )
+
+    def test_route_to_leader_default(self):
+        engine = create_engine(
+            "spanner:///projects/project-id/instances/instance-id/"
+            + "databases/database-id"
+        )
+        with engine.connect() as connection:
+            assert (
+                connection.connection.instance._client.route_to_leader_enabled is True
+            )
+
 
 class ReturningTest(fixtures.TestBase):
     def setUp(self):
