@@ -76,6 +76,9 @@ def delete_stale_test_databases():
     database_pbs = instance.list_databases()
     for database_pb in database_pbs:
         database = Database.from_pb(database_pb, instance)
+        # The emulator does not return a create_time for databases.
+        if database.create_time is None:
+            continue
         create_time = datetime_helpers.to_milliseconds(database_pb.create_time)
         if create_time > cutoff:
             continue
