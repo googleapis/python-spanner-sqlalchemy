@@ -37,7 +37,7 @@ def transaction_sample():
         singer = Singer(id=singer_id, first_name="John", last_name="Doe")
         session.add(singer)
         # Flush the session. This pushes all changes in this session to the
-        # database without committing the curren transaction.
+        # database without committing the current transaction.
         session.flush([singer])
 
         # Verify that we can read this singer from the database during the

@@ -31,6 +31,8 @@ from sqlalchemy import (
     ForeignKeyConstraint,
     Sequence,
     TextClause,
+    func,
+    FetchedValue,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -77,6 +79,7 @@ class Album(Base):
     tracks: Mapped[List["Track"]] = relationship(
         back_populates="album",
         primaryjoin="Album.id == foreign(Track.id)",
+        order_by="Track.track_number",
     )
 
 
@@ -91,6 +94,13 @@ class Track(Base):
     track_number: Mapped[int] = mapped_column(Integer, primary_key=True)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     duration: Mapped[Optional[float]] = mapped_column(Numeric, nullable=True)
+    recorded_at: Mapped[Optional[datetime.datetime]] = mapped_column(
+        DateTime,
+        nullable=True,
+        # TODO: Enable this once 'func.now()' is mapped to CURRENT_TIMESTAMP
+        # server_default=func.now(),
+        server_default=TextClause("CURRENT_TIMESTAMP"),
+    )
     album: Mapped["Album"] = relationship(
         back_populates="tracks",
         foreign_keys=[id],
@@ -130,6 +140,7 @@ class Concert(Base):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     singer: Mapped["Singer"] = relationship(back_populates="concerts")
     venue: Mapped["Venue"] = relationship(back_populates="concerts")
+    ticket_sales: Mapped[List["TicketSale"]] = relationship(back_populates="concert")
 
 
 class TicketSale(Base):
@@ -148,6 +159,7 @@ class TicketSale(Base):
     )
     customer_name: Mapped[str] = mapped_column(String(200), nullable=False)
     seats: Mapped[list[str]] = mapped_column(ARRAY(String(20)), nullable=False)
+    concert: Mapped["Concert"] = relationship(back_populates="ticket_sales")
     venue_code: Mapped[str] = mapped_column(String(10), ForeignKey("venues.code"))
     start_time: Mapped[Optional[datetime.datetime]] = mapped_column(
         DateTime, nullable=False
