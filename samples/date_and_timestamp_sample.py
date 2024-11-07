@@ -12,17 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 import uuid
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from sample_helper import run_sample
-from model import Singer, Album, Track
+from model import Singer, Concert, Venue
 
-# Shows how to insert data using SQLAlchemy, including relationships that are
-# defined both as foreign keys and as interleaved tables.
-def insert_data():
+
+# Shows how to map and use the DATE and TIMESTAMP data types in Spanner.
+def date_and_timestamp_sample():
     engine = create_engine(
         "spanner:///projects/sample-project/"
         "instances/sample-instance/"
@@ -30,44 +31,34 @@ def insert_data():
         echo=True,
     )
     with Session(engine) as session:
+        # Singer has a property birthdate, which is mapped to a DATE column.
+        # Use the datetime.date type for this.
         singer = Singer(
             id=str(uuid.uuid4()),
             first_name="John",
-            last_name="Smith",
-            albums=[
-                Album(
-                    id=str(uuid.uuid4()),
-                    title="Rainforest",
-                    tracks=[
-                        # Track is INTERLEAVED IN PARENT Album, but can be treated
-                        # as a normal relationship in SQLAlchemy.
-                        Track(track_number=1, title="Green"),
-                        Track(track_number=2, title="Blue"),
-                        Track(track_number=3, title="Yellow"),
-                    ],
-                ),
-                Album(
-                    id=str(uuid.uuid4()),
-                    title="Butterflies",
-                    tracks=[
-                        Track(track_number=1, title="Purple"),
-                        Track(track_number=2, title="Cyan"),
-                        Track(track_number=3, title="Mauve"),
-                    ],
-                ),
-            ],
+            last_name="Doe",
+            birthdate=datetime.date(1979, 10, 14),
         )
-        session.add(singer)
+        venue = Venue(code="CH", name="Concert Hall", active=True)
+        # Concert has a property `start_time`, which is mapped to a TIMESTAMP
+        # column. Use the datetime.datetime type for this.
+        concert = Concert(
+            venue=venue,
+            start_time=datetime.datetime(2024, 11, 7, 19, 30, 0),
+            singer=singer,
+            title="John Doe - Live in Concert Hall",
+        )
+        session.add_all([singer, venue, concert])
         session.commit()
 
         # Use AUTOCOMMIT for sessions that only read. This is more
         # efficient than using a read/write transaction to only read.
         session.connection(execution_options={"isolation_level": "AUTOCOMMIT"})
         print(
-            f"Inserted singer {singer.full_name} with {len(singer.albums)} "
-            f"albums successfully"
+            f"{singer.full_name}, born on {singer.birthdate}, has planned "
+            f"a concert that starts on {concert.start_time} in {venue.name}."
         )
 
 
 if __name__ == "__main__":
-    run_sample(insert_data)
+    run_sample(date_and_timestamp_sample)
