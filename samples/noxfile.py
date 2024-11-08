@@ -23,6 +23,41 @@ def hello_world(session):
 
 
 @nox.session()
+def bit_reversed_sequence(session):
+    _sample(session)
+
+
+@nox.session()
+def date_and_timestamp(session):
+    _sample(session)
+
+
+@nox.session()
+def default_column_value(session):
+    _sample(session)
+
+
+@nox.session()
+def generated_column(session):
+    _sample(session)
+
+
+@nox.session()
+def insert_data(session):
+    _sample(session)
+
+
+@nox.session()
+def interleaved_table(session):
+    _sample(session)
+
+
+@nox.session()
+def transaction(session):
+    _sample(session)
+
+
+@nox.session()
 def _all_samples(session):
     _sample(session)
 
