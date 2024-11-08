@@ -286,6 +286,8 @@ def system(session):
 
     session.run("py.test", "--quiet", os.path.join("test", "system"), *session.posargs)
 
+    session.run("python", "drop_test_database.py")
+
 
 @nox.session(python=DEFAULT_PYTHON_VERSION)
 def unit(session):
