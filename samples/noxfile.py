@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from os import listdir
+from os.path import isfile, join
 
 import nox
 
@@ -21,9 +23,8 @@ def hello_world(session):
 
 
 @nox.session()
-def create_tables(session):
+def _all_samples(session):
     _sample(session)
-
 
 def _sample(session):
     session.install("testcontainers")
@@ -33,4 +34,9 @@ def _sample(session):
         "git+https://github.com/googleapis/python-spanner.git#egg=google-cloud-spanner"
     )
     session.install("../.")
-    session.run("python", session.name + "_sample.py")
+    if session.name == "_all_samples":
+        files = [f for f in listdir(".") if isfile(join(".", f)) and f.endswith("_sample.py")]
+        for file in files:
+            session.run("python", file)
+    else:
+        session.run("python", session.name + "_sample.py")
