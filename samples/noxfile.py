@@ -26,6 +26,7 @@ def hello_world(session):
 def _all_samples(session):
     _sample(session)
 
+
 def _sample(session):
     session.install("testcontainers")
     session.install("sqlalchemy")
@@ -35,7 +36,9 @@ def _sample(session):
     )
     session.install("../.")
     if session.name == "_all_samples":
-        files = [f for f in listdir(".") if isfile(join(".", f)) and f.endswith("_sample.py")]
+        files = [
+            f for f in listdir(".") if isfile(join(".", f)) and f.endswith("_sample.py")
+        ]
         for file in files:
             session.run("python", file)
     else:
