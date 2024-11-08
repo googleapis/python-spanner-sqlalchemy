@@ -61,7 +61,7 @@ During setup the dialect will be registered with entry points.
 Samples
 -------------
 
-The `samples directory <https://github.com/googleapis/python-spanner-sqlalchemy/blob/-/samples>`__
+The `samples directory <https://github.com/googleapis/python-spanner-sqlalchemy/blob/-/samples/README.md>`__
 contains multiple examples for how to configure and use common Spanner features.
 
 
