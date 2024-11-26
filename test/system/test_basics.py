@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Optional, List
 
 from sqlalchemy import (
     text,
@@ -21,10 +22,13 @@ from sqlalchemy import (
     String,
     Index,
     MetaData,
-    Boolean,
+    Boolean, ARRAY,
 )
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
 from sqlalchemy.testing import eq_
 from sqlalchemy.testing.plugin.plugin_base import fixtures
+
+from samples.conftest import connection
 
 
 class TestBasics(fixtures.TablesTest):
@@ -74,3 +78,27 @@ class TestBasics(fixtures.TablesTest):
         dialect_options = index.dialect_options["spanner"]
         eq_(1, len(dialect_options["storing"]))
         eq_("alternative_name", dialect_options["storing"][0])
+
+    def test_table_name_overlapping_with_system_table(self, connection):
+        class Base(DeclarativeBase):
+            pass
+
+        class Role(Base):
+            __tablename__ = "roles"
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            name: Mapped[str] = mapped_column(String(100), nullable=True)
+            type: Mapped[str] = mapped_column(String(100), nullable=True)
+            description: Mapped[Optional[str]] = mapped_column(String(512))
+
+        engine = connection.engine
+        Base.metadata.create_all(engine)
+
+        with Session(engine) as session:
+            role = Role(
+                id=1,
+                name="Test",
+                type="Test",
+                description="Test",
+            )
+            session.add(role)
+            session.commit()
