@@ -11,8 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Optional, List
 
+from typing import Optional
 from sqlalchemy import (
     text,
     Table,
@@ -22,13 +22,11 @@ from sqlalchemy import (
     String,
     Index,
     MetaData,
-    Boolean, ARRAY,
+    Boolean,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
 from sqlalchemy.testing import eq_
 from sqlalchemy.testing.plugin.plugin_base import fixtures
-
-from samples.conftest import connection
 
 
 class TestBasics(fixtures.TablesTest):
