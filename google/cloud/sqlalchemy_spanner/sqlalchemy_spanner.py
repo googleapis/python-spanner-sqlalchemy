@@ -85,8 +85,6 @@ _type_map = {
     "DATE": types.DATE,
     "DATETIME": types.DATETIME,
     "FLOAT32": types.REAL,
-    # Note: FLOAT64 was mapped to Float when Spanner only supported FLOAT64
-    #       This should however rather have been types.Double.
     "FLOAT64": types.Float,
     "INT64": types.BIGINT,
     "NUMERIC": types.NUMERIC(precision=38, scale=9),
@@ -106,7 +104,6 @@ _type_map_inv = {
     types.DATETIME: "DATETIME",
     types.REAL: "FLOAT32",
     types.Float: "FLOAT64",
-    types.DOUBLE: "FLOAT64",
     types.BIGINT: "INT64",
     types.DECIMAL: "NUMERIC",
     types.String: "STRING",
