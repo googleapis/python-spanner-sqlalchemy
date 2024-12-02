@@ -15,15 +15,25 @@
 from google.cloud.spanner_admin_database_v1 import UpdateDatabaseDdlRequest
 from sqlalchemy import create_engine, select, MetaData, Table, Column, Integer, String
 from sqlalchemy.orm import Session
-from sqlalchemy.testing import eq_, is_instance_of, is_not_none, is_none, \
-    is_false, is_true
+from sqlalchemy.testing import (
+    eq_,
+    is_instance_of,
+    is_not_none,
+    is_none,
+    is_false,
+    is_true,
+)
 from google.cloud.spanner_v1 import (
     FixedSizePool,
     BatchCreateSessionsRequest,
     ExecuteSqlRequest,
     ResultSet,
-    PingingPool, ResultSetStats, BeginTransactionRequest,
-    ExecuteBatchDmlRequest, CommitRequest, TypeCode,
+    PingingPool,
+    ResultSetStats,
+    BeginTransactionRequest,
+    ExecuteBatchDmlRequest,
+    CommitRequest,
+    TypeCode,
 )
 from test.mockserver_tests.mock_server_test_base import (
     MockServerTestBase,

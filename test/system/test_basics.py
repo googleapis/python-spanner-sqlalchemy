@@ -21,7 +21,8 @@ from sqlalchemy import (
     String,
     Index,
     MetaData,
-    Boolean, BIGINT,
+    Boolean,
+    BIGINT,
 )
 from sqlalchemy.orm import Session, DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.types import REAL
@@ -103,6 +104,8 @@ class TestBasics(fixtures.TablesTest):
 
         engine = connection.engine
         with Session(engine) as session:
-            number = Number(number=1, name="One", alternative_name="Uno", prime=False, ln=0.0)
+            number = Number(
+                number=1, name="One", alternative_name="Uno", prime=False, ln=0.0
+            )
             session.add(number)
             session.commit()
