@@ -35,6 +35,19 @@ def add_result(sql: str, result: ResultSet):
     MockServerTestBase.spanner_service.mock_spanner.add_result(sql, result)
 
 
+def add_update_count(sql: str, count: int):
+    result = result_set.ResultSet(
+        dict(
+            stats=result_set.ResultSetStats(
+                dict(
+                    row_count_exact=count,
+                )
+            ),
+        )
+    )
+    add_result(sql, result)
+
+
 def add_select1_result():
     result = result_set.ResultSet(
         dict(
