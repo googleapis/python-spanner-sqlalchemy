@@ -40,35 +40,41 @@ class TestReadOnlyTransaction(MockServerTestBase):
             connect_args={"client": self.client, "pool": FixedSizePool(size=10)},
         )
 
-        with Session(engine.execution_options(read_only=True)) as session:
-            # Execute two queries in a read-only transaction.
-            session.scalars(select(Singer)).all()
-            session.scalars(select(Singer)).all()
+        for i in range(2):
+            with Session(engine.execution_options(read_only=True)) as session:
+                # Execute two queries in a read-only transaction.
+                session.scalars(select(Singer)).all()
+                session.scalars(select(Singer)).all()
 
         # Verify the requests that we got.
         requests = self.spanner_service.requests
-        eq_(5, len(requests))
+        eq_(9, len(requests))
         is_instance_of(requests[0], BatchCreateSessionsRequest)
         # We should get rid of this extra round-trip for GetSession....
         is_instance_of(requests[1], GetSessionRequest)
         is_instance_of(requests[2], BeginTransactionRequest)
         is_instance_of(requests[3], ExecuteSqlRequest)
         is_instance_of(requests[4], ExecuteSqlRequest)
+        is_instance_of(requests[5], GetSessionRequest)
+        is_instance_of(requests[6], BeginTransactionRequest)
+        is_instance_of(requests[7], ExecuteSqlRequest)
+        is_instance_of(requests[8], ExecuteSqlRequest)
         # Verify that the transaction is a read-only transaction.
-        begin_request: BeginTransactionRequest = requests[2]
-        eq_(
-            TransactionOptions(
-                dict(
-                    read_only=TransactionOptions.ReadOnly(
-                        dict(
-                            strong=True,
-                            return_read_timestamp=True,
+        for index in [2, 6]:
+            begin_request: BeginTransactionRequest = requests[index]
+            eq_(
+                TransactionOptions(
+                    dict(
+                        read_only=TransactionOptions.ReadOnly(
+                            dict(
+                                strong=True,
+                                return_read_timestamp=True,
+                            )
                         )
                     )
-                )
-            ),
-            begin_request.options,
-        )
+                ),
+                begin_request.options,
+            )
 
 
 def add_singer_query_result(sql: str):
