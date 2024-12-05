@@ -12,8 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 from google.cloud.spanner_admin_database_v1 import UpdateDatabaseDdlRequest
-from sqlalchemy import create_engine, select, MetaData, Table, Column, Integer, String
+from sqlalchemy import (
+    create_engine,
+    select,
+    MetaData,
+    Table,
+    Column,
+    Integer,
+    String,
+    func,
+)
 from sqlalchemy.testing import eq_, is_instance_of
 from google.cloud.spanner_v1 import (
     FixedSizePool,
@@ -21,11 +31,13 @@ from google.cloud.spanner_v1 import (
     ExecuteSqlRequest,
     ResultSet,
     PingingPool,
+    TypeCode,
 )
 from test.mockserver_tests.mock_server_test_base import (
     MockServerTestBase,
     add_select1_result,
     add_result,
+    add_single_result,
 )
 
 
@@ -58,6 +70,25 @@ class TestBasics(MockServerTestBase):
         ) as connection:
             results = connection.execute(select(1)).fetchall()
             self.verify_select1(results)
+
+    def test_sqlalchemy_select_now(self):
+        now = datetime.datetime.now(datetime.UTC)
+        iso_now = now.isoformat().replace("+00:00", "Z")
+        add_single_result(
+            "SELECT current_timestamp AS now_1",
+            "now_1",
+            TypeCode.TIMESTAMP,
+            [(iso_now,)],
+        )
+        engine = create_engine(
+            "spanner:///projects/p/instances/i/databases/d",
+            connect_args={"client": self.client, "pool": PingingPool(size=10)},
+        )
+        with engine.connect().execution_options(
+            isolation_level="AUTOCOMMIT"
+        ) as connection:
+            spanner_now = connection.execute(select(func.now())).fetchone()[0]
+            eq_(spanner_now.timestamp(), now.timestamp())
 
     def test_create_table(self):
         add_result(
