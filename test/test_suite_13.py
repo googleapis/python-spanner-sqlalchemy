@@ -27,7 +27,7 @@ from unittest import mock
 from google.cloud.spanner_v1 import RequestOptions, Client
 
 import sqlalchemy
-from sqlalchemy import create_engine, literal, FLOAT
+from sqlalchemy import create_engine
 from sqlalchemy import inspect
 from sqlalchemy import testing
 from sqlalchemy import ForeignKey
@@ -52,7 +52,6 @@ from sqlalchemy import Boolean
 from sqlalchemy import Float
 from sqlalchemy import LargeBinary
 from sqlalchemy import String
-from sqlalchemy.sql.expression import cast
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relation
 from sqlalchemy.orm import Session
