@@ -48,19 +48,16 @@ class TestReadOnlyTransaction(MockServerTestBase):
 
         # Verify the requests that we got.
         requests = self.spanner_service.requests
-        eq_(9, len(requests))
+        eq_(7, len(requests))
         is_instance_of(requests[0], BatchCreateSessionsRequest)
-        # We should get rid of this extra round-trip for GetSession....
-        is_instance_of(requests[1], GetSessionRequest)
-        is_instance_of(requests[2], BeginTransactionRequest)
+        is_instance_of(requests[1], BeginTransactionRequest)
+        is_instance_of(requests[2], ExecuteSqlRequest)
         is_instance_of(requests[3], ExecuteSqlRequest)
-        is_instance_of(requests[4], ExecuteSqlRequest)
-        is_instance_of(requests[5], GetSessionRequest)
-        is_instance_of(requests[6], BeginTransactionRequest)
-        is_instance_of(requests[7], ExecuteSqlRequest)
-        is_instance_of(requests[8], ExecuteSqlRequest)
+        is_instance_of(requests[4], BeginTransactionRequest)
+        is_instance_of(requests[5], ExecuteSqlRequest)
+        is_instance_of(requests[6], ExecuteSqlRequest)
         # Verify that the transaction is a read-only transaction.
-        for index in [2, 6]:
+        for index in [1, 4]:
             begin_request: BeginTransactionRequest = requests[index]
             eq_(
                 TransactionOptions(
