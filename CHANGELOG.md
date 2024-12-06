@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.8.0](https://github.com/googleapis/python-spanner-sqlalchemy/compare/v1.7.0...v1.8.0) (2024-12-06)
+
+
+### Features
+
+* Add helper function for insert-or-update ([#526](https://github.com/googleapis/python-spanner-sqlalchemy/issues/526)) ([6ff12ec](https://github.com/googleapis/python-spanner-sqlalchemy/commit/6ff12ecf6f1883525a901df4b4103b45ca95abed)), closes [#391](https://github.com/googleapis/python-spanner-sqlalchemy/issues/391)
+* Support dml returning ([#335](https://github.com/googleapis/python-spanner-sqlalchemy/issues/335)) ([7db3f37](https://github.com/googleapis/python-spanner-sqlalchemy/commit/7db3f374510673d6521b16ca44d21043069d6ee7))
+
+
+### Bug Fixes
+
+* Add `existing_nullable` usage to `visit_column_type` ([#329](https://github.com/googleapis/python-spanner-sqlalchemy/issues/329)) ([273f03b](https://github.com/googleapis/python-spanner-sqlalchemy/commit/273f03bdf27c12317712a9939eedd25bd88c475a))
+* Support storing columns for indices ([#485](https://github.com/googleapis/python-spanner-sqlalchemy/issues/485)) ([93579c8](https://github.com/googleapis/python-spanner-sqlalchemy/commit/93579c8d6298dd9a07b2ca2b9c451036e33d2e6f))
+* Support THEN RETURN for insert, update, delete ([#503](https://github.com/googleapis/python-spanner-sqlalchemy/issues/503)) ([ac64472](https://github.com/googleapis/python-spanner-sqlalchemy/commit/ac644726665213f234ce8ec4dea715c820a670e9))
+
+
+### Dependencies
+
+* Add nh3 ([#481](https://github.com/googleapis/python-spanner-sqlalchemy/issues/481)) ([3c2bcf9](https://github.com/googleapis/python-spanner-sqlalchemy/commit/3c2bcf9901ce132a6d5d5d3b1ad3608526a378b5))
+* Add proto plus ([#482](https://github.com/googleapis/python-spanner-sqlalchemy/issues/482)) ([8663453](https://github.com/googleapis/python-spanner-sqlalchemy/commit/86634531793cf01b46cefe87f74375ee59060638))
+* Update all deps ([#413](https://github.com/googleapis/python-spanner-sqlalchemy/issues/413)) ([25d9d2c](https://github.com/googleapis/python-spanner-sqlalchemy/commit/25d9d2c32638eb3e551921eecea435452c548bcb))
+
+
+### Documentation
+
+* Add samples for Spanner-specific features ([#492](https://github.com/googleapis/python-spanner-sqlalchemy/issues/492)) ([a6ed382](https://github.com/googleapis/python-spanner-sqlalchemy/commit/a6ed382be2a7105f9e8b2f855df3919e8c6750c9))
+* Fix readme typo ([#487](https://github.com/googleapis/python-spanner-sqlalchemy/issues/487)) ([b452b4f](https://github.com/googleapis/python-spanner-sqlalchemy/commit/b452b4f73d200b99fd800862c88304b67aa035c5))
+
 ## [1.7.0](https://github.com/googleapis/python-spanner-sqlalchemy/compare/v1.6.2...v1.7.0) (2024-02-07)
 
 
