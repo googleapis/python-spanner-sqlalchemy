@@ -27,7 +27,7 @@ from unittest import mock
 from google.cloud.spanner_v1 import RequestOptions, Client
 
 import sqlalchemy
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, literal, FLOAT
 from sqlalchemy import inspect
 from sqlalchemy import testing
 from sqlalchemy import ForeignKey
@@ -52,6 +52,7 @@ from sqlalchemy import Boolean
 from sqlalchemy import Float
 from sqlalchemy import LargeBinary
 from sqlalchemy import String
+from sqlalchemy.sql.expression import cast
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relation
 from sqlalchemy.orm import Session
@@ -1299,6 +1300,13 @@ class NumericTest(_NumericTest):
             [15.7563],
             filter_=lambda n: n is not None and round(n, 5) or None,
         )
+
+    @testing.requires.literal_float_coercion
+    def test_float_coerce_round_trip(self, connection):
+        expr = 15.7563
+
+        val = connection.scalar(select(cast(literal(expr), FLOAT)))
+        eq_(val, expr)
 
     @requires.precision_numerics_general
     def test_precision_decimal(self):
