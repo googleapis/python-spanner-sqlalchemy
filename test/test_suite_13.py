@@ -1301,7 +1301,6 @@ class NumericTest(_NumericTest):
             filter_=lambda n: n is not None and round(n, 5) or None,
         )
 
-    @testing.requires.literal_float_coercion
     def test_float_coerce_round_trip(self, connection):
         expr = 15.7563
 
