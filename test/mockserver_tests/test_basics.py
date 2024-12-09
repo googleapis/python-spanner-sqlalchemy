@@ -71,7 +71,9 @@ class TestBasics(MockServerTestBase):
         with engine.connect().execution_options(
             isolation_level="AUTOCOMMIT"
         ) as connection:
-            results = connection.execute(select(1)).fetchall()
+            results = connection.execute(
+                select(1).execution_options(request_tag="my-tag")
+            ).fetchall()
             self.verify_select1(results)
 
     def test_sqlalchemy_select_now(self):
