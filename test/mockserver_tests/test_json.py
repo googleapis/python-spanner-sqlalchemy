@@ -21,7 +21,6 @@ from google.cloud.spanner_v1 import (
     BatchCreateSessionsRequest,
     ExecuteSqlRequest,
     CommitRequest,
-    GetSessionRequest,
     BeginTransactionRequest,
     TypeCode,
     JsonObject,
@@ -95,14 +94,12 @@ LIMIT 1
 
         # Verify the requests that we got.
         requests = self.spanner_service.requests
-        eq_(5, len(requests))
+        eq_(4, len(requests))
         is_instance_of(requests[0], BatchCreateSessionsRequest)
-        # We should get rid of this extra round-trip for GetSession....
-        is_instance_of(requests[1], GetSessionRequest)
-        is_instance_of(requests[2], BeginTransactionRequest)
-        is_instance_of(requests[3], ExecuteSqlRequest)
-        is_instance_of(requests[4], CommitRequest)
-        request: ExecuteSqlRequest = requests[3]
+        is_instance_of(requests[1], BeginTransactionRequest)
+        is_instance_of(requests[2], ExecuteSqlRequest)
+        is_instance_of(requests[3], CommitRequest)
+        request: ExecuteSqlRequest = requests[2]
         eq_(3, len(request.params))
         eq_("1", request.params["a0"])
         eq_("Test", request.params["a1"])
