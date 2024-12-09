@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from google.cloud.spanner_dbapi.parsed_statement import AutocommitDmlMode
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.testing.plugin.plugin_base import fixtures
 import google.cloud.spanner_v1.types.type as spanner_type
@@ -21,6 +22,7 @@ from google.cloud.spanner_v1 import (
     Client,
     ResultSet,
     PingingPool,
+    TypeCode,
 )
 from google.cloud.spanner_v1.database import Database
 from google.cloud.spanner_v1.instance import Instance
@@ -35,7 +37,24 @@ def add_result(sql: str, result: ResultSet):
     MockServerTestBase.spanner_service.mock_spanner.add_result(sql, result)
 
 
+def add_update_count(
+    sql: str, count: int, dml_mode: AutocommitDmlMode = AutocommitDmlMode.TRANSACTIONAL
+):
+    if dml_mode == AutocommitDmlMode.PARTITIONED_NON_ATOMIC:
+        stats = dict(row_count_lower_bound=count)
+    else:
+        stats = dict(row_count_exact=count)
+    result = result_set.ResultSet(dict(stats=result_set.ResultSetStats(stats)))
+    add_result(sql, result)
+
+
 def add_select1_result():
+    add_single_result("select 1", "c", TypeCode.INT64, [("1",)])
+
+
+def add_single_result(
+    sql: str, column_name: str, type_code: spanner_type.TypeCode, row
+):
     result = result_set.ResultSet(
         dict(
             metadata=result_set.ResultSetMetadata(
@@ -45,10 +64,8 @@ def add_select1_result():
                             fields=[
                                 spanner_type.StructType.Field(
                                     dict(
-                                        name="c",
-                                        type=spanner_type.Type(
-                                            dict(code=spanner_type.TypeCode.INT64)
-                                        ),
+                                        name=column_name,
+                                        type=spanner_type.Type(dict(code=type_code)),
                                     )
                                 )
                             ]
@@ -58,8 +75,8 @@ def add_select1_result():
             ),
         )
     )
-    result.rows.extend(["1"])
-    MockServerTestBase.spanner_service.mock_spanner.add_result("select 1", result)
+    result.rows.extend(row)
+    MockServerTestBase.spanner_service.mock_spanner.add_result(sql, result)
 
 
 class MockServerTestBase(fixtures.TestBase):
