@@ -33,7 +33,7 @@ import google.cloud.spanner_v1.types.result_set as result_set
 
 class TestStaleReads(MockServerTestBase):
     def test_request_tag(self):
-        from test.mockserver_tests.stale_read_model import Singer
+        from test.mockserver_tests.tags_model import Singer
 
         add_singer_query_result("SELECT singers.id, singers.name \n" + "FROM singers")
         engine = create_engine(
@@ -62,7 +62,7 @@ class TestStaleReads(MockServerTestBase):
         eq_("my-tag-2", requests[3].request_options.request_tag)
 
     def test_transaction_tag(self):
-        from test.mockserver_tests.stale_read_model import Singer
+        from test.mockserver_tests.tags_model import Singer
 
         add_singer_query_result("SELECT singers.id, singers.name\n" + "FROM singers")
         add_update_count("INSERT INTO singers (id, name) VALUES (@a0, @a1)", 1)
