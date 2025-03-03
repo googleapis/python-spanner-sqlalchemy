@@ -410,7 +410,9 @@ class SpannerDDLCompiler(DDLCompiler):
             colspec += " NOT NULL"
 
         has_identity = (
-            column.identity is not None and self.dialect.supports_identity_columns
+            hasattr(column, "identity")
+            and column.identity is not None
+            and self.dialect.supports_identity_columns
         )
         default = self.get_column_default_string(column)
 
