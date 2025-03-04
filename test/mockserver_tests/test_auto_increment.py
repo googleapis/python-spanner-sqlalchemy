@@ -26,6 +26,7 @@ from google.cloud.spanner_v1 import (
 from test.mockserver_tests.mock_server_test_base import (
     MockServerTestBase,
     add_result,
+    add_update_count,
 )
 from google.cloud.spanner_admin_database_v1 import UpdateDatabaseDdlRequest
 import google.cloud.spanner_v1.types.type as spanner_type
@@ -146,6 +147,26 @@ LIMIT 1
         is_instance_of(requests[1], BeginTransactionRequest)
         is_instance_of(requests[2], ExecuteSqlRequest)
         is_instance_of(requests[3], CommitRequest)
+
+    def test_insert_row_with_pk_value(self):
+        from test.mockserver_tests.auto_increment_model import Singer
+
+        # SQLAlchemy should not use a THEN RETURN clause when a value for the
+        # primary key has been set on the model.
+        add_update_count("INSERT INTO singers (id, name) VALUES (@a0, @a1)", 1)
+        engine = create_engine(
+            "spanner:///projects/p/instances/i/databases/d",
+            connect_args={"client": self.client, "pool": FixedSizePool(size=10)},
+        )
+
+        with Session(engine) as session:
+            # Manually specify a value for the primary key.
+            singer = Singer(id=1, name="Test")
+            session.add(singer)
+            # Flush the session to send the insert statement to the database.
+            session.flush()
+            eq_(1, singer.id)
+            session.commit()
 
     def add_insert_result(self, sql):
         result = result_set.ResultSet(
