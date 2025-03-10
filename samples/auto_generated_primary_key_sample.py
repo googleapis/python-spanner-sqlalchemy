@@ -12,14 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import datetime
-import uuid
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from sample_helper import run_sample
-from model import Singer, Concert, Venue, TicketSale
+from model import Venue
 
 
 # Shows how to use an IDENTITY column for primary key generation. IDENTITY
@@ -44,6 +41,14 @@ def auto_generated_primary_key_sample():
         "databases/sample-database",
         echo=True,
     )
+
+    # Add a line like the following to use AUTO_INCREMENT instead of IDENTITY
+    # when creating tables in SQLAlchemy.
+    # https://cloud.google.com/spanner/docs/primary-key-default-value#serial-auto-increment
+
+    # engine.dialect.use_auto_increment = True
+    # Base.metadata.create_all(engine)
+
     with Session(engine) as session:
         # Venue automatically generates a primary key value using an IDENTITY
         # column. We therefore do not need to specify a primary key value when
