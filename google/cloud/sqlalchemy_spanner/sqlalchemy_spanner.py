@@ -233,6 +233,10 @@ class SpannerSQLCompiler(SQLCompiler):
 
     compound_keywords = _compound_keywords
 
+    def __init__(self, *args, **kwargs):
+        self.tablealiases = {}
+        super().__init__(*args, **kwargs)
+
     def get_from_hint_text(self, _, text):
         """Return a hint text.
 
@@ -378,8 +382,10 @@ class SpannerSQLCompiler(SQLCompiler):
         return text
 
     def returning_clause(self, stmt, returning_cols, **kw):
+        # Set include_table=False because although table names are allowed in
+        # RETURNING clauses, schema names are not.
         columns = [
-            self._label_select_column(None, c, True, False, {})
+            self._label_select_column(None, c, True, False, {}, include_table=False)
             for c in expression._select_iterables(returning_cols)
         ]
 
@@ -390,6 +396,83 @@ class SpannerSQLCompiler(SQLCompiler):
         return " GET_NEXT_SEQUENCE_VALUE(SEQUENCE %s)" % self.preparer.format_sequence(
             seq
         )
+
+    def visit_table(self, table, spanner_aliased=False, iscrud=False, **kwargs):
+        """Produces the table name.
+
+        Schema names are not allowed in Spanner SELECT statements. We
+        need to avoid generating SQL like
+
+        SELECT schema.tbl.id
+        FROM schema.tbl
+
+        To do so, we alias the table in order to produce SQL like:
+
+        SELECT tbl_1.id, tbl_1.col
+        FROM schema.tbl AS tbl_1
+
+        And do similar for UPDATE and DELETE statements.
+
+        We don't need to correct INSERT statements, which is fortunate
+        because INSERT statements actually do not currently result in
+        calls to `visit_table`.
+
+        This closely mirrors the mssql dialect which also avoids
+        schema-qualified columns in SELECTs, although the behaviour is
+        currently behind a deprecated 'legacy_schema_aliasing' flag.
+        """
+        if spanner_aliased is table or self.isinsert:
+            return super().visit_table(table, **kwargs)
+
+        # alias schema-qualified tables
+        alias = self._schema_aliased_table(table)
+        if alias is not None:
+            return self.process(alias, spanner_aliased=table, **kwargs)
+        else:
+            return super().visit_table(table, **kwargs)
+
+    def visit_alias(self, alias, **kw):
+        """Produces alias statements."""
+        # translate for schema-qualified table aliases
+        kw["spanner_aliased"] = alias.element
+        return super().visit_alias(alias, **kw)
+
+    def visit_column(self, column, add_to_result_map=None, **kw):
+        """Produces column expressions.
+
+        In tandem with visit_table, replaces schema-qualified column
+        names with column names qualified against an alias.
+        """
+        if column.table is not None and not self.isinsert or self.is_subquery():
+            # translate for schema-qualified table aliases
+            t = self._schema_aliased_table(column.table)
+            if t is not None:
+                converted = elements._corresponding_column_or_error(t, column)
+                if add_to_result_map is not None:
+                    add_to_result_map(
+                        column.name,
+                        column.name,
+                        (column, column.name, column.key),
+                        column.type,
+                    )
+
+                return super().visit_column(converted, **kw)
+
+        return super().visit_column(column, add_to_result_map=add_to_result_map, **kw)
+
+    def _schema_aliased_table(self, table):
+        """Creates an alias for the table if it is schema-qualified.
+
+        If the table is schema-qualified, returns an alias for the
+        table and caches the alias for future references to the
+        table. If the table is not schema-qualified, returns None.
+        """
+        if getattr(table, "schema", None) is not None:
+            if table not in self.tablealiases:
+                self.tablealiases[table] = table.alias()
+            return self.tablealiases[table]
+        else:
+            return None
 
 
 class SpannerDDLCompiler(DDLCompiler):
