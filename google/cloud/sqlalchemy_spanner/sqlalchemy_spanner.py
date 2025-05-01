@@ -382,10 +382,11 @@ class SpannerSQLCompiler(SQLCompiler):
         return text
 
     def returning_clause(self, stmt, returning_cols, **kw):
-        # Set include_table=False because although table names are allowed in
-        # RETURNING clauses, schema names are not.
+        # Set the spanner_is_returning flag which is passed to visit_column.
         columns = [
-            self._label_select_column(None, c, True, False, {}, include_table=False)
+            self._label_select_column(
+                None, c, True, False, {"spanner_is_returning": True}
+            )
             for c in expression._select_iterables(returning_cols)
         ]
 
@@ -413,10 +414,6 @@ class SpannerSQLCompiler(SQLCompiler):
 
         And do similar for UPDATE and DELETE statements.
 
-        We don't need to correct INSERT statements, which is fortunate
-        because INSERT statements actually do not currently result in
-        calls to `visit_table`.
-
         This closely mirrors the mssql dialect which also avoids
         schema-qualified columns in SELECTs, although the behaviour is
         currently behind a deprecated 'legacy_schema_aliasing' flag.
@@ -437,7 +434,9 @@ class SpannerSQLCompiler(SQLCompiler):
         kw["spanner_aliased"] = alias.element
         return super().visit_alias(alias, **kw)
 
-    def visit_column(self, column, add_to_result_map=None, **kw):
+    def visit_column(
+        self, column, add_to_result_map=None, spanner_is_returning=False, **kw
+    ):
         """Produces column expressions.
 
         In tandem with visit_table, replaces schema-qualified column
@@ -457,6 +456,21 @@ class SpannerSQLCompiler(SQLCompiler):
                     )
 
                 return super().visit_column(converted, **kw)
+        if spanner_is_returning:
+            # Set include_table=False because although table names are
+            # allowed in RETURNING clauses, schema names are not.  We
+            # can't use the same aliasing trick above that we use with
+            # other statements, because INSERT statements don't result
+            # in visit_table calls and INSERT table names can't be
+            # aliased.  Statements like:
+            #
+            # INSERT INTO table (id, name)
+            # SELECT id, name FROM another_table
+            # THEN RETURN another_table.id
+            #
+            # aren't legal, so the columns remain unambiguous when not
+            # qualified by table name.
+            kw["include_table"] = False
 
         return super().visit_column(column, add_to_result_map=add_to_result_map, **kw)
 
