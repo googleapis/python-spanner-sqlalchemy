@@ -529,9 +529,11 @@ class SpannerDDLCompiler(DDLCompiler):
         return post_cmds
 
     def visit_create_index(
-        self, create, include_schema=False, include_table_schema=True, **kw
+        self, create, include_schema=True, include_table_schema=True, **kw
     ):
-        text = super().visit_create_index(create, True, include_table_schema, **kw)
+        text = super().visit_create_index(
+            create, include_schema, include_table_schema, **kw
+        )
         index = create.element
         if "spanner" in index.dialect_options:
             options = index.dialect_options["spanner"]
