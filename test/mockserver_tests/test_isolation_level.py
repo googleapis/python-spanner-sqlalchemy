@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.testing import eq_, is_instance_of
@@ -143,6 +143,19 @@ class TestIsolationLevel(MockServerTestBase):
             ),
             execute_request.transaction.begin,
         )
+
+    def test_invalid_isolation_level(self):
+        from test.mockserver_tests.isolation_level_model import Singer
+
+        engine = create_engine(
+            "spanner:///projects/p/instances/i/databases/d",
+            connect_args={"client": self.client, "pool": FixedSizePool(size=10)},
+        )
+        with pytest.raises(ValueError):
+            with Session(engine.execution_options(isolation_level="foo")) as session:
+                singer = Singer(name="Test")
+                session.add(singer)
+                session.commit()
 
     def verify_isolation_level(self, level):
         # Verify the requests that we got.

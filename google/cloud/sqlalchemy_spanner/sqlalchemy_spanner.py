@@ -1700,6 +1700,8 @@ LIMIT 1
             return "AUTOCOMMIT"
 
         level = conn.isolation_level
+        if level == TransactionOptions.IsolationLevel.ISOLATION_LEVEL_UNSPECIFIED:
+            level = TransactionOptions.IsolationLevel.SERIALIZABLE
         if isinstance(level, TransactionOptions.IsolationLevel):
             level = self._isolation_level_to_string(level)
 
@@ -1707,11 +1709,17 @@ LIMIT 1
 
     def _string_to_isolation_level(self, name):
         try:
-            return TransactionOptions.IsolationLevel[name.upper().replace(" ", "_")]
+            # SQLAlchemy guarantees that the isolation level string will:
+            # 1. Be all upper case.
+            # 2. Contain spaces instead of underscores.
+            # We change the spaces into underscores to get the enum value.
+            return TransactionOptions.IsolationLevel[name.replace(" ", "_")]
         except KeyError:
-            return TransactionOptions.IsolationLevel.ISOLATION_LEVEL_UNSPECIFIED
+            raise ValueError("Invalid isolation level name '%s'" % name)
 
     def _isolation_level_to_string(self, level):
+        # SQLAlchemy expects isolation level names to contain spaces,
+        # and not underscores, so we remove those before returning.
         return level.name.replace("_", " ")
 
     def do_rollback(self, dbapi_connection):
