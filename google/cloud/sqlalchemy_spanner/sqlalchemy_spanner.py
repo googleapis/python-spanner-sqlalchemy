@@ -24,7 +24,7 @@ from alembic.ddl.base import (
 )
 from google.api_core.client_options import ClientOptions
 from google.auth.credentials import AnonymousCredentials
-from google.cloud.spanner_v1 import Client
+from google.cloud.spanner_v1 import Client, TransactionOptions
 from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy.sql import elements
 from sqlalchemy import ForeignKeyConstraint, types
@@ -648,6 +648,7 @@ class SpannerDialect(DefaultDialect):
     encoding = "utf-8"
     max_identifier_length = 256
     _legacy_binary_type_literal_encoding = "utf-8"
+    _default_isolation_level = "SERIALIZABLE"
 
     execute_sequence_format = list
 
@@ -699,12 +700,11 @@ class SpannerDialect(DefaultDialect):
         Returns:
             str: default isolation level.
         """
-        return "SERIALIZABLE"
+        return self._default_isolation_level
 
     @default_isolation_level.setter
     def default_isolation_level(self, value):
-        """Default isolation level should not be changed."""
-        pass
+        self._default_isolation_level = value
 
     def _check_unicode_returns(self, connection, additional_tests=None):
         """Ensure requests are returning Unicode responses."""
@@ -1551,7 +1551,7 @@ LIMIT 1
                     spanner_dbapi.connection.Connection,
                 ]
             ):
-                Database connection proxy object or the connection iself.
+                Database connection proxy object or the connection itself.
             level (string): Isolation level.
         """
         if isinstance(conn_proxy, spanner_dbapi.Connection):
@@ -1559,7 +1559,12 @@ LIMIT 1
         else:
             conn = conn_proxy.connection
 
-        conn.autocommit = level == "AUTOCOMMIT"
+        if level == "AUTOCOMMIT":
+            conn.autocommit = True
+        else:
+            if isinstance(level, str):
+                level = self._string_to_isolation_level(level)
+            conn.isolation_level = level
 
     def get_isolation_level(self, conn_proxy):
         """Get the connection isolation level.
@@ -1571,7 +1576,7 @@ LIMIT 1
                     spanner_dbapi.connection.Connection,
                 ]
             ):
-                Database connection proxy object or the connection iself.
+                Database connection proxy object or the connection itself.
 
         Returns:
             str: the connection isolation level.
@@ -1581,7 +1586,23 @@ LIMIT 1
         else:
             conn = conn_proxy.connection
 
-        return "AUTOCOMMIT" if conn.autocommit else "SERIALIZABLE"
+        if conn.autocommit:
+            return "AUTOCOMMIT"
+
+        level = conn.isolation_level
+        if isinstance(level, TransactionOptions.IsolationLevel):
+            level = self._isolation_level_to_string(level)
+
+        return level
+
+    def _string_to_isolation_level(self, name):
+        try:
+            return TransactionOptions.IsolationLevel[name.upper().replace(" ", "_")]
+        except KeyError:
+            return TransactionOptions.IsolationLevel.ISOLATION_LEVEL_UNSPECIFIED
+
+    def _isolation_level_to_string(self, level):
+        return level.name.replace("_", " ")
 
     def do_rollback(self, dbapi_connection):
         """

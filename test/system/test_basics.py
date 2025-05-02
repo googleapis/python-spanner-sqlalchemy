@@ -147,7 +147,9 @@ class TestBasics(fixtures.TablesTest):
             session.add(number)
             session.commit()
 
-        with Session(engine) as session:
+        with Session(
+            engine.execution_options(isolation_level="REPEATABLE READ")
+        ) as session:
             user = User(name="Test")
             session.add(user)
             session.commit()
