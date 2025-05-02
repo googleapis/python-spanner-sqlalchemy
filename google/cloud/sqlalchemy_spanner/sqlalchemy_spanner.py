@@ -1314,7 +1314,8 @@ class SpannerDialect(DefaultDialect):
                 AND tc.TABLE_NAME = t.TABLE_NAME
             WHERE {table_filter_query} {table_type_query}
             {schema_filter_query} tc.CONSTRAINT_TYPE = "PRIMARY KEY"
-            ORDER BY tc.table_name ASC, kcu.ordinal_position ASC
+            ORDER BY tc.table_catalog ASC, tc.table_schema ASC,
+                     tc.table_name ASC, kcu.ordinal_position ASC
         """.format(
             table_filter_query=table_filter_query,
             table_type_query=table_type_query,
