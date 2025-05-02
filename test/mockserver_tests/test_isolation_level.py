@@ -31,14 +31,16 @@ from test.mockserver_tests.mock_server_test_base import (
 import google.cloud.spanner_v1.types.type as spanner_type
 import google.cloud.spanner_v1.types.result_set as result_set
 
+ISOLATION_LEVEL_UNSPECIFIED = (
+    TransactionOptions.IsolationLevel.ISOLATION_LEVEL_UNSPECIFIED
+)
+
 
 class TestIsolationLevel(MockServerTestBase):
     def test_default_isolation_level(self):
         from test.mockserver_tests.isolation_level_model import Singer
 
-        self.add_insert_result(
-            "INSERT INTO singers (name) VALUES (@a0) THEN RETURN singers.id"
-        )
+        self.add_insert_result("INSERT INTO singers (name) VALUES (@a0) THEN RETURN id")
         engine = create_engine(
             "spanner:///projects/p/instances/i/databases/d",
             connect_args={"client": self.client, "pool": FixedSizePool(size=10)},
@@ -55,9 +57,7 @@ class TestIsolationLevel(MockServerTestBase):
     def test_engine_isolation_level(self):
         from test.mockserver_tests.isolation_level_model import Singer
 
-        self.add_insert_result(
-            "INSERT INTO singers (name) VALUES (@a0) THEN RETURN singers.id"
-        )
+        self.add_insert_result("INSERT INTO singers (name) VALUES (@a0) THEN RETURN id")
         engine = create_engine(
             "spanner:///projects/p/instances/i/databases/d",
             connect_args={"client": self.client, "pool": FixedSizePool(size=10)},
@@ -73,9 +73,7 @@ class TestIsolationLevel(MockServerTestBase):
     def test_execution_options_isolation_level(self):
         from test.mockserver_tests.isolation_level_model import Singer
 
-        self.add_insert_result(
-            "INSERT INTO singers (name) VALUES (@a0) THEN RETURN singers.id"
-        )
+        self.add_insert_result("INSERT INTO singers (name) VALUES (@a0) THEN RETURN id")
         engine = create_engine(
             "spanner:///projects/p/instances/i/databases/d",
             connect_args={"client": self.client, "pool": FixedSizePool(size=10)},
@@ -92,9 +90,7 @@ class TestIsolationLevel(MockServerTestBase):
     def test_override_engine_isolation_level(self):
         from test.mockserver_tests.isolation_level_model import Singer
 
-        self.add_insert_result(
-            "INSERT INTO singers (name) VALUES (@a0) THEN RETURN singers.id"
-        )
+        self.add_insert_result("INSERT INTO singers (name) VALUES (@a0) THEN RETURN id")
         engine = create_engine(
             "spanner:///projects/p/instances/i/databases/d",
             connect_args={"client": self.client, "pool": FixedSizePool(size=10)},
@@ -108,6 +104,45 @@ class TestIsolationLevel(MockServerTestBase):
             session.add(singer)
             session.commit()
         self.verify_isolation_level(TransactionOptions.IsolationLevel.SERIALIZABLE)
+
+    def test_auto_commit(self):
+        from test.mockserver_tests.isolation_level_model import Singer
+
+        self.add_insert_result("INSERT INTO singers (name) VALUES (@a0) THEN RETURN id")
+        engine = create_engine(
+            "spanner:///projects/p/instances/i/databases/d",
+            connect_args={
+                "client": self.client,
+                "pool": FixedSizePool(size=10),
+                "ignore_transaction_warnings": True,
+            },
+        )
+
+        with Session(
+            engine.execution_options(
+                isolation_level="AUTOCOMMIT", ignore_transaction_warnings=True
+            )
+        ) as session:
+            singer = Singer(name="Test")
+            session.add(singer)
+            session.commit()
+
+        # Verify the requests that we got.
+        requests = self.spanner_service.requests
+        eq_(3, len(requests))
+        is_instance_of(requests[0], BatchCreateSessionsRequest)
+        is_instance_of(requests[1], ExecuteSqlRequest)
+        is_instance_of(requests[2], CommitRequest)
+        execute_request: ExecuteSqlRequest = requests[1]
+        eq_(
+            TransactionOptions(
+                dict(
+                    isolation_level=ISOLATION_LEVEL_UNSPECIFIED,
+                    read_write=TransactionOptions.ReadWrite(),
+                )
+            ),
+            execute_request.transaction.begin,
+        )
 
     def verify_isolation_level(self, level):
         # Verify the requests that we got.
