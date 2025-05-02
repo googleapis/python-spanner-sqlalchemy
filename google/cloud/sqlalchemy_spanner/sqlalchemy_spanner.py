@@ -421,7 +421,9 @@ class SpannerSQLCompiler(SQLCompiler):
         if spanner_aliased is table or self.isinsert:
             return super().visit_table(table, **kwargs)
 
-        # alias schema-qualified tables
+        # Add an alias for schema-qualified tables.
+        # Tables in the default schema are not aliased and follow the
+        # standard SQLAlchemy code path.
         alias = self._schema_aliased_table(table)
         if alias is not None:
             return self.process(alias, spanner_aliased=table, **kwargs)
