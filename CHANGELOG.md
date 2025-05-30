@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.0](https://github.com/googleapis/python-spanner-sqlalchemy/compare/v1.11.1...v1.12.0) (2025-05-30)
+
+
+### Features
+
+* Support multi-row inserts ([#671](https://github.com/googleapis/python-spanner-sqlalchemy/issues/671)) ([f5d94cd](https://github.com/googleapis/python-spanner-sqlalchemy/commit/f5d94cd15cba43684fc584072018ab3bc826f457)), closes [#670](https://github.com/googleapis/python-spanner-sqlalchemy/issues/670)
+
 ## [1.11.1](https://github.com/googleapis/python-spanner-sqlalchemy/compare/v1.11.0...v1.11.1) (2025-05-27)
 
 
