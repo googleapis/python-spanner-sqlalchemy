@@ -221,9 +221,9 @@ grpcio==1.71.0 \
     #   grpc-google-iam-v1
     #   grpc-interceptor
     #   grpcio-status
-grpcio-status==1.71.0 \
-    --hash=sha256:11405fed67b68f406b3f3c7c5ae5104a79d2d309666d10d61b152e91d28fb968 \
-    --hash=sha256:843934ef8c09e3e858952887467f8256aac3910c55f077a359a65b2b3cde3e68
+grpcio-status==1.72.1 \
+    --hash=sha256:627111a87afa920eafb42cc6c50db209d263e07fa51fbb084981ef636566be7b \
+    --hash=sha256:75fb29e1b879e875ff0c37032cbbb4e102c6dce845cdac37904c44ff52cbd8e7
     # via google-api-core
 idna==3.10 \
     --hash=sha256:12f65c9b470abda6dc35cf8e63cc574b1c52b11df2c86030af0ac09b01b13ea9 \
