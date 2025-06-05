@@ -928,8 +928,9 @@ class SpannerDialect(DefaultDialect):
             ),
             url.database,
         )
-
-        options = {"user_agent": f"gl-sqlalchemy-spanner/{sqlalchemy_spanner_version.__version__}"}
+        options = {
+            "user_agent": f"gl-sqlalchemy-spanner/{sqlalchemy_spanner_version.__version__}"
+        }
         connect_opts = url.translate_connect_args()
         if (
             "host" in connect_opts
