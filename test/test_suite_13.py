@@ -1640,6 +1640,24 @@ class UserAgentTest(SpannerSpecificTestBase):
             )
 
 
+class RouteToLeaderEnabledTest(SpannerSpecificTestBase):
+    """
+    Check that SQLAlchemy dialect passes correct
+    route_to_leader_enabled to Client.
+    """
+
+    def test_route_to_leader(self):
+        engine = create_engine(
+            "spanner:///projects/project-id/instances/instance-id/"
+            + "databases/database-id",
+            connect_args={"route_to_leader_enabled": False},
+        )
+        with engine.connect() as connection:
+            assert (
+                connection.connection.instance._client.route_to_leader_enabled is False
+            )
+
+
 class ExecutionOptionsReadOnlyTest(fixtures.TestBase):
     """
     Check that `execution_options()` method correctly
