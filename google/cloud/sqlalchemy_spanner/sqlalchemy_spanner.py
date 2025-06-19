@@ -798,7 +798,7 @@ class SpannerDialect(DefaultDialect):
     supports_sequences = True
     sequences_optional = False
     supports_identity_columns = True
-    supports_native_enum = True
+    supports_native_enum = False
     supports_native_boolean = True
     supports_native_decimal = True
     supports_statement_cache = True
