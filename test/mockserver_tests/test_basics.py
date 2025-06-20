@@ -26,7 +26,8 @@ from sqlalchemy import (
     String,
     func,
     text,
-    BigInteger, Enum,
+    BigInteger,
+    Enum,
 )
 from sqlalchemy.orm import Session, DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.testing import eq_, is_instance_of
@@ -120,7 +121,7 @@ LIMIT 1
             metadata,
             Column("user_id", Integer, primary_key=True),
             Column("user_name", String(16), nullable=False),
-            Column("status", Enum("pending_activation", "active", "disabled"))
+            Column("status", Enum("pending_activation", "active", "disabled")),
         )
         metadata.create_all(engine)
         requests = self.database_admin_service.requests
