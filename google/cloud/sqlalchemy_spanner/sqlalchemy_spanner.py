@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import base64
-
 import re
-
+import sqlalchemy
 from alembic.ddl.base import (
     ColumnNullable,
     ColumnType,
@@ -25,14 +24,16 @@ from alembic.ddl.base import (
 from google.api_core.client_options import ClientOptions
 from google.auth.credentials import AnonymousCredentials
 from google.cloud.spanner_v1 import Client, TransactionOptions
-from sqlalchemy.exc import NoSuchTableError
-from sqlalchemy.sql import elements
+from google.cloud.spanner_v1.data_types import JsonObject
 from sqlalchemy import ForeignKeyConstraint, types, TypeDecorator, PickleType
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.engine.default import DefaultDialect, DefaultExecutionContext
 from sqlalchemy.event import listens_for
+from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.pool import Pool
+from sqlalchemy.sql import elements
+from sqlalchemy.sql import expression
 from sqlalchemy.sql.compiler import (
     selectable,
     DDLCompiler,
@@ -44,13 +45,10 @@ from sqlalchemy.sql.compiler import (
 )
 from sqlalchemy.sql.default_comparator import operator_lookup
 from sqlalchemy.sql.operators import json_getitem_op
-from sqlalchemy.sql import expression
 
-from google.cloud.spanner_v1.data_types import JsonObject
 from google.cloud import spanner_dbapi
-from google.cloud.sqlalchemy_spanner._opentelemetry_tracing import trace_call
 from google.cloud.sqlalchemy_spanner import version as sqlalchemy_spanner_version
-import sqlalchemy
+from google.cloud.sqlalchemy_spanner._opentelemetry_tracing import trace_call
 
 USING_SQLACLCHEMY_20 = False
 if sqlalchemy.__version__.split(".")[0] == "2":
@@ -63,12 +61,18 @@ if USING_SQLACLCHEMY_20:
 @listens_for(Pool, "reset")
 def reset_connection(dbapi_conn, connection_record, reset_state=None):
     """An event of returning a connection back to a pool."""
+    if hasattr(dbapi_conn, "driver_connection"):
+        dbapi_conn = dbapi_conn.driver_connection
     if hasattr(dbapi_conn, "connection"):
         dbapi_conn = dbapi_conn.connection
     if isinstance(dbapi_conn, spanner_dbapi.Connection):
-        if dbapi_conn.inside_transaction:
+        transaction_started = getattr(
+            dbapi_conn,
+            "spanner_transaction_started",
+            getattr(dbapi_conn, "inside_transaction", False),
+        )
+        if transaction_started:
             dbapi_conn.rollback()
-
         dbapi_conn.staleness = None
         dbapi_conn.read_only = False
 
@@ -1709,7 +1713,7 @@ LIMIT 1
             conn_proxy (
                 Union[
                     sqlalchemy.pool._ConnectionFairy,
-                    spanner_dbapi.connection.Connection,
+                    spanner_dbapi.driver_connection.Connection,
                 ]
             ):
                 Database connection proxy object or the connection itself.
@@ -1718,7 +1722,7 @@ LIMIT 1
         if isinstance(conn_proxy, spanner_dbapi.Connection):
             conn = conn_proxy
         else:
-            conn = conn_proxy.connection
+            conn = conn_proxy.driver_connection
 
         if level == "AUTOCOMMIT":
             conn.autocommit = True
@@ -1735,7 +1739,7 @@ LIMIT 1
             conn_proxy (
                 Union[
                     sqlalchemy.pool._ConnectionFairy,
-                    spanner_dbapi.connection.Connection,
+                    spanner_dbapi.driver_connection.Connection,
                 ]
             ):
                 Database connection proxy object or the connection itself.
@@ -1746,7 +1750,7 @@ LIMIT 1
         if isinstance(conn_proxy, spanner_dbapi.Connection):
             conn = conn_proxy
         else:
-            conn = conn_proxy.connection
+            conn = conn_proxy.driver_connection
 
         if conn.autocommit:
             return "AUTOCOMMIT"
