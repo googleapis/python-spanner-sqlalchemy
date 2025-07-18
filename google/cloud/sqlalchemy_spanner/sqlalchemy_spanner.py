@@ -825,6 +825,7 @@ class SpannerDialect(DefaultDialect):
     update_returning = True
     delete_returning = True
     supports_multivalues_insert = True
+    use_insertmanyvalues = True
 
     ddl_compiler = SpannerDDLCompiler
     preparer = SpannerIdentifierPreparer
