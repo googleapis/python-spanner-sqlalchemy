@@ -572,7 +572,7 @@ class SpannerDDLCompiler(DDLCompiler):
         elif has_identity:
             colspec += " " + self.process(column.identity)
         elif default is not None:
-            colspec += " DEFAULT (" + default + ")"
+            colspec += f" DEFAULT {default}"
         elif hasattr(column, "computed") and column.computed is not None:
             colspec += " " + self.process(column.computed)
 
@@ -582,6 +582,13 @@ class SpannerDDLCompiler(DDLCompiler):
             colspec += " OPTIONS (allow_commit_timestamp=true)"
 
         return colspec
+
+    def get_column_default_string(self, column):
+        default = super().get_column_default_string(column)
+        if default is not None:
+            return f"({default})"
+
+        return default
 
     def visit_computed_column(self, generated, **kw):
         """Computed column operator."""
