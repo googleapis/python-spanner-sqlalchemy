@@ -20,6 +20,7 @@ from alembic.ddl.base import (
     ColumnType,
     alter_column,
     alter_table,
+    format_server_default,
     format_type,
 )
 from google.api_core.client_options import ClientOptions
@@ -1853,11 +1854,14 @@ LIMIT 1
 def visit_column_nullable(
     element: "ColumnNullable", compiler: "SpannerDDLCompiler", **kw
 ) -> str:
-    return "%s %s %s %s" % (
-        alter_table(compiler, element.table_name, element.schema),
-        alter_column(compiler, element.column_name),
-        format_type(compiler, element.existing_type),
-        "" if element.nullable else "NOT NULL",
+    return _format_alter_column(
+        compiler,
+        element.table_name,
+        element.schema,
+        element.column_name,
+        element.existing_type,
+        element.nullable,
+        element.existing_server_default,
     )
 
 
@@ -1866,9 +1870,28 @@ def visit_column_nullable(
 def visit_column_type(
     element: "ColumnType", compiler: "SpannerDDLCompiler", **kw
 ) -> str:
-    return "%s %s %s %s" % (
-        alter_table(compiler, element.table_name, element.schema),
-        alter_column(compiler, element.column_name),
-        "%s" % format_type(compiler, element.type_),
-        "" if element.existing_nullable else "NOT NULL",
+    return _format_alter_column(
+        compiler,
+        element.table_name,
+        element.schema,
+        element.column_name,
+        element.type_,
+        element.existing_nullable,
+        element.existing_server_default,
+    )
+
+
+def _format_alter_column(
+    compiler, table_name, schema, column_name, type_, nullable, server_default
+):
+    return "%s %s %s%s%s" % (
+        alter_table(compiler, table_name, schema),
+        alter_column(compiler, column_name),
+        format_type(compiler, type_),
+        "" if nullable else " NOT NULL",
+        (
+            ""
+            if server_default is None
+            else f" DEFAULT {format_server_default(compiler, server_default)}"
+        ),
     )
