@@ -22,7 +22,8 @@ from google.cloud.spanner_v1 import (
     ExecuteSqlRequest,
     CommitRequest,
     RollbackRequest,
-    BeginTransactionRequest, CreateSessionRequest,
+    BeginTransactionRequest,
+    CreateSessionRequest,
 )
 from test.mockserver_tests.mock_server_test_base import (
     MockServerTestBase,

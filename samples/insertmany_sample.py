@@ -15,10 +15,11 @@
 
 from datetime import datetime
 import uuid
-from sqlalchemy import text, String
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import text, String, create_engine
+from sqlalchemy.orm import DeclarativeBase, Session
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
+from sample_helper import run_sample
 
 
 class Base(DeclarativeBase):
@@ -41,7 +42,7 @@ class Base(DeclarativeBase):
 
 
 class Singer(Base):
-    __tablename__ = "singers"
+    __tablename__ = "singers_with_sentinel"
     id: Mapped[str] = mapped_column(
         String(36),
         primary_key=True,
@@ -56,3 +57,28 @@ class Singer(Base):
     inserted_at: Mapped[datetime] = mapped_column(
         server_default=text("CURRENT_TIMESTAMP()")
     )
+
+
+# Shows how to insert data using SQLAlchemy, including relationships that are
+# defined both as foreign keys and as interleaved tables.
+def insertmany():
+    engine = create_engine(
+        "spanner:///projects/sample-project/"
+        "instances/sample-instance/"
+        "databases/sample-database",
+        echo=True,
+    )
+    # Create the sample table.
+    Base.metadata.create_all(engine)
+
+    # Insert two singers in one session. These two singers will be inserted using
+    # a single INSERT statement with a THEN RETURN clause to return the generated
+    # creation timestamp.
+    with Session(engine) as session:
+        session.add(Singer(name="John Smith"))
+        session.add(Singer(name="Jane Smith"))
+        session.commit()
+
+
+if __name__ == "__main__":
+    run_sample(insertmany)
