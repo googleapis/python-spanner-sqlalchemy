@@ -16,16 +16,13 @@ import uuid
 from unittest import mock
 
 import sqlalchemy
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.testing import eq_, is_instance_of
 from google.cloud.spanner_v1 import (
-    FixedSizePool,
-    BatchCreateSessionsRequest,
     ExecuteSqlRequest,
     CommitRequest,
     RollbackRequest,
-    BeginTransactionRequest,
+    BeginTransactionRequest, CreateSessionRequest,
 )
 from test.mockserver_tests.mock_server_test_base import (
     MockServerTestBase,
@@ -46,10 +43,7 @@ class TestInsertmany(MockServerTestBase):
             "VALUES (@a0, @a1), (@a2, @a3) "
             "THEN RETURN inserted_at, id"
         )
-        engine = create_engine(
-            "spanner:///projects/p/instances/i/databases/d",
-            connect_args={"client": self.client, "pool": FixedSizePool(size=10)},
-        )
+        engine = self.create_engine()
 
         with Session(engine) as session:
             session.add(SingerUUID(name="a"))
@@ -59,7 +53,7 @@ class TestInsertmany(MockServerTestBase):
         # Verify the requests that we got.
         requests = self.spanner_service.requests
         eq_(4, len(requests))
-        is_instance_of(requests[0], BatchCreateSessionsRequest)
+        is_instance_of(requests[0], CreateSessionRequest)
         is_instance_of(requests[1], BeginTransactionRequest)
         is_instance_of(requests[2], ExecuteSqlRequest)
         is_instance_of(requests[3], CommitRequest)
@@ -80,10 +74,7 @@ class TestInsertmany(MockServerTestBase):
             "VALUES (@a0) "
             "THEN RETURN id, inserted_at"
         )
-        engine = create_engine(
-            "spanner:///projects/p/instances/i/databases/d",
-            connect_args={"client": self.client, "pool": FixedSizePool(size=10)},
-        )
+        engine = self.create_engine()
 
         with Session(engine) as session:
             session.add(SingerIntID(name="a"))
@@ -102,7 +93,7 @@ class TestInsertmany(MockServerTestBase):
         # Verify the requests that we got.
         requests = self.spanner_service.requests
         eq_(5, len(requests))
-        is_instance_of(requests[0], BatchCreateSessionsRequest)
+        is_instance_of(requests[0], CreateSessionRequest)
         is_instance_of(requests[1], BeginTransactionRequest)
         is_instance_of(requests[2], ExecuteSqlRequest)
         is_instance_of(requests[3], ExecuteSqlRequest)

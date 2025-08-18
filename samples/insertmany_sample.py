@@ -47,7 +47,7 @@ class Singer(Base):
         primary_key=True,
         # Supply a unique UUID client-side
         default=lambda: str(uuid.uuid4()),
-        # The column is unqiue and can be used as an insert_sentinel
+        # The column is unique and can be used as an insert_sentinel
         insert_sentinel=True,
         # Set a server-side default for write outside SQLAlchemy
         server_default=text("GENERATE_UUID()"),
