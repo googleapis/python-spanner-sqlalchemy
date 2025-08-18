@@ -20,6 +20,7 @@ from alembic.ddl.base import (
     ColumnType,
     alter_column,
     alter_table,
+    format_server_default,
     format_type,
 )
 from google.api_core.client_options import ClientOptions
@@ -425,7 +426,14 @@ class SpannerSQLCompiler(SQLCompiler):
             self._label_select_column(
                 None, c, True, False, {"spanner_is_returning": True}
             )
-            for c in expression._select_iterables(returning_cols)
+            for c in expression._select_iterables(
+                filter(
+                    lambda col: not col.dialect_options.get("spanner", {}).get(
+                        "exclude_from_returning", False
+                    ),
+                    returning_cols,
+                )
+            )
         ]
 
         return "THEN RETURN " + ", ".join(columns)
@@ -838,6 +846,7 @@ class SpannerDialect(DefaultDialect):
     update_returning = True
     delete_returning = True
     supports_multivalues_insert = True
+    use_insertmanyvalues = True
 
     ddl_compiler = SpannerDDLCompiler
     preparer = SpannerIdentifierPreparer
@@ -1859,11 +1868,14 @@ LIMIT 1
 def visit_column_nullable(
     element: "ColumnNullable", compiler: "SpannerDDLCompiler", **kw
 ) -> str:
-    return "%s %s %s %s" % (
-        alter_table(compiler, element.table_name, element.schema),
-        alter_column(compiler, element.column_name),
-        format_type(compiler, element.existing_type),
-        "" if element.nullable else "NOT NULL",
+    return _format_alter_column(
+        compiler,
+        element.table_name,
+        element.schema,
+        element.column_name,
+        element.existing_type,
+        element.nullable,
+        element.existing_server_default,
     )
 
 
@@ -1872,9 +1884,34 @@ def visit_column_nullable(
 def visit_column_type(
     element: "ColumnType", compiler: "SpannerDDLCompiler", **kw
 ) -> str:
-    return "%s %s %s %s" % (
-        alter_table(compiler, element.table_name, element.schema),
-        alter_column(compiler, element.column_name),
-        "%s" % format_type(compiler, element.type_),
-        "" if element.existing_nullable else "NOT NULL",
+    return _format_alter_column(
+        compiler,
+        element.table_name,
+        element.schema,
+        element.column_name,
+        element.type_,
+        element.existing_nullable,
+        element.existing_server_default,
+    )
+
+
+def _format_alter_column(
+    compiler, table_name, schema, column_name, type_, nullable, server_default
+):
+    # Older versions of SQLAlchemy pass in a boolean to indicate whether there
+    # is an existing DEFAULT constraint, instead of the actual DEFAULT constraint
+    # expression. In those cases, we do not want to explicitly include the DEFAULT
+    # constraint in the expression that is generated here.
+    if isinstance(server_default, bool):
+        server_default = None
+    return "%s %s %s%s%s" % (
+        alter_table(compiler, table_name, schema),
+        alter_column(compiler, column_name),
+        format_type(compiler, type_),
+        "" if nullable else " NOT NULL",
+        (
+            ""
+            if server_default is None
+            else f" DEFAULT {format_server_default(compiler, server_default)}"
+        ),
     )
