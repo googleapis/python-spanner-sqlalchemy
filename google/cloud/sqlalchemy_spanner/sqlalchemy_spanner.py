@@ -1890,6 +1890,12 @@ def visit_column_type(
 def _format_alter_column(
     compiler, table_name, schema, column_name, type_, nullable, server_default
 ):
+    # Older versions of SQLAlchemy pass in a boolean to indicate whether there
+    # is an existing DEFAULT constraint, instead of the actual DEFAULT constraint
+    # expression. In those cases, we do not want to explicitly include the DEFAULT
+    # constraint in the expression that is generated here.
+    if isinstance(server_default, bool):
+        server_default = None
     return "%s %s %s%s%s" % (
         alter_table(compiler, table_name, schema),
         alter_column(compiler, column_name),
