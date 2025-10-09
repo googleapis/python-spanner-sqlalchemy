@@ -972,6 +972,10 @@ class SpannerDialect(DefaultDialect):
         or `spanner:///projects/{project-id}/instances/{instance-id}`. For the latter,
         database operations will be not be possible and if required a new engine with
         database-id set will need to be created.
+        If you want to disble route to leader, pass options as following:
+        engine = create_engine(
+        "spanner+spanner:///projects/project-id/instances/instance-id/databases/database-id",
+        connect_args={'route_to_leader_enabled': False})
         """
         match = re.match(
             (
