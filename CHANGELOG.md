@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.17.2](https://github.com/googleapis/python-spanner-sqlalchemy/compare/v1.17.1...v1.17.2) (2025-11-10)
+
+
+### Bug Fixes
+
+* Retrieve columns in compound indexes in correct order ([#798](https://github.com/googleapis/python-spanner-sqlalchemy/issues/798)) ([9afe49b](https://github.com/googleapis/python-spanner-sqlalchemy/commit/9afe49bb720356c58890931c17546650ffd61f88)), closes [#797](https://github.com/googleapis/python-spanner-sqlalchemy/issues/797)
+
 ## [1.17.1](https://github.com/googleapis/python-spanner-sqlalchemy/compare/v1.17.0...v1.17.1) (2025-10-21)
 
 
