@@ -4,9 +4,9 @@
 #
 #    pip-compile --generate-hashes
 #
-alembic==1.17.0 \
-    --hash=sha256:4652a0b3e19616b57d652b82bfa5e38bf5dbea0813eed971612671cb9e90c0fe \
-    --hash=sha256:80523bc437d41b35c5db7e525ad9d908f79de65c27d6a5a5eab6df348a352d99
+alembic==1.18.1 \
+    --hash=sha256:83ac6b81359596816fb3b893099841a0862f2117b2963258e965d70dc62fb866 \
+    --hash=sha256:f1c3b0920b87134e851c25f1f7f236d8a332c34b75416802d06971df5d1b7810
     # via -r requirements.in
 build==1.3.0 \
     --hash=sha256:698edd0ea270bde950f53aed21f3a0135672206f3911e0176261a31e0e07b397 \
