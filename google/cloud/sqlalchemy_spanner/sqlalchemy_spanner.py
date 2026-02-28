@@ -820,6 +820,40 @@ class SpannerTypeCompiler(GenericTypeCompiler):
         return "JSON"
 
 
+def _make_json_serializer(json_serializer):
+    """Build a ``_json_serializer`` callable from a user-supplied function.
+
+    SQLAlchemy's ``create_engine(json_serializer=fn)`` convention expects a
+    callable that replaces ``json.dumps`` entirely — it takes a Python object
+    and returns a JSON string.  The Spanner pipeline is different: it wraps
+    values in a :class:`JsonObject` first, and serialization happens later in
+    ``_helpers._make_param_value_pb`` via ``obj.serialize()``.
+
+    To bridge this gap we use a **serialize-then-wrap** strategy:
+
+    1. Call the user's ``json_serializer(value)`` to produce a JSON string
+       with all custom types (``datetime``, etc.) already handled.
+    2. Feed that string into ``JsonObject.from_str()`` which parses it back
+       into a ``JsonObject`` containing only native Python types.
+    3. When ``_helpers.py`` later calls ``obj.serialize()``, the standard
+       ``json.dumps`` works because no custom types remain.
+
+    This avoids subclassing or monkey-patching ``JsonObject`` and requires
+    no changes to the core ``google-cloud-spanner`` library.
+
+    If *json_serializer* is already a ``JsonObject`` subclass (e.g. the
+    default class-level value), it is returned directly.
+    """
+    if isinstance(json_serializer, type) and issubclass(json_serializer, JsonObject):
+        return json_serializer
+
+    def _factory(value):
+        json_str = json_serializer(value)
+        return JsonObject.from_str(json_str)
+
+    return _factory
+
+
 class SpannerDialect(DefaultDialect):
     """Cloud Spanner dialect.
 
@@ -868,6 +902,13 @@ class SpannerDialect(DefaultDialect):
     execution_ctx_cls = SpannerExecutionContext
     _json_serializer = JsonObject
     _json_deserializer = JsonObject
+
+    def __init__(self, json_serializer=None, json_deserializer=None, **kwargs):
+        super().__init__(**kwargs)
+        if json_serializer is not None:
+            self._json_serializer = _make_json_serializer(json_serializer)
+        if json_deserializer is not None:
+            self._json_deserializer = json_deserializer
 
     @classmethod
     def dbapi(cls):
