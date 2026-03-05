@@ -14,9 +14,9 @@ build==1.4.0 \
     # via
     #   -r requirements.in
     #   pip-tools
-cachetools==7.0.2 \
-    --hash=sha256:7e7f09a4ca8b791d8bb4864afc71e9c17e607a28e6839ca1a644253c97dbeae0 \
-    --hash=sha256:938dcad184827c5e94928c4fd5526e2b46692b7fb1ae94472da9131d0299343c
+cachetools==7.0.3 \
+    --hash=sha256:8c246313b95849964e54a909c03b327a87ab0428b068fac10da7b105ca275ef6 \
+    --hash=sha256:c128ffca156eef344c25fcd08a96a5952803786fa33097f5f2d49edf76f79d53
     # via google-auth
 certifi==2026.2.25 \
     --hash=sha256:027692e4402ad994f1c42e52a4997a9763c646b73e4096e4d5d6db8af1d6f0fa \
